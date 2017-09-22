@@ -51,4 +51,5 @@ members = [
     "lib/etc/libimagnotification",
     "lib/etc/libimagtimeui",
     "lib/etc/libimagutil",
+    "lib/tui/libimagtui",
 ]
