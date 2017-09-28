@@ -17,22 +17,5 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-extern crate libimagstore;
-extern crate libimagerror;
-
-#[macro_use]
-extern crate error_chain;
-
-#[macro_use]
-extern crate log;
-
-extern crate toml;
-extern crate toml_query;
-extern crate glob;
-extern crate cursive;
-
-pub mod error;
-
-pub mod views;
-pub mod util;
+pub mod storeid;
 
