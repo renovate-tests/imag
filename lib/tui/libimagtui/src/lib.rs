@@ -30,6 +30,8 @@ extern crate toml;
 extern crate toml_query;
 extern crate glob;
 extern crate cursive;
+extern crate cursive_tree_view;
 
 pub mod error;
+pub mod storeid_explorer;
 
