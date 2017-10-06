@@ -29,6 +29,14 @@ use error::Result;
 use cursive_tree_view::TreeView;
 use cursive_tree_view::Placement;
 
+use cursive::Printer;
+use cursive::event::Event;
+use cursive::event::EventResult;
+use cursive::vec::Vec2;
+use cursive::view::Selector;
+use cursive::view::View;
+use cursive::direction::Direction;
+
 pub struct Explorer(TreeView<StoreId>);
 
 impl Explorer {
@@ -63,5 +71,41 @@ impl DerefMut for Explorer {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
+}
+
+impl View for Explorer {
+
+    fn draw(&self, printer: &Printer) {
+        self.0.draw(printer)
+    }
+
+    fn on_event(&mut self, e: Event) -> EventResult {
+        self.0.on_event(e)
+    }
+
+    fn required_size(&mut self, constraint: Vec2) -> Vec2 {
+        self.0.required_size(constraint)
+    }
+
+    fn needs_relayout(&self) -> bool {
+        self.0.needs_relayout()
+    }
+
+    fn layout(&mut self, v: Vec2) {
+        self.0.layout(v)
+    }
+
+    //fn find_any<'a>(&mut self, s: &Selector, f: Box<FnMut(&mut ::std::any::Any) + 'a>) {
+    //    self.0.find_any(s, f)
+    //}
+
+    fn focus_view(&mut self, s: &Selector) -> ::std::result::Result<(), ()> {
+        self.0.focus_view(s)
+    }
+
+    fn take_focus(&mut self, source: Direction) -> bool {
+        self.0.take_focus(source)
+    }
+
 }
 
