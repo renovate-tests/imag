@@ -9,14 +9,15 @@ let
   dependencies = with pkgs; [
     cmake
     curl
+    dbus
     gcc
     libpsl
+    libtool
+    ncurses
     openssl
     pkgconfig
     which
     zlib
-    dbus
-    libtool
   ];
 in
 
