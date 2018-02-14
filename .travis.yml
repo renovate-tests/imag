@@ -16,6 +16,16 @@ rust:
   - nightly
 
 matrix:
+  include:
+    - os: linux
+      sudo: false
+      language: r
+      pandoc_version: 2.0
+      script:
+        - |
+            cd doc && make
+      cache:
+        - packages
   allow_failures:
     - rust: nightly
 
