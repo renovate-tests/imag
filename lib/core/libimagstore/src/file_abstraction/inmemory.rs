@@ -33,6 +33,7 @@ use super::Drain;
 use store::Entry;
 use storeid::StoreId;
 use file_abstraction::iter::PathIterator;
+use file_abstraction::iter::PathIterBuilder;
 
 type Backend = Arc<Mutex<RefCell<HashMap<PathBuf, Entry>>>>;
 
@@ -181,9 +182,9 @@ impl FileAbstraction for InMemoryFileAbstraction {
         Ok(())
     }
 
-    fn pathes_recursively(&self, _basepath: PathBuf) -> Result<PathIterator, SE> {
-        debug!("Getting all pathes");
-        let keys : Vec<Result<PathBuf, SE>> = self
+    fn pathes_recursively(&self, _basepath: PathBuf, storepath: PathBuf, backend: Arc<FileAbstraction>) -> Result<PathIterator, SE> {
+        trace!("Building PathIterator object (inmemory implementation)");
+        let keys : Vec<PathBuf> = self
             .backend()
             .lock()
             .map_err(|_| SE::from_kind(SEK::FileError))?
@@ -191,9 +192,21 @@ impl FileAbstraction for InMemoryFileAbstraction {
             .keys()
             .map(PathBuf::from)
             .map(Ok)
-            .collect(); // we have to collect() because of the lock() above.
+            .collect::<Result<_, SE>>()?; // we have to collect() because of the lock() above.
 
-        Ok(PathIterator::new(Box::new(keys.into_iter())))
+        Ok(PathIterator::new(Box::new(InMemPathIterBuilder(keys)), storepath, backend))
+    }
+}
+
+pub(crate) struct InMemPathIterBuilder(Vec<PathBuf>);
+
+impl PathIterBuilder for InMemPathIterBuilder {
+    fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf, SE>>> {
+        Box::new(self.0.clone().into_iter().map(Ok))
+    }
+
+    fn in_collection(&mut self, c: &str) {
+        self.0.retain(|p| p.starts_with(c));
     }
 }
 

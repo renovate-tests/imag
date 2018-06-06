@@ -95,7 +95,7 @@ impl<'a, 'b> Wiki<'a, 'b> {
 
     pub fn all_ids(&self) -> Result<WikiIdIterator> {
         let filter = IdIsInWikiFilter(self.1);
-        Ok(WikiIdIterator(self.0.entries()?, filter))
+        Ok(WikiIdIterator(self.0.entries()?.without_store().with_store(self.0), filter))
     }
 
     pub fn delete_entry<EN: AsRef<str>>(&self, entry_name: EN) -> Result<()> {
