@@ -107,9 +107,18 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                    .about("Workout tracking and planning tool")
                    .version("0.1")
                    .subcommand(SubCommand::with_name("define")
-                              .about("Definr a new workout type")
+                              .about("Definr a new workout and schedule it")
                               .version("0.1")
-                              // TODO
+                              // uses imag-calendar to create calendar entries for when workout is
+                              // scheduled
+                              // uses imag-todo to create todo entries.for the day the workout is
+                              // scheduled
+                              // uses kairos for re-scheduling
+                              // links all created entries to a "workout" entry for that date and
+                              // links this workout entry to an overall entry for this type of
+                              // workout
+                              //
+                              // todo and calendar can be set to "off" via flags
                               )
                    .subcommand(SubCommand::with_name("track")
                               .about("Add a tracking of a completed workout")
