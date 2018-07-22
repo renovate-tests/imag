@@ -123,7 +123,15 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                    .subcommand(SubCommand::with_name("track")
                               .about("Add a tracking of a completed workout")
                               .version("0.1")
-                              // TODO
+                              // Finds the closest occurence for the workout type passed and marks
+                              // it as done (imag-todo) or/and moves the calendar entry
+                              // (inag-calendar) to the
+                              // current time (or to the optionally passed time) so that it is in
+                              // the past.
+                              //
+                              // It also records notes (via imag-diary, the diary name can be
+                              // configured)
+                              //
                               )
                    .subcommand(SubCommand::with_name("list")
                               .about("List trackings")
