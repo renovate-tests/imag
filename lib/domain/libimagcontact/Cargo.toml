@@ -24,7 +24,7 @@ error-chain  = "0.12"
 log          = "0.3"
 toml         = "0.4"
 toml-query   = "0.7"
-vobject      = "0.6"
+vobject      = { git = "https://github.com/matthiasbeyer/rust-vobject", branch = "update-errorchain" }
 uuid         = "0.6"
 serde        = "1"
 serde_derive = "1"
