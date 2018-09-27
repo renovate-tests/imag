@@ -21,11 +21,11 @@ maintenance                       = { status     = "actively-developed" }
 
 [dependencies]
 chrono = "0.4"
-log = "0.3"
+log = "0.4"
 toml = "0.4"
-toml-query = "0.6"
-error-chain = "0.11"
-kairos = "0.1.0"
+toml-query = "0.7"
+error-chain = "0.12"
+kairos = { git = "https://github.com/matthiasbeyer/kairos", branch = "master" }
 
 libimagstore     = { version = "0.9.0", path = "../../../lib/core/libimagstore" }
 libimagerror     = { version = "0.9.0", path = "../../../lib/core/libimagerror" }

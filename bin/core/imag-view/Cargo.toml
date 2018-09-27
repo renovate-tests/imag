@@ -24,8 +24,8 @@ maintenance                       = { status     = "actively-developed" }
 [dependencies]
 log = "0.4.0"
 toml = "0.4"
-toml-query = "0.6"
-handlebars = "0.29.0"
+toml-query = "0.7"
+handlebars = "1.0"
 tempfile = "2.1"
 
 libimagstore     = { version = "0.9.0", path = "../../../lib/core/libimagstore" }

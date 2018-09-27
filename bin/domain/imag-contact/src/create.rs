@@ -39,6 +39,7 @@ use std::path::PathBuf;
 use std::fs::OpenOptions;
 
 use vobject::vcard::Vcard;
+use vobject::vcard::VcardBuilder;
 use vobject::write_component;
 use toml_query::read::TomlValueReadExt;
 use toml::Value;
@@ -208,7 +209,7 @@ pub fn create(rt: &Runtime) {
 }
 
 fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
-    let mut vcard = Vcard::default().with_uid(uuid);
+    let mut vcard = VcardBuilder::new().with_uid(uuid);
 
     { // parse name
         debug!("Parsing name");
@@ -448,6 +449,9 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
     }
 
+    let vcard = vcard
+        .build()
+        .unwrap(); // TODO: This unwrap does not fail with rust-vobject, why is there a Result<> returned?
     Some(vcard)
 }
 
