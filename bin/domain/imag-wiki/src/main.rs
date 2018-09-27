@@ -17,6 +17,8 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
+#![forbid(unsafe_code)]
+
 extern crate clap;
 extern crate regex;
 extern crate filters;
