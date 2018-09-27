@@ -23,6 +23,8 @@ use std::env;
 use std::process::exit;
 use std::io::Stdin;
 use std::sync::Arc;
+use std::io::StdoutLock;
+use std::borrow::Borrow;
 
 pub use clap::App;
 use clap::AppSettings;
@@ -42,9 +44,11 @@ use io::OutputProxy;
 use libimagerror::errors::ErrorMsg as EM;
 use libimagerror::trace::*;
 use libimagstore::store::Store;
+use libimagstore::storeid::StoreId;
 use libimagstore::file_abstraction::InMemoryFileAbstraction;
 use libimagutil::debug_result::DebugResult;
 use spec::CliSpec;
+use atty;
 
 /// The Runtime object
 ///
@@ -55,6 +59,9 @@ pub struct Runtime<'a> {
     configuration: Option<Value>,
     cli_matches: ArgMatches<'a>,
     store: Store,
+
+    has_output_pipe: bool,
+    has_input_pipe: bool,
 }
 
 impl<'a> Runtime<'a> {
@@ -142,6 +149,9 @@ impl<'a> Runtime<'a> {
             configuration: config,
             rtp: rtp,
             store: store,
+
+            has_output_pipe: !atty::is(atty::Stream::Stdout),
+            has_input_pipe: !atty::is(atty::Stream::Stdin),
         })
         .context(err_msg("Cannot instantiate runtime"))
         .map_err(Error::from)
@@ -415,7 +425,11 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn stdout(&self) -> OutputProxy {
-        OutputProxy::Out(::std::io::stdout())
+        if self.has_output_pipe {
+            OutputProxy::Err(::std::io::stderr())
+        } else {
+            OutputProxy::Out(::std::io::stdout())
+        }
     }
 
     pub fn stderr(&self) -> OutputProxy {
@@ -423,7 +437,11 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn stdin(&self) -> Option<Stdin> {
-        Some(::std::io::stdin())
+        if self.has_input_pipe {
+            None
+        } else {
+            Some(::std::io::stdin())
+        }
     }
 
     /// Helper for handling subcommands which are not available.
@@ -503,6 +521,38 @@ impl<'a> Runtime<'a> {
             })
             .context(EM::IO)
             .map_err(Error::from)
+    }
+
+    pub fn report_touched(&self, id: &StoreId) -> Result<()> {
+        let out      = ::std::io::stdout();
+        let mut lock = out.lock();
+
+        self.report_touched_id(id, &mut lock)
+    }
+
+    pub fn report_all_touched<ID, I>(&self, ids: I) -> Result<()>
+        where ID: Borrow<StoreId> + Sized,
+              I: Iterator<Item = ID>
+    {
+        let out      = ::std::io::stdout();
+        let mut lock = out.lock();
+
+        for id in ids {
+            self.report_touched_id(id.borrow(), &mut lock)?;
+        }
+
+        Ok(())
+    }
+
+    #[inline]
+    fn report_touched_id(&self, id: &StoreId, output: &mut StdoutLock) -> Result<()> {
+        use std::io::Write;
+
+        if self.has_output_pipe {
+            writeln!(output, "{}", id)?;
+        }
+
+        Ok(())
     }
 }
 
