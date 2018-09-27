@@ -266,6 +266,10 @@ impl StoreIdIterator {
         StoreIdIterator { iter }
     }
 
+    pub fn with_store<'a>(self, store: &'a Store) -> StoreIdIteratorWithStore<'a> {
+        StoreIdIteratorWithStore(self, store)
+    }
+
 }
 
 impl Iterator for StoreIdIterator {

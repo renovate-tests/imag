@@ -48,11 +48,11 @@ pub trait HabitStore {
 impl HabitStore for Store {
     /// Get an iterator over all habits
     fn all_habit_templates(&self) -> Result<HabitTemplateStoreIdIterator> {
-        self.entries().map(HabitTemplateStoreIdIterator::from).map_err(From::from)
+        Ok(HabitTemplateStoreIdIterator::from(self.entries()?.without_store()))
     }
 
     fn all_habit_instances(&self) -> Result<HabitInstanceStoreIdIterator> {
-        self.entries().map(HabitInstanceStoreIdIterator::from).map_err(From::from)
+        Ok(HabitInstanceStoreIdIterator::from(self.entries()?.without_store()))
     }
 }
 

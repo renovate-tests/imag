@@ -20,6 +20,7 @@
 use std::fs::{File, OpenOptions, create_dir_all, remove_file, copy, rename};
 use std::io::{Seek, SeekFrom, Read};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use error::{StoreError as SE, StoreErrorKind as SEK};
 use error::ResultExt;
@@ -30,6 +31,9 @@ use super::Drain;
 use store::Entry;
 use storeid::StoreId;
 use file_abstraction::iter::PathIterator;
+use file_abstraction::iter::PathIterBuilder;
+
+use walkdir::WalkDir;
 
 #[derive(Debug)]
 pub struct FSFileAbstractionInstance(PathBuf);
@@ -133,18 +137,34 @@ impl FileAbstraction for FSFileAbstraction {
             })
     }
 
-    fn pathes_recursively(&self, basepath: PathBuf) -> Result<PathIterator, SE> {
-        use walkdir::WalkDir;
+    fn pathes_recursively(&self,
+                          basepath: PathBuf,
+                          storepath: PathBuf,
+                          backend: Arc<FileAbstraction>)
+        -> Result<PathIterator, SE>
+    {
+        trace!("Building PathIterator object");
+        Ok(PathIterator::new(Box::new(WalkDirPathIterBuilder { basepath }), storepath, backend))
+    }
+}
 
-        let i = WalkDir::new(basepath)
+pub(crate) struct WalkDirPathIterBuilder {
+    basepath: PathBuf
+}
+
+impl PathIterBuilder for WalkDirPathIterBuilder {
+    fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf, SE>>> {
+        Box::new(WalkDir::new(self.basepath.clone())
             .min_depth(1)
             .max_open(100)
             .into_iter()
             .map(|r| {
                 r.map(|e| PathBuf::from(e.path())).chain_err(|| SE::from_kind(SEK::FileError))
-            });
+            }))
+    }
 
-        Ok(PathIterator::new(Box::new(i)))
+    fn in_collection(&mut self, c: &str) {
+        self.basepath.push(c);
     }
 }
 

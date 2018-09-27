@@ -17,18 +17,18 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use libimagstore::storeid::StoreIdIteratorWithStore;
+use libimagstore::iter::Entries;
 use libimagstore::store::Store;
 use libimagstore::store::Result as StoreResult;
 use libimagstore::store::FileLockEntry;
 
 use constants::*;
 
-pub struct TimeTrackingsGetIterator<'a>(StoreIdIteratorWithStore<'a>, &'a Store);
+pub struct TimeTrackingsGetIterator<'a>(Entries<'a>, &'a Store);
 
 impl<'a> TimeTrackingsGetIterator<'a> {
-    pub fn new(sit: StoreIdIteratorWithStore<'a>, store: &'a Store) -> Self {
-        TimeTrackingsGetIterator(sit, store)
+    pub fn new(entries: Entries<'a>, store: &'a Store) -> Self {
+        TimeTrackingsGetIterator(entries, store)
     }
 }
 
