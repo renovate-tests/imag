@@ -22,7 +22,7 @@ maintenance                       = { status     = "actively-developed" }
 [dependencies]
 ansi_term = "0.10"
 interactor = "0.1"
-lazy_static = "0.2"
+lazy_static = "1"
 log = "0.4.0"
 regex = "0.2"
 toml = "0.4"
