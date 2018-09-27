@@ -227,8 +227,9 @@ fn show(rt: &Runtime) {
                 None
             }
         })
-        .for_each(|elem| {
-            let data = build_data_object_for_handlebars(0, &elem);
+        .enumerate()
+        .for_each(|(i, elem)| {
+            let data = build_data_object_for_handlebars(i, &elem);
 
             let s = show_format
                 .render("format", &data)
