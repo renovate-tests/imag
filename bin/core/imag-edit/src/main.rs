@@ -41,15 +41,11 @@ extern crate libimagerror;
 extern crate libimagstore;
 extern crate libimagutil;
 
-use std::path::PathBuf;
-use std::io::Read;
-
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
 use libimagentryedit::edit::Edit;
 use libimagentryedit::edit::EditHeader;
 use libimagrt::setup::generate_runtime_setup;
-use libimagstore::storeid::IntoStoreId;
 use libimagstore::storeid::StoreIdIterator;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
 
@@ -62,32 +58,10 @@ fn main() {
                                     "Edit store entries with $EDITOR",
                                     ui::build_ui);
 
-    let sids = match rt.cli().value_of("entry") {
-        Some(path) => vec![PathBuf::from(path).into_storeid().map_err_trace_exit_unwrap(1)],
-        None => if rt.cli().is_present("entries-from-stdin") {
-            let stdin = rt.stdin().unwrap_or_else(|| {
-                error!("Cannot get handle to stdin");
-                ::std::process::exit(1)
-            });
-
-            let mut buf = String::new();
-            let _ = stdin.lock().read_to_string(&mut buf).unwrap_or_else(|_| {
-                error!("Failed to read from stdin");
-                ::std::process::exit(1)
-            });
-
-            buf.lines()
-                .map(PathBuf::from)
-                .map(|p| p.into_storeid().map_err_trace_exit_unwrap(1))
-                .collect()
-        } else {
-            error!("Something weird happened. I was not able to find the path of the entries to edit");
-            ::std::process::exit(1)
-        }
-    };
-
     let edit_header = rt.cli().is_present("edit-header");
     let edit_header_only = rt.cli().is_present("edit-header-only");
+
+    let sids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
 
     StoreIdIterator::new(Box::new(sids.into_iter().map(Ok)))
         .into_get_iter(rt.store())
