@@ -144,14 +144,20 @@ impl<'a> Runtime<'a> {
             Store::new(storepath, &config)
         };
 
+        let has_output_pipe = !atty::is(atty::Stream::Stdout);
+        let has_input_pipe  = !atty::is(atty::Stream::Stdin);
+
+        debug!("has output pipe = {}", has_output_pipe);
+        debug!("has input pipe  = {}", has_input_pipe);
+
         store_result.map(|store| Runtime {
             cli_matches: matches,
             configuration: config,
             rtp: rtp,
             store: store,
 
-            has_output_pipe: !atty::is(atty::Stream::Stdout),
-            has_input_pipe: !atty::is(atty::Stream::Stdin),
+            has_output_pipe,
+            has_input_pipe,
         })
         .context(err_msg("Cannot instantiate runtime"))
         .map_err(Error::from)
@@ -383,6 +389,33 @@ impl<'a> Runtime<'a> {
         &self.cli_matches
     }
 
+    pub fn ids_from_stdin(&self) -> bool {
+        self.has_input_pipe
+    }
+
+    pub fn ids<T: IdPathProvider>(&self) -> Result<Vec<StoreId>> {
+        use std::io::Read;
+
+        if self.has_input_pipe {
+            trace!("Getting IDs from stdin...");
+            let stdin    = ::std::io::stdin();
+            let mut lock = stdin.lock();
+
+            let mut buf = String::new();
+            lock.read_to_string(&mut buf)
+                .map_err(Error::from)
+                .and_then(|_| {
+                    trace!("Got IDs = {}", buf);
+                    buf.lines()
+                        .map(PathBuf::from)
+                        .map(|id| StoreId::new_baseless(id).map_err(Error::from))
+                        .collect()
+                })
+        } else {
+            Ok(T::get_ids(self.cli()))
+        }
+    }
+
     /// Get the configuration object
     pub fn config(&self) -> Option<&Value> {
         self.configuration.as_ref()
@@ -424,8 +457,12 @@ impl<'a> Runtime<'a> {
             })
     }
 
+    pub fn output_is_pipe(&self) -> bool {
+        self.has_output_pipe
+    }
+
     pub fn stdout(&self) -> OutputProxy {
-        if self.has_output_pipe {
+        if self.output_is_pipe() {
             OutputProxy::Err(::std::io::stderr())
         } else {
             OutputProxy::Out(::std::io::stdout())
@@ -548,12 +585,45 @@ impl<'a> Runtime<'a> {
     fn report_touched_id(&self, id: &StoreId, output: &mut StdoutLock) -> Result<()> {
         use std::io::Write;
 
-        if self.has_output_pipe {
+        if self.output_is_pipe() {
+            trace!("Reporting: {} to {:?}", id, output);
             writeln!(output, "{}", id)?;
         }
 
         Ok(())
     }
+}
+
+/// A trait for the path provider functionality
+///
+/// This trait can be implement on a type so that it can provide IDs when given a ArgMatches
+/// object.
+///
+/// It can be used with Runtime::ids() and libimagrt handles "stdin-provides-ids" cases
+/// automatically:
+///
+/// ```ignore
+/// runtime.ids::<PathProvider>()?.iter().for_each(|id| /* ... */)
+/// ```
+///
+/// libimagrt does not call the PathProvider if the ids are provided by piping to stdin.
+///
+///
+/// # Passed arguments
+///
+/// The arguments which are passed into the IdPathProvider::get_ids() function are the _top level
+/// ArgMatches_. Traversing might be required in the implementation of the ::get_ids() function.
+///
+///
+/// # Returns
+///
+/// In case of error, the IdPathProvider::get_ids() function should exit the application
+/// with the appropriate error message(s).
+///
+/// On success, the StoreId objects to operate on are returned from the ArgMatches.
+///
+pub trait IdPathProvider {
+    fn get_ids(matches: &ArgMatches) -> Vec<StoreId>;
 }
 
 /// Exported for the `imag` command, you probably do not want to use that.
