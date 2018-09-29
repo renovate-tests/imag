@@ -45,10 +45,8 @@ extern crate libimagstore;
 extern crate libimagutil;
 
 use std::io::Write;
-use std::path::PathBuf;
 
 use failure::Error;
-use failure::err_msg;
 
 use libimagentryannotation::annotateable::*;
 use libimagentryannotation::annotation_fetcher::*;
@@ -56,10 +54,10 @@ use libimagentryedit::edit::*;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::exit::ExitUnwrap;
 use libimagerror::io::ToExitCode;
+use libimagerror::errors::ErrorMsg as EM;
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
 use libimagstore::store::FileLockEntry;
-use libimagstore::storeid::IntoStoreId;
 
 mod ui;
 
@@ -91,89 +89,96 @@ fn main() {
 fn add(rt: &Runtime) {
     let scmd            = rt.cli().subcommand_matches("add").unwrap(); // safed by main()
     let annotation_name = scmd.value_of("annotation_name").unwrap(); // safed by clap
-    let entry_name      = scmd
-        .value_of("entry")
-        .map(PathBuf::from)
-        .map(|pb| pb.into_storeid().map_err_trace_exit_unwrap(1))
-        .unwrap(); // safed by clap
+    let ids             = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
 
-    let _ = rt.store()
-        .get(entry_name)
-        .map_err_trace_exit_unwrap(1)
-        .ok_or_else(|| Error::from(err_msg("Entry does not exist".to_owned())))
-        .map_err_trace_exit_unwrap(1)
-        .annotate(rt.store(), annotation_name)
-        .map_err_trace_exit_unwrap(1)
-        .edit_content(&rt)
-        .map_err_trace_exit_unwrap(1);
+    ids.into_iter().for_each(|id| {
+        let _ = rt.store()
+            .get(id.clone())
+            .map_err_trace_exit_unwrap(1)
+            .ok_or_else(|| EM::EntryNotFound(id.local_display_string()))
+            .map_err(Error::from)
+            .map_err_trace_exit_unwrap(1)
+            .annotate(rt.store(), annotation_name)
+            .map_err_trace_exit_unwrap(1)
+            .edit_content(&rt)
+            .map_err_trace_exit_unwrap(1);
+    })
+
 }
 
 fn remove(rt: &Runtime) {
     let scmd            = rt.cli().subcommand_matches("remove").unwrap(); // safed by main()
-    let entry_name      = scmd.value_of("entry").unwrap(); // safed by clap
     let annotation_name = scmd.value_of("annotation_name").unwrap(); // safed by clap
     let delete          = scmd.is_present("delete-annotation");
+    let ids       = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
 
-    let mut entry = rt.store()
-        .get(PathBuf::from(entry_name).into_storeid().map_err_trace_exit_unwrap(1))
-        .map_err_trace_exit_unwrap(1)
-        .ok_or_else(|| Error::from(err_msg("Entry does not exist".to_owned())))
-        .map_err_trace_exit_unwrap(1);
+    ids.into_iter().for_each(|id| {
+        let mut entry = rt.store()
+            .get(id.clone())
+            .map_err_trace_exit_unwrap(1)
+            .ok_or_else(|| EM::EntryNotFound(id.local_display_string()))
+            .map_err(Error::from)
+            .map_err_trace_exit_unwrap(1);
 
-    let annotation = entry
-        .denotate(rt.store(), annotation_name)
-        .map_err_trace_exit_unwrap(1);
+        let annotation = entry
+            .denotate(rt.store(), annotation_name)
+            .map_err_trace_exit_unwrap(1);
 
-    if delete {
-        debug!("Deleting annotation object");
-        if let Some(an) = annotation {
-            let loc = an.get_location().clone();
-            drop(an);
+        if delete {
+            debug!("Deleting annotation object");
+            if let Some(an) = annotation {
+                let loc = an.get_location().clone();
+                drop(an);
 
-            let _ = rt
-                .store()
-                .delete(loc)
-                .map_err_trace_exit_unwrap(1);
+                let _ = rt
+                    .store()
+                    .delete(loc)
+                    .map_err_trace_exit_unwrap(1);
+            } else {
+                warn!("Not having annotation object, cannot delete!");
+            }
         } else {
-            warn!("Not having annotation object, cannot delete!");
+            debug!("Not deleting annotation object");
         }
-    } else {
-        debug!("Not deleting annotation object");
-    }
+    })
+
 }
 
 fn list(rt: &Runtime) {
-    let scmd        = rt.cli().subcommand_matches("list").unwrap(); // safed by clap
-    let with_text   = scmd.is_present("list-with-text");
-    match scmd.value_of("entry").map(PathBuf::from) {
-        Some(pb) => {
-            let _ = rt
-                .store()
-                .get(pb.into_storeid().map_err_trace_exit_unwrap(1))
-                .map_err_trace_exit_unwrap(1)
-                .ok_or_else(|| Error::from(err_msg("Entry does not exist")))
-                .map_err_trace_exit_unwrap(1)
-                .annotations(rt.store())
-                .map_err_trace_exit_unwrap(1)
-                .enumerate()
-                .map(|(i, a)| {
-                    list_annotation(&rt, i, a.map_err_trace_exit_unwrap(1), with_text)
-                })
-                .collect::<Vec<_>>();
-        }
+    let scmd      = rt.cli().subcommand_matches("list").unwrap(); // safed by clap
+    let with_text = scmd.is_present("list-with-text");
+    let ids       = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
 
-        None => {
-            // show them all
-            let _ = rt
-                .store()
-                .all_annotations()
-                .map_err_trace_exit_unwrap(1)
-                .enumerate()
-                .map(|(i, a)| {
-                    list_annotation(&rt, i, a.map_err_trace_exit_unwrap(1), with_text)
-                })
-                .collect::<Vec<_>>();
-        }
+    if ids.len() != 0 {
+        let _ = ids
+            .into_iter()
+            .for_each(|id| {
+                let _ = rt
+                    .store()
+                    .get(id.clone())
+                    .map_err_trace_exit_unwrap(1)
+                    .ok_or_else(|| EM::EntryNotFound(id.local_display_string()))
+                    .map_err(Error::from)
+                    .map_err_trace_exit_unwrap(1)
+                    .annotations(rt.store())
+                    .map_err_trace_exit_unwrap(1)
+                    .enumerate()
+                    .map(|(i, a)| {
+                        list_annotation(&rt, i, a.map_err_trace_exit_unwrap(1), with_text)
+                    })
+                    .collect::<Vec<_>>();
+            });
+    } else { // ids.len() == 0
+        // show them all
+        let _ = rt
+            .store()
+            .all_annotations()
+            .map_err_trace_exit_unwrap(1)
+            .enumerate()
+            .map(|(i, a)| {
+                list_annotation(&rt, i, a.map_err_trace_exit_unwrap(1), with_text)
+            })
+            .collect::<Vec<_>>();
     }
 }
 
