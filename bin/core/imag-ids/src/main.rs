@@ -89,7 +89,8 @@ fn main() {
             id_filters::header_filter_lang::parse(&query)
         });
 
-    if rt.ids_from_stdin() {
+    let iterator = if rt.ids_from_stdin() {
+        debug!("Fetching IDs from stdin...");
         let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
         Box::new(ids.into_iter().map(Ok))
             as Box<Iterator<Item = Result<StoreId, _>>>
@@ -118,11 +119,20 @@ fn main() {
         id
     } else {
         id.without_base()
-    })
-    .for_each(|id| {
-        let _ = writeln!(rt.stdout(), "{}", id.to_str().map_err_trace_exit_unwrap(1))
-            .to_exit_code()
-            .unwrap_or_exit();
     });
+
+    let mut stdout = rt.stdout();
+    trace!("Got output: {:?}", stdout);
+
+    iterator.for_each(|id| {
+        rt.report_touched(&id).map_err_trace_exit_unwrap(1);
+        if !rt.output_is_pipe() {
+            let id = id.to_str().map_err_trace_exit_unwrap(1);
+            trace!("Writing to {:?}", stdout);
+            let _ = writeln!(stdout, "{}", id)
+                .to_exit_code()
+                .unwrap_or_exit();
+        }
+    })
 }
 
