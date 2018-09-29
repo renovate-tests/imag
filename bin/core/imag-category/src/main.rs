@@ -47,13 +47,10 @@ use libimagerror::exit::ExitUnwrap;
 use libimagerror::io::ToExitCode;
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
-use libimagstore::storeid::IntoStoreId;
 
 mod ui;
 
 use std::io::Write;
-use std::io::Read;
-use std::path::PathBuf;
 
 use libimagentrycategory::store::CategoryStore;
 use libimagstore::storeid::StoreIdIterator;
@@ -93,29 +90,7 @@ fn main() {
 fn set(rt: &Runtime) {
     let scmd = rt.cli().subcommand_matches("set").unwrap(); // safed by main()
     let name = scmd.value_of("set-name").map(String::from).unwrap(); // safed by clap
-    let sids = match scmd.value_of("set-ids") {
-        Some(path) => vec![PathBuf::from(path).into_storeid().map_err_trace_exit_unwrap(1)],
-        None => if rt.cli().is_present("entries-from-stdin") {
-            let stdin = rt.stdin().unwrap_or_else(|| {
-                error!("Cannot get handle to stdin");
-                ::std::process::exit(1)
-            });
-
-            let mut buf = String::new();
-            let _ = stdin.lock().read_to_string(&mut buf).unwrap_or_else(|_| {
-                error!("Failed to read from stdin");
-                ::std::process::exit(1)
-            });
-
-            buf.lines()
-                .map(PathBuf::from)
-                .map(|p| p.into_storeid().map_err_trace_exit_unwrap(1))
-                .collect()
-        } else {
-            error!("Something weird happened. I was not able to find the path of the entries to edit");
-            ::std::process::exit(1)
-        }
-    };
+    let sids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
 
     StoreIdIterator::new(Box::new(sids.into_iter().map(Ok)))
         .into_get_iter(rt.store())
@@ -132,31 +107,7 @@ fn set(rt: &Runtime) {
 }
 
 fn get(rt: &Runtime) {
-    let scmd = rt.cli().subcommand_matches("get").unwrap(); // safed by main()
-    let sids = match scmd.value_of("get-ids") {
-        Some(path) => vec![PathBuf::from(path).into_storeid().map_err_trace_exit_unwrap(1)],
-        None => if rt.cli().is_present("entries-from-stdin") {
-            let stdin = rt.stdin().unwrap_or_else(|| {
-                error!("Cannot get handle to stdin");
-                ::std::process::exit(1)
-            });
-
-            let mut buf = String::new();
-            let _ = stdin.lock().read_to_string(&mut buf).unwrap_or_else(|_| {
-                error!("Failed to read from stdin");
-                ::std::process::exit(1)
-            });
-
-            buf.lines()
-                .map(PathBuf::from)
-                .map(|p| p.into_storeid().map_err_trace_exit_unwrap(1))
-                .collect()
-        } else {
-            error!("Something weird happened. I was not able to find the path of the entries to edit");
-            ::std::process::exit(1)
-        }
-    };
-
+    let sids        = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
     let out         = rt.stdout();
     let mut outlock = out.lock();
 
