@@ -31,7 +31,7 @@ pub fn edit_in_tmpfile_with_command(mut cmd: Command, s: &mut String) -> Result<
     let file_path = file.path();
 
     file.write_all(&s.clone().into_bytes()[..])?;
-    file.sync_data()?;
+    file.as_file().sync_data()?;
 
     debug!("Calling {:?} for {}", cmd, file_path.display());
 
@@ -39,7 +39,8 @@ pub fn edit_in_tmpfile_with_command(mut cmd: Command, s: &mut String) -> Result<
         .status()
         .and_then(|status| {
             if status.success() {
-                file.sync_data()
+                file.as_file()
+                    .sync_data()
                     .and_then(|_| file.seek(SeekFrom::Start(0)))
                     .and_then(|_| {
                         let mut new_s = String::new();
