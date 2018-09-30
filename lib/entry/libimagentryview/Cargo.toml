@@ -23,14 +23,14 @@ maintenance                       = { status     = "actively-developed" }
 log = "0.4.0"
 toml = "0.4"
 error-chain = "0.12"
-textwrap = "0.9"
+textwrap = "0.10"
 
 libimagrt        = { version = "0.9.0", path = "../../../lib/core/libimagrt" }
 libimagstore     = { version = "0.9.0", path = "../../../lib/core/libimagstore" }
 libimagerror     = { version = "0.9.0", path = "../../../lib/core/libimagerror" }
 libimagentryedit = { version = "0.9.0", path = "../../../lib/entry/libimagentryedit" }
 
-mdcat   = { version = "0.8", optional = true }
+mdcat   = { version = "0.10", optional = true }
 failure = { version = "0.1", optional = true }
 
 [dependencies.pulldown-cmark]
