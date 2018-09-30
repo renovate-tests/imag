@@ -35,7 +35,7 @@ error_chain! {
         TomlDe(::toml::de::Error);
         TomlSer(::toml::ser::Error);
         TomlQueryError(::toml_query::error::Error);
-        UuidError(::uuid::ParseError);
+        UuidError(::uuid::parser::ParseError);
     }
 
     errors {
