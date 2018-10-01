@@ -45,7 +45,6 @@ extern crate libimagstore;
 
 use std::io::Write;
 use std::process::exit;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use failure::Error;
@@ -58,7 +57,6 @@ use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::exit::ExitUnwrap;
 use libimagerror::io::ToExitCode;
-use libimagstore::storeid::IntoStoreId;
 
 mod ui;
 
@@ -88,13 +86,6 @@ fn main() {
 }
 
 fn add(rt: &Runtime) {
-    let scmd = rt.cli().subcommand_matches("add").unwrap(); // safed by main()
-
-    let entry_name  = scmd.value_of("entry").unwrap(); // safed by clap
-    let sid         = PathBuf::from(entry_name)
-        .into_storeid()
-        .map_err_trace_exit_unwrap(1);
-
     let c = {
         let parse = |value: &str| -> (i64, i64, i64) {
             debug!("Parsing '{}' into degree, minute and second", value);
@@ -120,6 +111,8 @@ fn add(rt: &Runtime) {
             (*degree, *minute, *second)
         };
 
+        let scmd = rt.cli().subcommand_matches("add").unwrap(); // safed by main()
+
         let long = parse(scmd.value_of("longitude").unwrap()); // unwrap safed by clap
         let lati = parse(scmd.value_of("latitude").unwrap()); // unwrap safed by clap
 
@@ -129,70 +122,78 @@ fn add(rt: &Runtime) {
         Coordinates::new(long, lati)
     };
 
-    rt.store()
-        .get(sid)
+    rt.ids::<::ui::PathProvider>()
         .map_err_trace_exit_unwrap(1)
-        .map(|mut entry| {
-            let _ = entry.set_coordinates(c).map_err_trace_exit_unwrap(1);
-        })
-        .unwrap_or_else(|| {
-            error!("No such entry: {}", entry_name);
-            exit(1)
+        .into_iter()
+        .for_each(|id| {
+            rt.store()
+                .get(id.clone())
+                .map_err_trace_exit_unwrap(1)
+                .unwrap_or_else(|| { // if we have Ok(None)
+                    error!("No such entry: {}", id);
+                    exit(1)
+                })
+                .set_coordinates(c.clone())
+                .map_err_trace_exit_unwrap(1);
         });
 }
 
 fn remove(rt: &Runtime) {
-    let scmd = rt.cli().subcommand_matches("remove").unwrap(); // safed by main()
+    let print_removed = rt
+        .cli()
+        .subcommand_matches("remove")
+        .unwrap()
+        .is_present("print-removed"); // safed by main()
 
-    let entry_name  = scmd.value_of("entry").unwrap(); // safed by clap
-    let sid         = PathBuf::from(entry_name)
-        .into_storeid()
-        .map_err_trace_exit_unwrap(1);
-
-    let removed_value = rt
-        .store()
-        .get(sid)
+    rt.ids::<::ui::PathProvider>()
         .map_err_trace_exit_unwrap(1)
-        .unwrap_or_else(|| { // if we have Ok(None)
-            error!("No such entry: {}", entry_name);
-            exit(1)
-        })
-        .remove_coordinates()
-        .map_err_trace_exit_unwrap(1) // The delete action failed
-        .unwrap_or_else(|| { // if we have Ok(None)
-            error!("Entry had no coordinates: {}", entry_name);
-            exit(1)
-        })
-        .map_err_trace_exit_unwrap(1); // The parsing of the deleted values failed
+        .into_iter()
+        .for_each(|id| {
+            let removed_value = rt
+                .store()
+                .get(id.clone())
+                .map_err_trace_exit_unwrap(1)
+                .unwrap_or_else(|| { // if we have Ok(None)
+                    error!("No such entry: {}", id);
+                    exit(1)
+                })
+                .remove_coordinates()
+                .map_err_trace_exit_unwrap(1) // The delete action failed
+                .unwrap_or_else(|| { // if we have Ok(None)
+                    error!("Entry had no coordinates: {}", id);
+                    exit(1)
+                })
+                .map_err_trace_exit_unwrap(1); // The parsing of the deleted values failed
 
-    if scmd.is_present("print-removed") {
-        let _ = writeln!(rt.stdout(), "{}", removed_value).to_exit_code().unwrap_or_exit();
-    }
+            if print_removed {
+                let _ = writeln!(rt.stdout(), "{}", removed_value).to_exit_code().unwrap_or_exit();
+            }
+        });
 }
 
 fn get(rt: &Runtime) {
-    let scmd = rt.cli().subcommand_matches("get").unwrap(); // safed by main()
-
-    let entry_name  = scmd.value_of("entry").unwrap(); // safed by clap
-    let sid         = PathBuf::from(entry_name)
-        .into_storeid()
-        .map_err_trace_exit_unwrap(1);
-
-    let value = rt
-        .store()
-        .get(sid)
+    let mut stdout = rt.stdout();
+    rt.ids::<::ui::PathProvider>()
         .map_err_trace_exit_unwrap(1)
-        .unwrap_or_else(|| { // if we have Ok(None)
-            error!("No such entry: {}", entry_name);
-            exit(1)
-        })
-        .get_coordinates()
-        .map_err_trace_exit_unwrap(1) // The get action failed
-        .unwrap_or_else(|| { // if we have Ok(None)
-            error!("Entry has no coordinates: {}", entry_name);
-            exit(1)
-        });
+        .into_iter()
+        .for_each(|id| {
+            let value = rt
+                .store()
+                .get(id.clone())
+                .map_err_trace_exit_unwrap(1)
+                .unwrap_or_else(|| { // if we have Ok(None)
+                    error!("No such entry: {}", id);
+                    exit(1)
+                })
+                .get_coordinates()
+                .map_err_trace_exit_unwrap(1) // The get action failed
+                .unwrap_or_else(|| { // if we have Ok(None)
+                    error!("Entry has no coordinates: {}", id);
+                    exit(1)
+                });
 
-    let _       = writeln!(rt.stdout(), "{}", value).to_exit_code().unwrap_or_exit();
+            let _ = writeln!(stdout, "{}", value).to_exit_code().unwrap_or_exit();
+        })
+
 }
 

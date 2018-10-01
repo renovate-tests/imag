@@ -17,7 +17,14 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use clap::{Arg, App, SubCommand};
+use std::path::PathBuf;
+
+use clap::{Arg, ArgMatches, App, SubCommand};
+
+use libimagstore::storeid::IntoStoreId;
+use libimagstore::storeid::StoreId;
+use libimagrt::runtime::IdPathProvider;
+use libimagerror::trace::MapErrTrace;
 
 pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
     app
@@ -42,7 +49,7 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                          .index(1)
                          .takes_value(true)
                          .required(true)
-                         .multiple(false)
+                         .multiple(true)
                          .help("The entry to add the latitude/longitude to")
                          .value_name("ENTRY"))
                     )
@@ -60,7 +67,7 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                      .index(1)
                      .takes_value(true)
                      .required(true)
-                     .multiple(false)
+                     .multiple(true)
                      .help("The entry to remove the latitude/longitude from")
                      .value_name("ENTRY"))
                 )
@@ -72,7 +79,7 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                      .index(1)
                      .takes_value(true)
                      .required(true)
-                     .multiple(false)
+                     .multiple(true)
                      .help("The entry to get the latitude/longitude from")
                      .value_name("ENTRY"))
                 .arg(Arg::with_name("format-json")
@@ -88,4 +95,58 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                      .multiple(false)
                      .help("Print as <key>=<value> pairs (2 lines, default)"))
                 )
+}
+
+pub struct PathProvider;
+impl IdPathProvider for PathProvider {
+    fn get_ids(matches: &ArgMatches) -> Vec<StoreId> {
+        match matches.subcommand() {
+            ("add", Some(subm)) => {
+                subm.values_of("entry")
+                    .ok_or_else(|| {
+                        error!("No StoreId found");
+                        ::std::process::exit(1)
+                    })
+                    .unwrap()
+                    .into_iter()
+                    .map(PathBuf::from)
+                    .map(|pb| pb.into_storeid())
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err_trace_exit_unwrap(1)
+            },
+
+            ("remove", Some(subm)) => {
+                subm.values_of("entry")
+                    .ok_or_else(|| {
+                        error!("No StoreId found");
+                        ::std::process::exit(1)
+                    })
+                    .unwrap()
+                    .into_iter()
+                    .map(PathBuf::from)
+                    .map(|pb| pb.into_storeid())
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err_trace_exit_unwrap(1)
+            },
+
+            ("get", Some(subm)) => {
+                subm.values_of("get-ids")
+                    .ok_or_else(|| {
+                        error!("No StoreId found");
+                        ::std::process::exit(1)
+                    })
+                    .unwrap()
+                    .into_iter()
+                    .map(PathBuf::from)
+                    .map(|pb| pb.into_storeid())
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err_trace_exit_unwrap(1)
+            },
+
+            (other, _) => {
+                    error!("Not a known command: {}", other);
+                    ::std::process::exit(1)
+            }
+        }
+    }
 }
