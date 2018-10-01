@@ -122,5 +122,9 @@ fn show(rt: &Runtime, e: &Entry, re: &Regex, opts: &Options, count: &mut usize) 
         let _ = writeln!(rt.stdout(), "").to_exit_code().unwrap_or_exit();
         *count += 1;
     }
+
+    let _ = rt
+        .report_touched(e.get_location())
+        .map_err_trace_exit_unwrap(1);
 }
 
