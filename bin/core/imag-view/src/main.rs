@@ -58,7 +58,6 @@ use failure::Error;
 use failure::err_msg;
 
 use libimagrt::setup::generate_runtime_setup;
-use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
 use libimagerror::io::ToExitCode;
@@ -66,8 +65,6 @@ use libimagerror::exit::ExitUnwrap;
 use libimagentryview::builtin::stdout::StdoutViewer;
 use libimagentryview::builtin::md::MarkdownViewer;
 use libimagentryview::viewer::Viewer;
-use libimagstore::storeid::IntoStoreId;
-use libimagstore::storeid::StoreIdIterator;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
 use libimagstore::store::FileLockEntry;
 
@@ -83,27 +80,26 @@ fn main() {
 
     let view_header  = rt.cli().is_present("view-header");
     let hide_content = rt.cli().is_present("not-view-content");
-    let entry_ids    = rt.ids::<::ui::PathProvider>()
+    let entries      = rt.ids::<::ui::PathProvider>()
         .map_err_trace_exit_unwrap(1)
         .into_iter()
-        .map(|x| Ok(x) as Result<_, StoreError>)
+        .map(Ok)
         .into_get_iter(rt.store())
         .trace_unwrap_exit(1)
         .map(|e| {
-             e.ok_or_else(|| String::from("Entry not found"))
-                 .map_err(StoreError::from)
+             e.ok_or_else(|| err_msg("Entry not found"))
+                 .map_err(Error::from)
                  .map_err_trace_exit_unwrap(1)
         });
 
     if rt.cli().is_present("in") {
-        let files = entry_ids
-            .into_get_iter(rt.store())
-            .trace_unwrap_exit(1)
-            .map(|e| {
-                 e.ok_or_else(|| err_msg("Entry not found"))
-                     .map_err_trace_exit_unwrap(1)
+        let files = entries
+            .map(|entry| {
+                let tmpfile = create_tempfile_for(&entry, view_header, hide_content);
+                rt.report_touched(entry.get_location())
+                    .map_err_trace_exit_unwrap(1);
+                tmpfile
             })
-            .map(|entry| create_tempfile_for(&entry, view_header, hide_content))
             .collect::<Vec<_>>();
 
         let mut command = {
@@ -178,14 +174,6 @@ fn main() {
 
         drop(files);
     } else {
-        let iter = entry_ids
-            .into_get_iter(rt.store())
-            .map(|e| {
-                 e.map_err_trace_exit_unwrap(1)
-                     .ok_or_else(|| err_msg("Entry not found"))
-                     .map_err_trace_exit_unwrap(1)
-            });
-
         let out         = rt.stdout();
         let mut outlock = out.lock();
 
@@ -206,7 +194,7 @@ fn main() {
             let viewer    = MarkdownViewer::new(&rt);
             let seperator = basesep.map(|s| build_seperator(s, sep_width));
 
-            entry_ids
+            entries
                 .enumerate()
                 .for_each(|(n, entry)| {
                     if n != 0 {
@@ -217,6 +205,9 @@ fn main() {
 
                     viewer
                         .view_entry(&entry, &mut outlock)
+                        .map_err_trace_exit_unwrap(1);
+
+                    rt.report_touched(entry.get_location())
                         .map_err_trace_exit_unwrap(1);
                 });
         } else {
@@ -238,7 +229,7 @@ fn main() {
             }
 
             let seperator = basesep.map(|s| build_seperator(s, sep_width));
-            entry_ids
+            entries
                 .enumerate()
                 .for_each(|(n, entry)| {
                     if n != 0 {
@@ -249,6 +240,9 @@ fn main() {
 
                     viewer
                         .view_entry(&entry, &mut outlock)
+                        .map_err_trace_exit_unwrap(1);
+
+                    rt.report_touched(entry.get_location())
                         .map_err_trace_exit_unwrap(1);
                 });
         }
