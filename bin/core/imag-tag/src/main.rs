@@ -56,9 +56,7 @@ extern crate toml_query;
 #[cfg(test)]
 extern crate env_logger;
 
-use std::path::PathBuf;
 use std::io::Write;
-use std::io::Read;
 
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
@@ -84,30 +82,7 @@ fn main() {
                                     "Direct interface to the store. Use with great care!",
                                     build_ui);
 
-    let ids : Vec<PathBuf> = rt
-        .cli()
-        .values_of("id")
-        .map(|vals| {
-            vals.map(PathBuf::from).collect()
-        }).unwrap_or_else(|| {
-            if !rt.cli().is_present("ids-from-stdin") {
-                error!("No ids");
-                ::std::process::exit(1)
-            }
-
-            let stdin = rt.stdin().unwrap_or_else(|| {
-                error!("Cannot get handle to stdin");
-                ::std::process::exit(1)
-            });
-
-            let mut buf = String::new();
-            let _ = stdin.lock().read_to_string(&mut buf).unwrap_or_else(|_| {
-                error!("Failed to read from stdin");
-                ::std::process::exit(1)
-            });
-
-            buf.lines().map(PathBuf::from).collect()
-        });
+    let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
 
     rt.cli()
         .subcommand_name()
@@ -116,14 +91,12 @@ fn main() {
                 list(id, &rt)
             },
             "remove" => for id in ids {
-                let id = PathBuf::from(id);
                 let add = None;
                 let rem = get_remove_tags(rt.cli());
                 debug!("id = {:?}, add = {:?}, rem = {:?}", id, add, rem);
                 alter(&rt, id, add, rem);
             },
             "add" => for id in ids {
-                let id = PathBuf::from(id);
                 let add = get_add_tags(rt.cli());
                 let rem = None;
                 debug!("id = {:?}, add = {:?}, rem = {:?}", id, add, rem);
@@ -139,10 +112,7 @@ fn main() {
         });
 }
 
-fn alter(rt: &Runtime, id: PathBuf, add: Option<Vec<Tag>>, rem: Option<Vec<Tag>>) {
-    let path = StoreId::new(Some(rt.store().path().clone()), id).map_err_trace_exit_unwrap(1);
-    debug!("path = {:?}", path);
-
+fn alter(rt: &Runtime, path: StoreId, add: Option<Vec<Tag>>, rem: Option<Vec<Tag>>) {
     match rt.store().get(path) {
         Ok(Some(mut e)) => {
             debug!("Entry header now = {:?}", e.get_header());
@@ -186,10 +156,7 @@ fn alter(rt: &Runtime, id: PathBuf, add: Option<Vec<Tag>>, rem: Option<Vec<Tag>>
     }
 }
 
-fn list(id: PathBuf, rt: &Runtime) {
-    let path = StoreId::new(Some(rt.store().path().clone()), id).map_err_trace_exit_unwrap(1);
-    debug!("path = {:?}", path);
-
+fn list(path: StoreId, rt: &Runtime) {
     let entry = match rt.store().get(path.clone()).map_err_trace_exit_unwrap(1) {
         Some(e) => e,
         None => warn_exit("No entry found.", 1),
@@ -330,7 +297,7 @@ mod tests {
         debug!("Add-tags: {:?}", add);
 
         debug!("Altering things");
-        alter(&rt, id.clone(), add, None);
+        alter(&rt, StoreId::new_baseless(id.clone()).unwrap(), add, None);
         debug!("Altered");
 
         let test_entry = rt.store().get(id).unwrap().unwrap();
@@ -365,7 +332,7 @@ mod tests {
         debug!("Rem-tags: {:?}", rem);
 
         debug!("Altering things");
-        alter(&rt, id.clone(), add, rem);
+        alter(&rt, StoreId::new_baseless(id.clone()).unwrap(), add, rem);
         debug!("Altered");
 
         let test_entry = rt.store().get(id).unwrap().unwrap();
@@ -393,7 +360,7 @@ mod tests {
         debug!("Rem-tags: {:?}", rem);
 
         debug!("Altering things");
-        alter(&rt, id.clone(), add, rem);
+        alter(&rt, StoreId::new_baseless(id.clone()).unwrap(), add, rem);
         debug!("Altered");
 
         let test_entry = rt.store().get(id).unwrap().unwrap();
@@ -421,7 +388,7 @@ mod tests {
         debug!("Rem-tags: {:?}", rem);
 
         debug!("Altering things");
-        alter(&rt, id.clone(), add, rem);
+        alter(&rt, StoreId::new_baseless(id.clone()).unwrap(), add, rem);
         debug!("Altered");
 
         let test_entry = rt.store().get(id).unwrap().unwrap();

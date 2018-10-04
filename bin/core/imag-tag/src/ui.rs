@@ -17,8 +17,14 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use clap::{Arg, App, ArgGroup, SubCommand};
+use std::path::PathBuf;
 
+use clap::{Arg, ArgMatches, ArgGroup, App, SubCommand};
+
+use libimagstore::storeid::StoreId;
+use libimagstore::storeid::IntoStoreId;
+use libimagrt::runtime::IdPathProvider;
+use libimagerror::trace::MapErrTrace;
 use libimagentrytag::tag::is_tag;
 
 pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
@@ -29,14 +35,6 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                 .multiple(true)
                 .value_name("ID")
                 .help("Entry to use"))
-
-        .arg(Arg::with_name("ids-from-stdin")
-                .long("ids-from-stdin")
-                .short("I")
-                .takes_value(false)
-                .required(false)
-                .multiple(false)
-                .help("Read store ids to tag from stdin"))
 
         .subcommand(SubCommand::with_name("add")
                    .about("Add tags")
@@ -104,3 +102,14 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                    )
 
 }
+
+pub struct PathProvider;
+impl IdPathProvider for PathProvider {
+    fn get_ids(matches: &ArgMatches) -> Vec<StoreId> {
+        matches.values_of("id")
+            .unwrap()
+            .map(|s| PathBuf::from(s).into_storeid().map_err_trace_exit_unwrap(1))
+            .collect()
+    }
+}
+
