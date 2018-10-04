@@ -30,7 +30,7 @@ libimagstore     = { version = "0.9.0", path = "../../../lib/core/libimagstore" 
 libimagerror     = { version = "0.9.0", path = "../../../lib/core/libimagerror" }
 libimagentryedit = { version = "0.9.0", path = "../../../lib/entry/libimagentryedit" }
 
-mdcat   = { version = "0.10", optional = true }
+mdcat   = { version = "0.8", optional = true }
 failure = { version = "0.1", optional = true }
 
 [dependencies.pulldown-cmark]
