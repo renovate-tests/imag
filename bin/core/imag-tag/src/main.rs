@@ -113,7 +113,7 @@ fn main() {
 }
 
 fn alter(rt: &Runtime, path: StoreId, add: Option<Vec<Tag>>, rem: Option<Vec<Tag>>) {
-    match rt.store().get(path) {
+    match rt.store().get(path.clone()) {
         Ok(Some(mut e)) => {
             debug!("Entry header now = {:?}", e.get_header());
 
@@ -154,6 +154,10 @@ fn alter(rt: &Runtime, path: StoreId, add: Option<Vec<Tag>>, rem: Option<Vec<Tag
             trace_error(&e);
         },
     }
+
+    let _ = rt
+        .report_touched(&path)
+        .map_err_trace_exit_unwrap(1);
 }
 
 fn list(path: StoreId, rt: &Runtime) {
@@ -200,6 +204,10 @@ fn list(path: StoreId, rt: &Runtime) {
             .to_exit_code()
             .unwrap_or_exit();
     }
+
+    let _ = rt
+        .report_touched(&path)
+        .map_err_trace_exit_unwrap(1);
 }
 
 /// Get the tags which should be added from the commandline
