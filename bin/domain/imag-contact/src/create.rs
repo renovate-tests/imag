@@ -93,7 +93,7 @@ pub fn create(rt: &Runtime) {
                 error!("File does exist, cannot create/override");
                 exit(1);
             } else if fl.is_dir() {
-                let uuid = Uuid::new_v4().hyphenated().to_string();
+                let uuid = Uuid::new_v4().to_hyphenated().to_string();
                 fl.push(uuid.clone());
                 fl.set_extension("vcf");
                 info!("Creating file: {:?}", fl);
@@ -144,7 +144,7 @@ pub fn create(rt: &Runtime) {
             (Box::new(file), Some(fl), uuid_string)
         } else {
             // We generate a random uuid for stdout
-            let uuid = Uuid::new_v4().hyphenated().to_string();
+            let uuid = Uuid::new_v4().to_hyphenated().to_string();
             (Box::new(rt.stdout()), None, uuid)
         }
     };

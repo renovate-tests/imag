@@ -28,7 +28,7 @@ is-it-maintained-open-issues      = { repository = "matthiasbeyer/imag" }
 maintenance                       = { status     = "actively-developed" }
 
 [dependencies]
-walkdir = "1"
+walkdir = "2"
 log = "0.4.0"
 toml = "0.4"
 toml-query = "0.7"

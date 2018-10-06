@@ -20,8 +20,8 @@
 use chrono::NaiveDateTime;
 use filters::filter::Filter;
 use prettytable::Table;
-use prettytable::row::Row;
-use prettytable::cell::Cell;
+use prettytable::Row;
+use prettytable::Cell;
 use kairos::parser::Parsed;
 use kairos::parser::parse as kairos_parse;
 use clap::ArgMatches;

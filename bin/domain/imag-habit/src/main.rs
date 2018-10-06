@@ -51,8 +51,8 @@ use std::io::Write;
 use std::process::exit;
 
 use prettytable::Table;
-use prettytable::cell::Cell;
-use prettytable::row::Row;
+use prettytable::Cell;
+use prettytable::Row;
 
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
