@@ -41,6 +41,14 @@ pub fn view(rt: &Runtime) {
             ::std::process::exit(1)
         }));
 
+    let entries = entries.map(|e| {
+        let _ = rt
+            .report_touched(e.get_location())
+            .map_err_trace_exit_unwrap(1);
+
+        e
+    });
+
     let out = rt.stdout();
     DV::new(hdr).view_entries(entries, &mut out.lock())
         .map_err_trace_exit_unwrap(1);

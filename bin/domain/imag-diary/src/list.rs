@@ -54,6 +54,12 @@ pub fn list(rt: &Runtime) {
     ids.into_iter()
         .map(IntoStoreId::into_storeid)
         .trace_unwrap_exit(1)
-        .for_each(|id| writeln!(rt.stdout(), "{}", id).to_exit_code().unwrap_or_exit());
+        .for_each(|id| {
+            let _ = rt
+                .report_touched(&id)
+                .map_err_trace_exit_unwrap(1);
+
+            writeln!(rt.stdout(), "{}", id).to_exit_code().unwrap_or_exit()
+        });
 }
 

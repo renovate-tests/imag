@@ -67,6 +67,10 @@ pub fn delete(rt: &Runtime) {
     }
 
     let _ = rt
+        .report_touched(&to_del_location)
+        .map_err_trace_exit_unwrap(1);
+
+    let _ = rt
         .store()
         .delete(to_del_location)
         .map_err_trace_exit_unwrap(1);
