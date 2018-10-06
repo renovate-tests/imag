@@ -122,6 +122,11 @@ fn list(rt: &Runtime) {
         .trace_unwrap_exit(1)
         .map(|fle| fle.ok_or_else(|| Error::from(err_msg("StoreId not found".to_owned()))))
         .trace_unwrap_exit(1)
+        .map(|fle| {
+            let _ = rt.report_touched(fle.get_location())
+                .map_err_trace_exit_unwrap(1);
+            fle
+        })
         .map(|e| e.deser())
         .trace_unwrap_exit(1)
         .enumerate();
@@ -163,20 +168,29 @@ fn import(rt: &Runtime) {
     }
 
     if path.is_file() {
-        let _ = rt
+        let entry = rt
             .store()
             .retrieve_from_path(&path)
+            .map_err_trace_exit_unwrap(1);
+
+        let _ = rt
+            .report_touched(entry.get_location())
             .map_err_trace_exit_unwrap(1);
     } else if path.is_dir() {
         for entry in WalkDir::new(path).min_depth(1).into_iter() {
             let entry = entry
                 .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1);
+
             if entry.file_type().is_file() {
                 let pb = PathBuf::from(entry.path());
-                let _ = rt
+                let fle = rt
                     .store()
                     .retrieve_from_path(&pb)
+                    .map_err_trace_exit_unwrap(1);
+
+                let _ = rt
+                    .report_touched(fle.get_location())
                     .map_err_trace_exit_unwrap(1);
                 info!("Imported: {}", entry.path().to_str().unwrap_or("<non UTF-8 path>"));
             } else {
@@ -216,6 +230,9 @@ fn show(rt: &Runtime) {
                 .unwrap() // exited above
                 .starts_with(&hash)
             {
+                let _ = rt
+                    .report_touched(entry.get_location())
+                    .map_err_trace_exit_unwrap(1);
                 Some(deser)
             } else {
                 None
@@ -270,6 +287,10 @@ fn find(rt: &Runtime) {
                 || card.fullname().iter().any(|a| str_contains_any(a, &grepstring));
 
             if take {
+                let _ = rt
+                    .report_touched(entry.get_location())
+                    .map_err_trace_exit_unwrap(1);
+
                 // optimization so we don't have to parse again in the next step
                 Some((entry, card))
             } else {
