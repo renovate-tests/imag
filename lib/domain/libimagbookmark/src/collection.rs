@@ -34,6 +34,7 @@ use libimagstore::store::Store;
 use libimagstore::store::Entry;
 use libimagstore::store::FileLockEntry;
 use libimagstore::storeid::IntoStoreId;
+use libimagstore::storeid::StoreId;
 use libimagentrylink::external::ExternalLinker;
 use libimagentrylink::external::iter::UrlIter;
 use libimagentrylink::internal::InternalLinker;
@@ -76,10 +77,10 @@ impl<'a> BookmarkCollectionStore<'a> for Store {
 
 pub trait BookmarkCollection : Sized + InternalLinker + ExternalLinker {
     fn links<'a>(&self, store: &'a Store)                        -> Result<UrlIter<'a>>;
-    fn link_entries(&self)                                   -> Result<Vec<StoreLink>>;
-    fn add_link(&mut self, store: &Store, l: Link)           -> Result<()>;
+    fn link_entries(&self)                                       -> Result<Vec<StoreLink>>;
+    fn add_link(&mut self, store: &Store, l: Link)               -> Result<Vec<StoreId>>;
     fn get_links_matching<'a>(&self, store: &'a Store, r: Regex) -> Result<LinksMatchingRegexIter<'a>>;
-    fn remove_link(&mut self, store: &Store, l: Link)        -> Result<()>;
+    fn remove_link(&mut self, store: &Store, l: Link)            -> Result<Vec<StoreId>>;
 }
 
 impl BookmarkCollection for Entry {
@@ -93,7 +94,7 @@ impl BookmarkCollection for Entry {
         self.get_internal_links().map(|v| v.filter(|id| is_external_link_storeid(id)).collect())
     }
 
-    fn add_link(&mut self, store: &Store, l: Link) -> Result<()> {
+    fn add_link(&mut self, store: &Store, l: Link) -> Result<Vec<StoreId>> {
         use link::IntoUrl;
         l.into_url().and_then(|url| self.add_external_link(store, url))
     }
@@ -103,7 +104,7 @@ impl BookmarkCollection for Entry {
         self.get_external_links(store).map(|iter| iter.matching_regex(r))
     }
 
-    fn remove_link(&mut self, store: &Store, l: Link) -> Result<()> {
+    fn remove_link(&mut self, store: &Store, l: Link) -> Result<Vec<StoreId>> {
         use link::IntoUrl;
         l.into_url().and_then(|url| self.remove_external_link(store, url))
     }

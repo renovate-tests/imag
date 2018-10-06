@@ -108,13 +108,13 @@ pub trait ExternalLinker : InternalLinker {
     fn get_external_links<'a>(&self, store: &'a Store) -> Result<UrlIter<'a>>;
 
     /// Set the external links for the implementor object
-    fn set_external_links(&mut self, store: &Store, links: Vec<Url>) -> Result<()>;
+    fn set_external_links(&mut self, store: &Store, links: Vec<Url>) -> Result<Vec<StoreId>>;
 
     /// Add an external link to the implementor object
-    fn add_external_link(&mut self, store: &Store, link: Url) -> Result<()>;
+    fn add_external_link(&mut self, store: &Store, link: Url) -> Result<Vec<StoreId>>;
 
     /// Remove an external link from the implementor object
-    fn remove_external_link(&mut self, store: &Store, link: Url) -> Result<()>;
+    fn remove_external_link(&mut self, store: &Store, link: Url) -> Result<Vec<StoreId>>;
 
 }
 
@@ -322,13 +322,20 @@ impl ExternalLinker for Entry {
     }
 
     /// Set the external links for the implementor object
-    fn set_external_links(&mut self, store: &Store, links: Vec<Url>) -> Result<()> {
+    ///
+    /// # Return Value
+    ///
+    /// Returns the StoreIds which were newly created for the new external links, if there are more
+    /// external links than before.
+    /// If there are less external links than before, an empty vec![] is returned.
+    ///
+    fn set_external_links(&mut self, store: &Store, links: Vec<Url>) -> Result<Vec<StoreId>> {
         // Take all the links, generate a SHA sum out of each one, filter out the already existing
         // store entries and store the other URIs in the header of one FileLockEntry each, in
         // the path /link/external/<SHA of the URL>
 
         debug!("Iterating {} links = {:?}", links.len(), links);
-        for link in links { // for all links
+        links.into_iter().map(|link| {
             let hash = hex::encode(Sha1::digest(&link.as_str().as_bytes()));
             let file_id =
                 ModuleEntryPath::new(format!("external/{}", hash)).into_storeid()
@@ -340,6 +347,8 @@ impl ExternalLinker for Entry {
             debug!("Link    = '{:?}'", link);
             debug!("Hash    = '{:?}'", hash);
             debug!("StoreId = '{:?}'", file_id);
+
+            let link_already_exists = store.get(file_id.clone())?.is_some();
 
             // retrieve the file from the store, which implicitely creates the entry if it does not
             // exist
@@ -375,13 +384,27 @@ impl ExternalLinker for Entry {
             // then add an internal link to the new file or return an error if this fails
             let _ = self.add_internal_link(file.deref_mut())?;
             debug!("Error adding internal link");
-        }
-        debug!("Ready iterating");
-        Ok(())
+
+            Ok((link_already_exists, file_id))
+        })
+        .filter_map(|res| match res {
+            Ok((exists, entry)) => if exists { Some(Ok(entry)) } else { None },
+            Err(e) => Some(Err(e))
+        })
+        .collect()
     }
 
     /// Add an external link to the implementor object
-    fn add_external_link(&mut self, store: &Store, link: Url) -> Result<()> {
+    ///
+    /// # Return Value
+    ///
+    /// (See ExternalLinker::set_external_links())
+    ///
+    /// Returns the StoreIds which were newly created for the new external links, if there are more
+    /// external links than before.
+    /// If there are less external links than before, an empty vec![] is returned.
+    ///
+    fn add_external_link(&mut self, store: &Store, link: Url) -> Result<Vec<StoreId>> {
         // get external links, add this one, save them
         debug!("Getting links");
         self.get_external_links(store)
@@ -396,7 +419,16 @@ impl ExternalLinker for Entry {
     }
 
     /// Remove an external link from the implementor object
-    fn remove_external_link(&mut self, store: &Store, link: Url) -> Result<()> {
+    ///
+    /// # Return Value
+    ///
+    /// (See ExternalLinker::set_external_links())
+    ///
+    /// Returns the StoreIds which were newly created for the new external links, if there are more
+    /// external links than before.
+    /// If there are less external links than before, an empty vec![] is returned.
+    ///
+    fn remove_external_link(&mut self, store: &Store, link: Url) -> Result<Vec<StoreId>> {
         // get external links, remove this one, save them
         self.get_external_links(store)
             .and_then(|links| {
