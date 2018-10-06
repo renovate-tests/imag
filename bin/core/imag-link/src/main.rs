@@ -147,7 +147,7 @@ fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
 
     for entry in to {
         debug!("Handling 'to' entry: {:?}", entry);
-        if PathBuf::from(entry).exists() {
+        if !rt.store().get(PathBuf::from(entry)).map_err_trace_exit_unwrap(1).is_some() {
             debug!("Linking externally: {:?} -> {:?}", from, entry);
             let url = Url::parse(entry).unwrap_or_else(|e| {
                 error!("Error parsing URL: {:?}", e);
