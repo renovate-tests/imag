@@ -74,29 +74,31 @@ macro_rules! build_subcommand {
 
 // Actually generates the module.
 gen_mods_buildui!(
-    ("../../../bin/core/imag-annotate/src/ui.rs",    imagannotate),
-    ("../../../bin/core/imag-diagnostics/src/ui.rs", imagdiagnostics),
-    ("../../../bin/core/imag-edit/src/ui.rs",        imagedit),
-    ("../../../bin/core/imag-git/src/ui.rs",         imaggit),
-    ("../../../bin/core/imag-gps/src/ui.rs",         imaggps),
-    ("../../../bin/core/imag-grep/src/ui.rs",        imaggrep),
-    ("../../../bin/core/imag-ids/src/ui.rs",         imagids),
-    ("../../../bin/core/imag-init/src/ui.rs",        imaginit),
-    ("../../../bin/core/imag-link/src/ui.rs",        imaglink),
-    ("../../../bin/core/imag-mv/src/ui.rs",          imagmv),
-    ("../../../bin/core/imag-ref/src/ui.rs",         imagref),
-    ("../../../bin/core/imag-store/src/ui.rs",       imagstore),
-    ("../../../bin/core/imag-tag/src/ui.rs",         imagtag),
-    ("../../../bin/core/imag-view/src/ui.rs",        imagview)
-    ("../../../bin/domain/imag-bookmark/src/ui.rs",  imagbookmark),
-    ("../../../bin/domain/imag-contact/src/ui.rs",   imagcontact),
-    ("../../../bin/domain/imag-diary/src/ui.rs",     imagdiary),
-    ("../../../bin/domain/imag-habit/src/ui.rs",     imaghabit),
-    ("../../../bin/domain/imag-log/src/ui.rs",       imaglog),
-    ("../../../bin/domain/imag-mail/src/ui.rs",      imagmail),
-    ("../../../bin/domain/imag-notes/src/ui.rs",     imagnotes),
-    ("../../../bin/domain/imag-timetrack/src/ui.rs", imagtimetrack),
-    ("../../../bin/domain/imag-todo/src/ui.rs",      imagtodo),
+    ("../../../bin/core/imag-annotate/src/ui.rs"    , imagannotate)    ,
+    ("../../../bin/core/imag-category/src/ui.rs"    , imagcategory)    ,
+    ("../../../bin/core/imag-diagnostics/src/ui.rs" , imagdiagnostics) ,
+    ("../../../bin/core/imag-edit/src/ui.rs"        , imagedit)        ,
+    ("../../../bin/core/imag-git/src/ui.rs"         , imaggit)         ,
+    ("../../../bin/core/imag-gps/src/ui.rs"         , imaggps)         ,
+    ("../../../bin/core/imag-grep/src/ui.rs"        , imaggrep)        ,
+    ("../../../bin/core/imag-ids/src/ui.rs"         , imagids)         ,
+    ("../../../bin/core/imag-init/src/ui.rs"        , imaginit)        ,
+    ("../../../bin/core/imag-link/src/ui.rs"        , imaglink)        ,
+    ("../../../bin/core/imag-mv/src/ui.rs"          , imagmv)          ,
+    ("../../../bin/core/imag-ref/src/ui.rs"         , imagref)         ,
+    ("../../../bin/core/imag-store/src/ui.rs"       , imagstore)       ,
+    ("../../../bin/core/imag-tag/src/ui.rs"         , imagtag)         ,
+    ("../../../bin/core/imag-view/src/ui.rs"        , imagview)        ,
+    ("../../../bin/domain/imag-bookmark/src/ui.rs"  , imagbookmark)    ,
+    ("../../../bin/domain/imag-contact/src/ui.rs"   , imagcontact)     ,
+    ("../../../bin/domain/imag-diary/src/ui.rs"     , imagdiary)       ,
+    ("../../../bin/domain/imag-habit/src/ui.rs"     , imaghabit)       ,
+    ("../../../bin/domain/imag-log/src/ui.rs"       , imaglog)         ,
+    ("../../../bin/domain/imag-mail/src/ui.rs"      , imagmail)        ,
+    ("../../../bin/domain/imag-notes/src/ui.rs"     , imagnotes)       ,
+    ("../../../bin/domain/imag-timetrack/src/ui.rs" , imagtimetrack)   ,
+    ("../../../bin/domain/imag-todo/src/ui.rs"      , imagtodo)        ,
+    ("../../../bin/domain/imag-wiki/src/ui.rs"      , imagwiki)        ,
 );
 
 fn main() {
@@ -107,29 +109,31 @@ fn main() {
         &version[..],
         "imag")
         // and add all the subapps as subcommands.
-        .subcommand(build_subcommand!("annotate",    imagannotate,      version))
-        .subcommand(build_subcommand!("diagnostics", imagdiagnostics,   version))
-        .subcommand(build_subcommand!("edit",        imagedit,          version))
-        .subcommand(build_subcommand!("git",         imaggit,           version))
-        .subcommand(build_subcommand!("gps",         imaggps,           version))
-        .subcommand(build_subcommand!("grep",        imaggrep,          version))
-        .subcommand(build_subcommand!("ids",         imagids,           version))
-        .subcommand(build_subcommand!("init",        imaginit,          version))
-        .subcommand(build_subcommand!("link",        imaglink,          version))
-        .subcommand(build_subcommand!("mv",          imagmv,            version))
-        .subcommand(build_subcommand!("ref",         imagref,           version))
-        .subcommand(build_subcommand!("store",       imagstore,         version))
-        .subcommand(build_subcommand!("tag",         imagtag,           version))
-        .subcommand(build_subcommand!("view",        imagview,          version))
-        .subcommand(build_subcommand!("bookmark",    imagbookmark,      version))
-        .subcommand(build_subcommand!("contact",     imagcontact,       version))
-        .subcommand(build_subcommand!("diary",       imagdiary,         version))
-        .subcommand(build_subcommand!("habit",       imaghabit,         version))
-        .subcommand(build_subcommand!("log",         imaglog,           version))
-        .subcommand(build_subcommand!("mail",        imagmail,          version))
-        .subcommand(build_subcommand!("notes",       imagnotes,         version))
-        .subcommand(build_subcommand!("timetrack",   imagtimetrack,     version))
-        .subcommand(build_subcommand!("todo",        imagtodo,          version));
+        .subcommand(build_subcommand!("annotate"    , imagannotate    , version))
+        .subcommand(build_subcommand!("bookmark"    , imagbookmark    , version))
+        .subcommand(build_subcommand!("category"    , imagcategory    , version))
+        .subcommand(build_subcommand!("contact"     , imagcontact     , version))
+        .subcommand(build_subcommand!("diagnostics" , imagdiagnostics , version))
+        .subcommand(build_subcommand!("diary"       , imagdiary       , version))
+        .subcommand(build_subcommand!("edit"        , imagedit        , version))
+        .subcommand(build_subcommand!("git"         , imaggit         , version))
+        .subcommand(build_subcommand!("gps"         , imaggps         , version))
+        .subcommand(build_subcommand!("grep"        , imaggrep        , version))
+        .subcommand(build_subcommand!("habit"       , imaghabit       , version))
+        .subcommand(build_subcommand!("ids"         , imagids         , version))
+        .subcommand(build_subcommand!("init"        , imaginit        , version))
+        .subcommand(build_subcommand!("link"        , imaglink        , version))
+        .subcommand(build_subcommand!("log"         , imaglog         , version))
+        .subcommand(build_subcommand!("mail"        , imagmail        , version))
+        .subcommand(build_subcommand!("mv"          , imagmv          , version))
+        .subcommand(build_subcommand!("notes"       , imagnotes       , version))
+        .subcommand(build_subcommand!("ref"         , imagref         , version))
+        .subcommand(build_subcommand!("store"       , imagstore       , version))
+        .subcommand(build_subcommand!("tag"         , imagtag         , version))
+        .subcommand(build_subcommand!("timetrack"   , imagtimetrack   , version))
+        .subcommand(build_subcommand!("todo"        , imagtodo        , version))
+        .subcommand(build_subcommand!("view"        , imagview        , version))
+        .subcommand(build_subcommand!("wiki"        , imagwiki        , version));
 
     // Actually generates the completion files
     app.gen_completions("imag", Shell::Bash, "../../../target/");
@@ -138,4 +142,5 @@ fn main() {
 
     toplevelbuildscript::build();
 }
+
 
