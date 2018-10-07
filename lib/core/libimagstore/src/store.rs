@@ -222,11 +222,13 @@ impl Store {
 
         debug!("Creating id: '{}'", id);
 
-        let exists = id.exists()? || self.entries
-            .read()
-            .map(|map| map.contains_key(&id))
-            .map_err(|_| Error::from(EM::LockError))
-            .context(format_err!("CreateCallError: {}", id))?;
+        let exists =
+            self.backend.exists(&id.clone().into_pathbuf()?)? ||
+            self.entries
+                .read()
+                .map(|map| map.contains_key(&id))
+                .map_err(|_| Error::from(EM::LockError))
+                .context(format_err!("CreateCallError: {}", id))?;
 
         if exists {
             debug!("Entry exists: {:?}", id);
@@ -304,11 +306,13 @@ impl Store {
 
         debug!("Getting id: '{}'", id);
 
-        let exists = id.exists()? || self.entries
-            .read()
-            .map(|map| map.contains_key(&id))
-            .map_err(|_| Error::from(EM::LockError))
-            .context(format_err!("GetCallError: {}", id))?;
+        let exists =
+            self.backend.exists(&id.clone().into_pathbuf()?)? ||
+            self.entries
+                .read()
+                .map(|map| map.contains_key(&id))
+                .map_err(|_| Error::from(EM::LockError))
+                .context(format_err!("CreateCallError: {}", id))?;
 
         if !exists {
             debug!("Does not exist in internal cache or filesystem: {:?}", id);
