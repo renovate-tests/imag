@@ -170,7 +170,7 @@ fn import(rt: &Runtime) {
     if path.is_file() {
         let _ = rt
             .store()
-            .create_from_path(&path)
+            .retrieve_from_path(&path)
             .map_err_trace_exit_unwrap(1);
     } else if path.is_dir() {
         for entry in WalkDir::new(path).min_depth(1).into_iter() {
@@ -182,7 +182,7 @@ fn import(rt: &Runtime) {
                 let pb = PathBuf::from(entry.path());
                 let _ = rt
                     .store()
-                    .create_from_path(&pb)
+                    .retrieve_from_path(&pb)
                     .map_err_trace_exit_unwrap(1);
                 info!("Imported: {}", entry.path().to_str().unwrap_or("<non UTF-8 path>"));
             } else {
