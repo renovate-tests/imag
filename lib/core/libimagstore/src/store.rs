@@ -229,10 +229,16 @@ impl Store {
 
         debug!("Creating id: '{}'", id);
 
-        let exists = id.exists()? || self.entries
+        let exists = self.entries
             .read()
-            .map(|map| map.contains_key(&id))
             .map_err(|_| SE::from_kind(SEK::LockPoisoned))
+            .map(|map| map.contains_key(&id))
+            .and_then(|exists| if exists {
+                Ok(exists)
+            } else {
+                let pb = id.clone().into_pathbuf().map_err(SE::from)?;
+                self.backend.exists(&pb)
+            })
             .chain_err(|| SEK::CreateCallError(id.clone()))?;
 
         if exists {
@@ -314,10 +320,16 @@ impl Store {
 
         debug!("Getting id: '{}'", id);
 
-        let exists = id.exists()? || self.entries
+        let exists = self.entries
             .read()
-            .map(|map| map.contains_key(&id))
             .map_err(|_| SE::from_kind(SEK::LockPoisoned))
+            .map(|map| map.contains_key(&id))
+            .and_then(|exists| if exists {
+                Ok(exists)
+            } else {
+                let pb = id.clone().into_pathbuf().map_err(SE::from)?;
+                self.backend.exists(&pb)
+            })
             .chain_err(|| SEK::GetCallError(id.clone()))?;
 
         if !exists {
@@ -461,12 +473,7 @@ impl Store {
 
         debug!("Deleting id: '{}'", id);
 
-        // Small optimization: We need the pathbuf for deleting, but when calling
-        // StoreId::exists(), a PathBuf object gets allocated. So we simply get a
-        // PathBuf here, check whether it is there and if it is, we can re-use it to
-        // delete the filesystem file.
         let pb = id.clone().into_pathbuf()?;
-
         {
             let mut entries = self
                 .entries
@@ -1183,8 +1190,8 @@ mod store_tests {
                     assert!(store.create(id.clone()).is_ok());
                 }
 
+                let id_with_base = id.clone().with_base(store.path().clone());
                 {
-                    let id_with_base = id.clone().with_base(store.path().clone());
                     assert!(store.entries.read().unwrap().get(&id_with_base).is_some());
                 }
 
@@ -1196,8 +1203,16 @@ mod store_tests {
                     assert!(store.entries.read().unwrap().get(&id_mv_with_base).is_some());
                 }
 
-                assert!(match store.get(id.clone()) { Ok(None) => true, _ => false },
-                        "Moved id ({:?}) is still there", id);
+                {
+                    let pb = id_with_base.into_pathbuf().unwrap();
+                    let exists = store.backend.exists(&pb).unwrap();
+                    assert!(!exists, "Old entry exists in Filesystem, but shouldn't");
+                }
+
+                let result = store.get(id.clone());
+
+                assert!(match result { Ok(None) => true, _ => false },
+                        "Moved id ({:?}) is still there: {:?}", id, result);
                 assert!(match store.get(id_mv.clone()) { Ok(Some(_)) => true, _ => false },
                         "New id ({:?}) is not in store...", id_mv);
             }

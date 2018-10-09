@@ -96,7 +96,7 @@ macro_rules! make_mock_app {
 
             #[allow(unused)]
             pub fn generate_test_runtime<'a>(mut args: Vec<&'static str>) -> Result<Runtime<'a>, RuntimeError> {
-                let mut cli_args = vec![$appname, "--rtp", "/tmp"];
+                let mut cli_args = vec![$appname];
 
                 cli_args.append(&mut args);
 
