@@ -1,7 +1,7 @@
 { pkgs ? (import <nixpkgs> {}) }:
 
 let
-  env = with pkgs.latest.rustChannels.stable; [
+  env = with pkgs.rustChannels.stable; [
     rust
     cargo
   ];
