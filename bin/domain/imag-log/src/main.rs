@@ -57,6 +57,7 @@ use libimagerror::trace::MapErrTrace;
 use libimagerror::io::ToExitCode;
 use libimagerror::exit::ExitUnwrap;
 use libimagerror::iter::TraceIterator;
+use libimagerror::exit::ExitCode;
 use libimagdiary::diary::Diary;
 use libimaglog::log::Log;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
@@ -156,7 +157,7 @@ fn show(rt: &Runtime) {
             .into_iter()
             .map(|(id, entry)| {
                 debug!("Found entry: {:?}", entry);
-                writeln!(rt.stdout(),
+                let _ = writeln!(rt.stdout(),
                         "{dname: >10} - {y: >4}-{m:0>2}-{d:0>2}T{H:0>2}:{M:0>2} - {text}",
                          dname = id.diary_name(),
                          y = id.year(),
@@ -165,9 +166,14 @@ fn show(rt: &Runtime) {
                          H = id.hour(),
                          M = id.minute(),
                          text = entry.get_content())
-                    .to_exit_code()
+                    .to_exit_code()?;
+
+                let _ = rt
+                    .report_touched(entry.get_location())
+                    .map_err_trace_exit_unwrap(1);
+                Ok(())
             })
-            .collect::<Result<Vec<()>, _>>()
+            .collect::<Result<Vec<()>, ExitCode>>()
             .unwrap_or_exit();
     }
 }
