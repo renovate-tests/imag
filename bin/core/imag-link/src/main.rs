@@ -80,7 +80,7 @@ fn main() {
     let version = make_imag_version!();
     let rt = generate_runtime_setup("imag-link",
                                     &version,
-                                    "Link entries",
+                                    "Add/Remove links between entries",
                                     build_ui);
     if rt.cli().is_present("check-consistency") {
         let exit_code = match rt.store().check_link_consistency() {
