@@ -13,8 +13,7 @@ early 2019. I hope I can continue develop imag during that time, but I cannot
 guarantee that. I hope I can continue development of imag after that and I
 certainly plan to do so.
 
-But from May 2018 until early 2019, expect long response times on issues and
-pull requests.
+But from May 2018 until early 2019, expect long response times.
 
 
 ## Goal / What is imag?
@@ -44,24 +43,14 @@ All subdirectories prefixed with "`libimag"` are libraries.
 All subdirectories prefixed with `"imag-"` are binaries and compiling them will
 give you a commandline application.
 
+
 ### Building
 
 We use `cargo` for building all crates in this repository.
 Make sure to use a recent `cargo`, at least one with workspace support.
 Building all crates works with `cargo build --all`, building individual crates
-by `cd`ing to their directory and calling `cargo build`.
+by specifying the `--manifest-path` flag to cargo.
 
-For building all commandline applications:
-
-```bash
-find bin -maxdepth 3 -name Cargo.toml -exec cargo build --manifest-path {} \;
-```
-
-For building only the core functionality
-
-```bash
-find bin/core -maxdepth 3 -name Cargo.toml -exec cargo build --manifest-path {} \;
-```
 
 ### Running
 
@@ -69,8 +58,10 @@ After you build the module you want to play with, you can simply call the binary
 itself with the `--help` flag, to get some help what the module is capable of.
 
 If you installed the module, you can either call `imag-<modulename>` (if the
-install-directory is in your `$PATH`), or install the `imag` binary to call `imag
-<modulename>` (also if everything is in your `$PATH`).
+install-directory is in your `$PATH`), or install the `imag` binary to call
+`imag <modulename>` (also if everything is in your `$PATH`).
+Call `imag --help` to see which modules are found and can be used.
+Call `imag --versions` to print the versions of all modules.
 
 
 ## Example usage
@@ -91,7 +82,7 @@ imag contact create --file /home/user/contacts/private
 # Add a diary entry
 imag diary -p private create
 
-# Uh, I forgot something in a diary entry, select one and edit it
+# Uh, I forgot something in a diary entry, select one (or multiple) and edit it
 # use the `fzf` tool here (not a part of imag) to select from the IDs
 imag diary -p private list | fzf -m | imag edit -I
 
@@ -105,7 +96,7 @@ imag annotate add contact/bc222298-casf-40a4-bda1-50aa980a68c9 contact-notes
 imag notes create "pineapple"
 
 # Where was that contact again?
-imag grep Eva
+imag grep Eva # also possible with `imag contact find Eva`
 # Okay, we need to add some imag-internal notes to that contact
 imag grep Eva -l | imag edit -I
 
@@ -118,7 +109,7 @@ imag git commit -m 'Commit message'
 ## Staying up-to-date
 
 We have a [official website for imag](https://imag-pim.org), where I post
-[release notes](http://imag-pim.org/releases/) and monthly(ish) updates what's
+[release notes](https://imag-pim.org/releases/) and monthly(ish) updates what's
 happening in the source tree ([RSS here](https://imag-pim.org/index.xml)).
 
 We also have a [mailinglist](https://imag-pim.org/mailinglist/) where I post
@@ -128,7 +119,7 @@ updates and where discussion and questions are encouraged.
 ## Documentation
 
 We have some documentation in [the ./doc subtree](./doc/)
-which can be compiled to PDF or a website.
+which can be compiled to PDF or a website using pandoc.
 It might not be up to date, though.
 Developer documentation for the last release is available
 [on docs.rs](https://docs.rs/releases/search?query=imag).
@@ -137,8 +128,9 @@ Developer documentation for the last release is available
 ## Please contribute!
 
 We are looking for contributors!
-Feel free to open issues for asking questions, suggesting features or other
-things!
+Feel free to open issues (by writing to
+[the mailinglist](https://imag-pim.org/mailinglist/))
+for asking questions, suggesting features or other things!
 
 Also have a look at [the CONTRIBUTING.md file](./CONTRIBUTING.md)!
 
