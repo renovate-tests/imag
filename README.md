@@ -2,12 +2,6 @@
 
 `imag` is a commandline personal information management suite.
 
-[![Build Status](https://travis-ci.org/matthiasbeyer/imag.svg?branch=master)](https://travis-ci.org/matthiasbeyer/imag)
-[![Issue Stats](http://www.issuestats.com/github/matthiasbeyer/imag/badge/pr?style=flat-square)](http://www.issuestats.com/github/matthiasbeyer/imag)
-[![Issue Stats](http://www.issuestats.com/github/matthiasbeyer/imag/badge/issue?style=flat-square)](http://www.issuestats.com/github/matthiasbeyer/imag)
-[![license](https://img.shields.io/github/license/matthiasbeyer/imag.svg?maxAge=2592000?style=flat-square)]()
-[![Tokei](https://tokei.rs/b1/github/matthiasbeyer/imag)](https://github.com/matthiasbeyer/imag)
-
 **This application is in early development. There are _some_ things that work,
 but we do not consider anything stable or usable at this moment. Feel free to
 play around anyways.**
