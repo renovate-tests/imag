@@ -30,6 +30,7 @@ use libimagstore::storeid::StoreIdIteratorWithStore;
 use libimagentrylink::internal::InternalLinker;
 
 use failure::Fallible as Result;
+use failure::Error;
 use failure::err_msg;
 
 pub struct Wiki<'a, 'b>(&'a Store, &'b str);
@@ -54,6 +55,16 @@ impl<'a, 'b> Wiki<'a, 'b> {
         let sid  = ::module_path::ModuleEntryPath::new(path).into_storeid()?;
 
         self.0.create(sid)
+    }
+
+    pub(crate) fn get_index_page(&self) -> Result<FileLockEntry<'a>> {
+        let path = PathBuf::from(format!("{}/index", self.1));
+        let sid  = ::module_path::ModuleEntryPath::new(path).into_storeid()?;
+
+        self.0
+            .get(sid)
+            .map_err(Error::from)?
+            .ok_or_else(|| Error::from(err_msg("Missing index")))
     }
 
     pub fn get_entry<EN: AsRef<str>>(&self, entry_name: EN) -> Result<Option<FileLockEntry<'a>>> {
