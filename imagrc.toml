@@ -349,3 +349,10 @@ default = "default"
 # if this variable is _true_, imag-git will run git in $IMAG_RTP/store
 execute_in_store = false
 
+[ref]
+
+# configuration for imag-ref and ref using tools.
+# The base pathes define the search pathes for libimagentryref
+[ref.basepathes]
+music = "/home/user/music"
+
