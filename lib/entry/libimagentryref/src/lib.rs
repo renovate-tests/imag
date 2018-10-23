@@ -41,41 +41,17 @@
 extern crate itertools;
 extern crate toml;
 extern crate toml_query;
-
-#[macro_use] extern crate libimagstore;
-extern crate libimagerror;
-#[macro_use] extern crate libimagentryutil;
-extern crate failure;
-
-module_entry_path_mod!("ref");
-
-pub mod reference;
-pub mod refstore;
-
-#[cfg(feature  = "generators-sha1")]
+#[macro_use] extern crate serde_derive;
 extern crate sha1;
 
-#[cfg(any(
-    feature = "generators-sha224",
-    feature = "generators-sha256",
-    feature = "generators-sha384",
-    feature = "generators-sha512",
-))]
-extern crate sha2;
+extern crate libimagstore;
+extern crate libimagerror;
+#[macro_use] extern crate libimagentryutil;
+#[macro_use] extern crate failure;
 
-#[cfg(feature  = "generators-sha3")]
-extern crate sha3;
+#[cfg(test)]
+extern crate env_logger;
 
-#[cfg(any(
-    feature = "generators-sha1",
-    feature = "generators-sha224",
-    feature = "generators-sha256",
-    feature = "generators-sha384",
-    feature = "generators-sha512",
-    feature = "generators-sha3",
-))]
-extern crate hex;
-
-#[cfg(feature = "generators")]
-pub mod generators;
+pub mod hasher;
+pub mod reference;
 
