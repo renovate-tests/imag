@@ -132,7 +132,9 @@ impl StoreId {
     ///
     /// This is safe because the
     ///
+    /// ```ignore
     ///     impl<T: fmt::Display + ?Sized> ToString for T
+    /// ```
     ///
     /// does only fail if Display::display() failed. The implementation of ::std::path::Display and
     /// the implementation ::std::fmt::Display for ::std::path::Display do not return errors though.
