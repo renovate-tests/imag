@@ -68,7 +68,7 @@ fn main() {
     let version = make_imag_version!();
     let rt = generate_runtime_setup("imag-ids",
                                     &version,
-                                    "print all ids",
+                                    "Print all ids, optionally filtered with a user-defined filter",
                                     build_ui);
 
     let print_storepath = rt.cli().is_present("print-storepath");

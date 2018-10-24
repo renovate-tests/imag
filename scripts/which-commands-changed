@@ -2,11 +2,22 @@
 
 # Find all imag commands which changed since last install
 
-imag versions   |\
-grep "imag-"    |\
-sed 's,v.*-g,,' |\
+imag versions 2>&1 | \
+grep "imag-"  | \
+sed 's,\ *->.*\ , ,' | \
 while read binary hash; do
-    git diff "$hash..master" --name-only | \
-    grep "$binary" >/dev/null 2>/dev/null && \
-    echo "$binary changed since last install (was $hash)"
+    if [[ "$hash" =~ v.*\..*\..*- ]]; then
+        hash="$(echo "$hash" | sed 's,.*-g,,')"
+    fi
+
+    log="$(git diff --name-only ${hash}..master 2>/dev/null)"
+    if [[ $? -eq 0 ]]; then
+        echo "$log" | \
+        grep "$binary" >/dev/null 2>/dev/null && \
+        echo -e "changed since last install ($hash): $binary"
+    else
+        echo "WARN: Could not check $binary because git hash '$hash' is not present"
+    fi
+
 done
+

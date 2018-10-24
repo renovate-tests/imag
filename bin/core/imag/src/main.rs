@@ -91,7 +91,7 @@ fn help_text(cmds: Vec<String>) -> String {
     Call a command with 'imag <command> <args>'
     Each command can be called with "--help" to get the respective helptext.
 
-    Please visit https://github.com/matthiasbeyer/imag to view the source code,
+    Please visit https://git.imag-pim.org/imag to view the source code,
     follow the development of imag or maybe even contribute to imag.
 
     imag is free software. It is released under the terms of LGPLv2.1

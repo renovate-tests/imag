@@ -128,6 +128,18 @@ impl StoreId {
             .ok_or_else(|| SE::from_kind(SEK::StoreIdHandlingError))
     }
 
+    /// Helper function for creating a displayable String from StoreId
+    ///
+    /// This is safe because the
+    ///
+    ///     impl<T: fmt::Display + ?Sized> ToString for T
+    ///
+    /// does only fail if Display::display() failed. The implementation of ::std::path::Display and
+    /// the implementation ::std::fmt::Display for ::std::path::Display do not return errors though.
+    pub fn local_display_string(&self) -> String {
+        self.local().display().to_string()
+    }
+
     /// Returns the components of the `id` part of the StoreId object.
     ///
     /// Can be used to check whether a StoreId points to an entry in a specific collection of

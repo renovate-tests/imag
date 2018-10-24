@@ -80,7 +80,7 @@ fn main() {
     let version = make_imag_version!();
     let rt = generate_runtime_setup("imag-tag",
                                     &version,
-                                    "Direct interface to the store. Use with great care!",
+                                    "Add and remove tags for entries",
                                     build_ui);
 
     let ids : Vec<PathBuf> = rt

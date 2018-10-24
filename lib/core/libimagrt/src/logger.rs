@@ -174,28 +174,35 @@ impl Log for ImagLogger {
         self.module_settings
             .get(record_target)
             .map(|module_setting| {
+                // We have a module setting some
+                // * Check whether logging is enabled for this module and
+                // * check whether the module logging level is >= or, if there is no module logging
+                // level,
+                // * check whether the global logging level is >= the record level.
                 let set = module_setting.enabled &&
                     module_setting.level.unwrap_or(self.global_loglevel) >= record.level();
 
-                if set {
+                if set { // if we want to log from a setting standpoint
+                    // get the destinations for the module and log to all of them
                     module_setting.destinations.as_ref().map(|destinations| for d in destinations {
-                        // If there's an error, we cannot do anything, can we?
-                        let _ = log_to_destination(&d);
+                        let _ = log_to_destination(&d); // ignore errors, because what else?
                     });
 
+                    // after that, log to the global destinations as well
                     for d in self.global_destinations.iter() {
-                        // If there's an error, we cannot do anything, can we?
-                        let _ = log_to_destination(&d);
+                        let _ = log_to_destination(&d); // ignore errors, because what else?
                     }
                 }
             })
+
+        // if we do not have a setting for the record target
         .unwrap_or_else(|| {
-            if self.global_loglevel >= record.level() {
-                // Yes, we log
-                for d in self.global_destinations.iter() {
-                    // If there's an error, we cannot do anything, can we?
-                    let _ = log_to_destination(&d);
-                }
+            if self.global_loglevel >= record.level() { // if logging is enabled for that level
+                self.global_destinations
+                    .iter()
+                    .for_each(|d| { // log to all global destinations
+                        let _ = log_to_destination(&d); // ignore errors, because what else?
+                    });
             }
         });
     }
@@ -287,14 +294,14 @@ fn translate_destinations(raw: &Vec<Value>) -> Result<Vec<LogDestination>> {
 fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
     -> Result<Vec<LogDestination>>
 {
-
+    let config_log_dest_path = "imag.logging.destinations";
     match config {
         Some(cfg) => cfg
-            .read("imag.logging.destinations")?
+            .read(&config_log_dest_path)?
             .ok_or_else(|| RE::from_kind(EK::GlobalDestinationConfigMissing))?
             .as_array()
             .ok_or_else(|| {
-                let path = "imag.logging.destinations".to_owned();
+                let path = config_log_dest_path.to_owned();
                 let ty   = "Array";
                 RE::from_kind(EK::ConfigTypeError(path, ty))
             })
