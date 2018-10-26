@@ -42,6 +42,20 @@ pub fn is_integer<A: AsRef<str>>(s: A) -> Result<(), String> {
     i.map(|_| ()).map_err(|_| format!("Not an integer: {}", s.as_ref()))
 }
 
+pub fn is_float<A: AsRef<str>>(s: A) -> Result<(), String> {
+    use std::str::FromStr;
+
+    let i : Result<f64, _> = FromStr::from_str(s.as_ref());
+    i.map(|_| ()).map_err(|_| format!("Not an float: {}", s.as_ref()))
+}
+
+pub fn is_bool<A: AsRef<str>>(s: A) -> Result<(), String> {
+    use std::str::FromStr;
+
+    let i : Result<bool, _> = FromStr::from_str(s.as_ref());
+    i.map(|_| ()).map_err(|_| format!("Not an bool: {}", s.as_ref()))
+}
+
 pub fn is_url<A: AsRef<str>>(s: A) -> Result<(), String> {
     use url::Url;
     Url::parse(s.as_ref()).map(|_| ()).map_err(|_| format!("Not a URL: {}", s.as_ref()))
