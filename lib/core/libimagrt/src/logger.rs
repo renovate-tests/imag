@@ -39,6 +39,7 @@ use handlebars::Handlebars;
 type ModuleName = String;
 type Result<T> = ::std::result::Result<T, RE>;
 
+#[derive(Debug)]
 enum LogDestination {
     Stderr,
     File(Arc<Mutex<::std::fs::File>>),
@@ -50,6 +51,7 @@ impl Default for LogDestination {
     }
 }
 
+#[derive(Debug)]
 struct ModuleSettings {
     enabled:        bool,
     level:          Option<Level>,
@@ -106,10 +108,13 @@ impl ImagLogger {
             handlebars.register_template_string("ERROR", fmt)?; // name must be uppercase
         }
 
+        let module_settings = aggregate_module_settings(matches, config)?;
+        eprintln!("Logging: {:?}", module_settings);
+
         Ok(ImagLogger {
             global_loglevel     : aggregate_global_loglevel(matches, config)?,
             global_destinations : aggregate_global_destinations(matches, config)?,
-            module_settings     : aggregate_module_settings(matches, config)?,
+            module_settings     : module_settings,
             handlebars          : handlebars,
         })
     }
@@ -372,7 +377,7 @@ fn aggregate_global_format_error(config: Option<&Value>)
                             config)
 }
 
-fn aggregate_module_settings(_matches: &ArgMatches, config: Option<&Value>)
+fn aggregate_module_settings(matches: &ArgMatches, config: Option<&Value>)
     -> Result<BTreeMap<ModuleName, ModuleSettings>>
 {
     // Helper macro to return the error from Some(Err(_)) and map everything else to an
@@ -407,17 +412,25 @@ fn aggregate_module_settings(_matches: &ArgMatches, config: Option<&Value>)
                             })
                     };
 
-                    let level = inner_try! {
-                        v.read_string("level")?.map(|s| match_log_level_str(&s))
+
+                    let (pre_enabled, level) = if matches.is_present(Runtime::arg_debugging_name()) {
+                        (true, Some(Level::Debug))
+                    } else {
+                        let level = inner_try! {
+                            v.read_string("level")?.map(|s| match_log_level_str(&s))
+                        };
+
+                        (false, level)
                     };
 
-                    let enabled = v.read("enabled")?
-                        .map(|v| v.as_bool().unwrap_or(false))
-                        .ok_or_else(|| {
-                            let path = "imag.logging.modules.<mod>.enabled".to_owned();
-                            let ty = "Boolean";
-                            RE::from_kind(EK::ConfigTypeError(path, ty))
-                        })?;
+                    let enabled = pre_enabled ||
+                        v.read("enabled")?
+                            .map(|v| v.as_bool().unwrap_or(false))
+                            .ok_or_else(|| {
+                                let path = "imag.logging.modules.<mod>.enabled".to_owned();
+                                let ty = "Boolean";
+                                RE::from_kind(EK::ConfigTypeError(path, ty))
+                            })?;
 
                     let module_settings = ModuleSettings {
                         enabled: enabled,
