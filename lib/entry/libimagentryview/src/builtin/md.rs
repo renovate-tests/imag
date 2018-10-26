@@ -22,10 +22,9 @@ use std::io::Write;
 use libimagstore::store::Entry;
 use libimagrt::runtime::Runtime;
 
-use mdcat::{ResourceAccess, Terminal, TerminalSize};
+use mdcat::{AnsiTerminal, ResourceAccess, TerminalSize};
 use pulldown_cmark::Parser;
 use syntect::parsing::SyntaxSet;
-use mdcat;
 
 use viewer::Viewer;
 use failure::Fallible as Result;
@@ -34,7 +33,6 @@ use failure::Error;
 pub struct MarkdownViewer<'a> {
     rt:                 &'a Runtime<'a>,
     resource_access:    ResourceAccess,
-    terminal:           Terminal,
     termsize:           TerminalSize,
 }
 
@@ -43,7 +41,6 @@ impl<'a> MarkdownViewer<'a> {
         MarkdownViewer {
             rt,
             resource_access: ResourceAccess::LocalOnly,
-            terminal:        Terminal::detect(),
             termsize:        TerminalSize::detect().unwrap_or(TerminalSize {
                 width: 80,
                 height: 20,
@@ -60,13 +57,15 @@ impl<'a> Viewer for MarkdownViewer<'a> {
         let base_dir        = self.rt.rtp();
         let syntax_set      = SyntaxSet::load_defaults_newlines();
 
-        mdcat::push_tty(sink,
-                        self.terminal.clone(),
-                        self.termsize.clone(),
-                        parser,
-                        base_dir,
-                        self.resource_access.clone(),
-                        syntax_set)
+        let mut term = AnsiTerminal::new(sink);
+
+        ::mdcat::push_tty(&mut term,
+                          self.termsize.clone(),
+                          parser,
+                          base_dir,
+                          self.resource_access.clone(),
+                          syntax_set)
+        .map_err(|e| e.compat())
         .map_err(Error::from)
     }
 }
