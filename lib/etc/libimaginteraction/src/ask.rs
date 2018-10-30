@@ -24,13 +24,13 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::result::Result as RResult;
 
-use error::InteractionErrorKind;
-use error::ResultExt;
-use error::Result;
-
 use regex::Regex;
 use ansi_term::Colour::*;
 use interactor::*;
+use failure::Error;
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::err_msg;
 
 /// Ask the user for a Yes/No answer. Optionally provide a default value. If none is provided, this
 /// keeps loop{}ing
@@ -163,7 +163,8 @@ fn ask_string_<R: BufRead>(s: &str,
 
 pub fn ask_select_from_list(list: &[&str]) -> Result<String> {
     pick_from_list(default_menu_cmd().as_mut(), list, "Selection: ")
-        .chain_err(|| InteractionErrorKind::Unknown)
+        .context(err_msg("Unknown interaction error"))
+        .map_err(Error::from)
 }
 
 /// Helper function to print a imag question string. The `question` argument may not contain a

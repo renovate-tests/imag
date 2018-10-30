@@ -23,10 +23,8 @@ use clap::{Arg, ArgMatches};
 
 use libimagstore::storeid::StoreId;
 
-use error::InteractionError as IE;
-use error::Result;
-use error::InteractionErrorKind as IEK;
-use error::ResultExt;
+use failure::err_msg;
+use failure::Fallible as Result;
 
 pub fn id_argument<'a, 'b>() -> Arg<'a, 'b> {
     Arg::with_name(id_argument_name())
@@ -52,14 +50,12 @@ pub fn id_argument_long() -> &'static str {
 pub fn get_id(matches: &ArgMatches) -> Result<Vec<StoreId>> {
     matches
         .values_of(id_argument_name())
-        .ok_or(IE::from_kind(IEK::IdMissingError))
-        .chain_err(|| IEK::CLIError)
+        .ok_or(err_msg("CLI error"))
         .and_then(|vals| {
             vals.into_iter()
                 .fold(Ok(vec![]), |acc, elem| {
                     acc.and_then(|mut v| {
-                        let elem = StoreId::new_baseless(PathBuf::from(String::from(elem)));
-                        let elem = elem.chain_err(|| IEK::StoreIdParsingError)?;
+                        let elem = StoreId::new_baseless(PathBuf::from(String::from(elem)))?;
                         v.push(elem);
                         Ok(v)
                     })
@@ -71,11 +67,10 @@ pub fn get_or_select_id(matches: &ArgMatches, store_path: &PathBuf) -> Result<Ve
     use interactor::{pick_file, default_menu_cmd};
 
     get_id(matches)
-        .chain_err(|| IEK::IdSelectingError)
         .or_else(|_| {
             let path = store_path.clone();
-            let p    = pick_file(default_menu_cmd, path).chain_err(|| IEK::IdSelectingError)?;
-            let id   = StoreId::new_baseless(p).chain_err(|| IEK::StoreIdParsingError)?;
+            let p    = pick_file(default_menu_cmd, path)?;
+            let id   = StoreId::new_baseless(p)?;
             Ok(vec![id])
         })
 }
