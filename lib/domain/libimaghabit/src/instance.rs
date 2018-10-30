@@ -20,8 +20,8 @@
 use chrono::NaiveDate;
 use toml::Value;
 use toml_query::set::TomlValueSetExt;
+use failure::Fallible as Result;
 
-use error::*;
 use util::*;
 
 use libimagstore::store::Entry;

@@ -17,13 +17,14 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
+use failure::Error;
+use failure::Fallible as Result;
+
 use libimagstore::storeid::StoreIdIterator;
 use libimagstore::storeid::StoreIdIteratorWithStore;
 use libimagstore::storeid::StoreId;
 
 use util::IsHabitCheck;
-use error::Result;
-use error::HabitError as HE;
 
 pub struct HabitTemplateStoreIdIterator(StoreIdIterator);
 
@@ -36,7 +37,7 @@ impl Iterator for HabitTemplateStoreIdIterator {
                 Ok(n) => if n.is_habit_template() {
                     return Some(Ok(n))
                 },
-                Err(e) => return Some(Err(e).map_err(HE::from)),
+                Err(e) => return Some(Err(e).map_err(Error::from)),
             }
         }
         None
@@ -72,7 +73,7 @@ impl Iterator for HabitInstanceStoreIdIterator {
                 Ok(n) => if n.is_habit_instance() {
                     return Some(Ok(n));
                 },
-                Err(e) => return Some(Err(e).map_err(HE::from)),
+                Err(e) => return Some(Err(e).map_err(Error::from)),
             }
         }
         None

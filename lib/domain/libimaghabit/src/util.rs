@@ -19,13 +19,15 @@
 
 use std::ops::BitXor;
 
-use error::Result;
+use failure::Error;
+use failure::Fallible as Result;
 
 use habit::HabitTemplate;
 use instance::HabitInstance;
 
 use libimagstore::storeid::StoreId;
 use libimagstore::store::Entry;
+use libimagerror::errors::ErrorMsg as EM;
 
 /// Helper trait to check whether a object which can be a habit instance and a habit template is
 /// actually a valid object, whereas "valid" is defined that it is _either_ an instance or a
@@ -81,11 +83,11 @@ impl IsHabitCheck for Entry {
 
 #[inline]
 pub fn get_string_header_from_entry(e: &Entry, path: &'static str) -> Result<String> {
-    use error::HabitErrorKind as HEK;
     use toml_query::read::TomlValueReadTypeExt;
 
     e.get_header()
         .read_string(path)?
-        .ok_or(HEK::HeaderFieldMissing(path).into())
+        .ok_or_else(|| EM::EntryHeaderFieldMissing(path))
+        .map_err(Error::from)
 }
 
