@@ -19,8 +19,9 @@
 
 use libimagstore::iter::Entries;
 use libimagstore::store::Store;
-use libimagstore::store::Result as StoreResult;
 use libimagstore::store::FileLockEntry;
+
+use failure::Fallible as Result;
 
 use constants::*;
 
@@ -33,7 +34,7 @@ impl<'a> TimeTrackingsGetIterator<'a> {
 }
 
 impl<'a> Iterator for TimeTrackingsGetIterator<'a> {
-    type Item = StoreResult<FileLockEntry<'a>>;
+    type Item = Result<FileLockEntry<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.0.next() {

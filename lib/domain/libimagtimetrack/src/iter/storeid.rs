@@ -18,9 +18,10 @@
 //
 
 use chrono::naive::NaiveDateTime as NDT;
+use failure::Fallible as Result;
+use failure::Error;
 
 use constants::*;
-use error::TimeTrackError;
 use iter::tag::TagIter;
 use iter::create::CreateTimeTrackIter;
 
@@ -48,7 +49,7 @@ impl TagStoreIdIter {
 }
 
 impl Iterator for TagStoreIdIter {
-    type Item = Result<(StoreId, NDT), TimeTrackError>;
+    type Item = Result<(StoreId, NDT)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         use module_path::ModuleEntryPath;
@@ -62,7 +63,7 @@ impl Iterator for TagStoreIdIter {
                     let id_str = format!("{}-{}", dt, tag.as_str());
                     ModuleEntryPath::new(id_str)
                         .into_storeid()
-                        .map_err(From::from)
+                        .map_err(Error::from)
                         .map(|id| (id, self.datetime.clone()))
                 })
             })

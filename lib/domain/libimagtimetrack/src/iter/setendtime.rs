@@ -20,9 +20,9 @@
 use toml::Value;
 use toml_query::insert::TomlValueInsertExt;
 use chrono::naive::NaiveDateTime as NDT;
+use failure::Fallible as Result;
 
 use constants::*;
-use error::TimeTrackError as TTE;
 use iter::create::CreateTimeTrackIter;
 
 use libimagstore::store::FileLockEntry;
@@ -43,7 +43,7 @@ impl<'a> SetEndTimeIter<'a>
 }
 
 impl<'a> Iterator for SetEndTimeIter<'a> {
-    type Item = Result<FileLockEntry<'a>, TTE>;
+    type Item = Result<FileLockEntry<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner

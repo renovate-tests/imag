@@ -20,9 +20,10 @@
 use toml::Value;
 use toml_query::insert::TomlValueInsertExt;
 use chrono::naive::NaiveDateTime as NDT;
+use failure::Fallible as Result;
+use failure::Error;
 
 use constants::*;
-use error::TimeTrackError as TTE;
 use iter::storeid::TagStoreIdIter;
 use iter::setendtime::SetEndTimeIter;
 
@@ -50,7 +51,7 @@ impl<'a> CreateTimeTrackIter<'a>
 
 impl<'a> Iterator for CreateTimeTrackIter<'a>
 {
-    type Item = Result<FileLockEntry<'a>, TTE>;
+    type Item = Result<FileLockEntry<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner
@@ -59,7 +60,7 @@ impl<'a> Iterator for CreateTimeTrackIter<'a>
                 res.and_then(|(id, starttime)| {
                     self.store
                         .create(id)
-                        .map_err(From::from)
+                        .map_err(Error::from)
                         .and_then(|mut entry| {
                             let v = Value::String(starttime.format(DATE_TIME_FORMAT).to_string());
                             let _ = entry.get_header_mut().insert(DATE_TIME_START_HEADER_PATH, v)?;
