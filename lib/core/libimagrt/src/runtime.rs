@@ -30,14 +30,16 @@ use toml::Value;
 use toml_query::read::TomlValueReadExt;
 
 use clap::{Arg, ArgMatches};
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 
 use configuration::{fetch_config, override_config, InternalConfiguration};
-use error::RuntimeError;
-use error::RuntimeErrorKind;
-use error::ResultExt;
 use logger::ImagLogger;
 use io::OutputProxy;
 
+use libimagerror::errors::ErrorMsg as EM;
 use libimagerror::trace::*;
 use libimagstore::store::Store;
 use libimagstore::file_abstraction::InMemoryFileAbstraction;
@@ -62,7 +64,7 @@ impl<'a> Runtime<'a> {
     /// and builds the Runtime object with it.
     ///
     /// The cli_app object should be initially build with the ::get_default_cli_builder() function.
-    pub fn new<C>(cli_app: C) -> Result<Runtime<'a>, RuntimeError>
+    pub fn new<C>(cli_app: C) -> Result<Runtime<'a>>
         where C: Clone + CliSpec<'a> + InternalConfiguration
     {
         use libimagerror::trace::trace_error;
@@ -76,17 +78,15 @@ impl<'a> Runtime<'a> {
 
         debug!("Config path = {:?}", configpath);
 
-        let config = match fetch_config(&configpath) {
-            Err(e) => if !is_match!(e.kind(), &RuntimeErrorKind::ConfigNoConfigFileFound) {
-                return Err(e).chain_err(|| RuntimeErrorKind::Instantiate);
-            } else {
-                eprintln!("No config file found.");
-                eprintln!("Maybe try to use 'imag-init' to initialize imag?");
-                eprintln!("Continuing without configuration file");
-                None
+        let config = match fetch_config(&configpath)? {
+            None => {
+                return Err(err_msg("No configuration file found"))
+                    .context(err_msg("Maybe try to use 'imag-init' to initialize imag?"))
+                    .context(err_msg("Continuing without configuration file"))
+                    .context(err_msg("Cannot instantiate runtime"))
+                    .map_err(Error::from);
             },
-
-            Ok(mut config) => {
+            Some(mut config) => {
                 if let Err(e) = override_config(&mut config, get_override_specs(&matches)) {
                     error!("Could not apply config overrides");
                     trace_error(&e);
@@ -102,16 +102,14 @@ impl<'a> Runtime<'a> {
     }
 
     /// Builds the Runtime object using the given `config`.
-    pub fn with_configuration<C>(cli_app: C, config: Option<Value>)
-                                 -> Result<Runtime<'a>, RuntimeError>
+    pub fn with_configuration<C>(cli_app: C, config: Option<Value>) -> Result<Runtime<'a>>
         where C: Clone + CliSpec<'a> + InternalConfiguration
     {
         let matches = cli_app.clone().matches();
         Runtime::_new(cli_app, matches, config)
     }
 
-    fn _new<C>(cli_app: C, matches: ArgMatches<'a>, config: Option<Value>)
-               -> Result<Runtime<'a>, RuntimeError>
+    fn _new<C>(cli_app: C, matches: ArgMatches<'a>, config: Option<Value>) -> Result<Runtime<'a>>
     where C: Clone + CliSpec<'a> + InternalConfiguration
     {
         if cli_app.enable_logging() {
@@ -146,7 +144,8 @@ impl<'a> Runtime<'a> {
                 store: store,
             }
         })
-        .chain_err(|| RuntimeErrorKind::Instantiate)
+        .context(err_msg("Cannot instantiate runtime"))
+        .map_err(Error::from)
     }
 
     ///
@@ -379,7 +378,7 @@ impl<'a> Runtime<'a> {
     }
 
     /// Get a editor command object which can be called to open the $EDITOR
-    pub fn editor(&self) -> Result<Option<Command>, RuntimeError> {
+    pub fn editor(&self) -> Result<Option<Command>> {
         self.cli()
             .value_of("editor")
             .map(String::from)
@@ -391,7 +390,7 @@ impl<'a> Runtime<'a> {
                     })
             })
             .or(env::var("EDITOR").ok())
-            .ok_or_else(|| RuntimeErrorKind::IOError.into())
+            .ok_or_else(|| Error::from(EM::IO))
             .map_dbg(|s| format!("Editing with '{}'", s))
             .and_then(|s| {
                 let mut split = s.split_whitespace();
@@ -401,7 +400,7 @@ impl<'a> Runtime<'a> {
                 }
                 let mut c = Command::new(command.unwrap()); // secured above
                 c.args(split);
-                c.stdin(::std::fs::File::open("/dev/tty")?);
+                c.stdin(::std::fs::File::open("/dev/tty").context(EM::IO)?);
                 c.stderr(::std::process::Stdio::inherit());
                 Ok(Some(c))
             })
@@ -442,8 +441,6 @@ impl<'a> Runtime<'a> {
     /// # Return value
     ///
     /// On success, the exit status object of the `Command` invocation is returned.
-    /// On Error, a RuntimeError object is returned. This is also the case if writing the error
-    /// message does not work.
     ///
     /// # Details
     ///
@@ -457,7 +454,7 @@ impl<'a> Runtime<'a> {
                                                     command: S,
                                                     subcommand: S,
                                                     args: &ArgMatches)
-        -> Result<::std::process::ExitStatus, RuntimeError>
+        -> Result<::std::process::ExitStatus>
     {
         use std::io::Write;
         use std::io::ErrorKind;
@@ -465,8 +462,7 @@ impl<'a> Runtime<'a> {
         let rtp_str = self.rtp()
             .to_str()
             .map(String::from)
-            .ok_or(RuntimeErrorKind::IOError)
-            .map_err(RuntimeError::from_kind)?;
+            .ok_or_else(|| Error::from(EM::IO))?;
 
         let command = format!("{}-{}", command.as_ref(), subcommand.as_ref());
 
@@ -497,7 +493,8 @@ impl<'a> Runtime<'a> {
                 },
                 _ => e,
             })
-            .map_err(RuntimeError::from)
+            .context(EM::IO)
+            .map_err(Error::from)
     }
 }
 
