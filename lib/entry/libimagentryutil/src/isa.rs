@@ -17,8 +17,8 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use error::EntryUtilError as EUE;
-use error::Result;
+use failure::Fallible as Result;
+use failure::Error;
 
 use toml::Value;
 use toml_query::read::TomlValueReadTypeExt;
@@ -41,8 +41,9 @@ use toml_query::insert::TomlValueInsertExt;
 /// # extern crate libimagstore;
 /// # #[macro_use]
 /// # extern crate libimagentryutil;
+/// # extern crate failure;
 ///
-/// # use libimagentryutil::error::Result as Result;
+/// use failure::Fallible as Result;
 /// use libimagentryutil::isa::IsKindHeaderPathProvider;
 /// use libimagentryutil::isa::Is;
 ///
@@ -76,16 +77,16 @@ impl Is for ::libimagstore::store::Entry {
     fn is<T: IsKindHeaderPathProvider>(&self) -> Result<bool> {
         let field = T::kindflag_header_location();
 
-        match self.get_header().read_bool(field)? {
+        match self.get_header().read_bool(field).map_err(Error::from)? {
             Some(b) => Ok(b),
-            None    => Err(format!("Field {} not available", field)).map_err(EUE::from),
+            None    => Err(format_err!("Field {} not available", field)),
         }
     }
 
     fn set_isflag<T: IsKindHeaderPathProvider>(&mut self) -> Result<()> {
         self.get_header_mut()
             .insert(T::kindflag_header_location(), Value::Boolean(true))
-            .map_err(EUE::from)
+            .map_err(Error::from)
             .map(|_| ())
     }
 }
