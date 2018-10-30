@@ -29,9 +29,8 @@ use libimagstore::storeid::StoreId;
 use libimagstore::storeid::StoreIdIteratorWithStore;
 use libimagentrylink::internal::InternalLinker;
 
-use error::WikiError as WE;
-use error::WikiErrorKind as WEK;
-use error::Result;
+use failure::Fallible as Result;
+use failure::err_msg;
 
 pub struct Wiki<'a, 'b>(&'a Store, &'b str);
 
@@ -54,15 +53,13 @@ impl<'a, 'b> Wiki<'a, 'b> {
         let path = PathBuf::from(format!("{}/index", self.1));
         let sid  = ::module_path::ModuleEntryPath::new(path).into_storeid()?;
 
-        self.0
-            .create(sid)
-            .map_err(WE::from)
+        self.0.create(sid)
     }
 
     pub fn get_entry<EN: AsRef<str>>(&self, entry_name: EN) -> Result<Option<FileLockEntry<'a>>> {
         let path  = PathBuf::from(format!("{}/{}", self.1, entry_name.as_ref()));
         let sid   = ::module_path::ModuleEntryPath::new(path).into_storeid()?;
-        self.0.get(sid).map_err(WE::from)
+        self.0.get(sid)
     }
 
     pub fn create_entry<EN: AsRef<str>>(&self, entry_name: EN) -> Result<FileLockEntry<'a>> {
@@ -70,13 +67,10 @@ impl<'a, 'b> Wiki<'a, 'b> {
         let sid       = ::module_path::ModuleEntryPath::new(path).into_storeid()?;
         let mut index = self
             .get_entry("index")?
-            .ok_or_else(|| WEK::MissingIndex.into())
-            .map_err(WE::from_kind)?;
+            .ok_or_else(|| err_msg("Missing index page"))?;
         let mut entry = self.0.create(sid)?;
 
-        entry.add_internal_link(&mut index)
-            .map_err(WE::from)
-            .map(|_| entry)
+        entry.add_internal_link(&mut index).map(|_| entry)
     }
 
     pub fn retrieve_entry<EN: AsRef<str>>(&self, entry_name: EN) -> Result<FileLockEntry<'a>> {
@@ -84,13 +78,10 @@ impl<'a, 'b> Wiki<'a, 'b> {
         let sid       = ::module_path::ModuleEntryPath::new(path).into_storeid()?;
         let mut index = self
             .get_entry("index")?
-            .ok_or_else(|| WEK::MissingIndex.into())
-            .map_err(WE::from_kind)?;
+            .ok_or_else(|| err_msg("Missing index page"))?;
         let mut entry = self.0.retrieve(sid)?;
 
-        entry.add_internal_link(&mut index)
-            .map_err(WE::from)
-            .map(|_| entry)
+        entry.add_internal_link(&mut index).map(|_| entry)
     }
 
     pub fn all_ids(&self) -> Result<WikiIdIterator> {
@@ -101,7 +92,7 @@ impl<'a, 'b> Wiki<'a, 'b> {
     pub fn delete_entry<EN: AsRef<str>>(&self, entry_name: EN) -> Result<()> {
         let path  = PathBuf::from(format!("{}/{}", self.1, entry_name.as_ref()));
         let sid   = ::module_path::ModuleEntryPath::new(path).into_storeid()?;
-        self.0.delete(sid).map_err(WE::from)
+        self.0.delete(sid)
     }
 }
 
@@ -116,7 +107,7 @@ impl<'a> Iterator for WikiIdIterator<'a> {
                 Ok(next) => if self.1.filter(&next) {
                     return Some(Ok(next));
                 },
-                Err(e) => return Some(Err(e).map_err(WE::from)),
+                Err(e) => return Some(Err(e)),
             }
         }
 

@@ -33,14 +33,12 @@
     while_true,
 )]
 
-#[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate toml;
 extern crate toml_query;
 
 extern crate libimagdiary;
 extern crate libimagstore;
 
-pub mod error;
 pub mod log;
 

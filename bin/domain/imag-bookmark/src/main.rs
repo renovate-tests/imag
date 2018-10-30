@@ -36,6 +36,7 @@ extern crate clap;
 #[macro_use] extern crate log;
 extern crate toml;
 extern crate toml_query;
+#[macro_use] extern crate failure;
 
 extern crate libimagbookmark;
 #[macro_use] extern crate libimagrt;
@@ -46,12 +47,12 @@ use std::io::Write;
 use std::process::exit;
 
 use toml_query::read::TomlValueReadTypeExt;
+use failure::Error;
 
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
 use libimagbookmark::collection::BookmarkCollection;
 use libimagbookmark::collection::BookmarkCollectionStore;
-use libimagbookmark::error::BookmarkError as BE;
 use libimagbookmark::link::Link as BookmarkLink;
 use libimagerror::trace::{MapErrTrace, trace_error};
 use libimagerror::io::ToExitCode;
@@ -94,7 +95,7 @@ fn add(rt: &Runtime) {
 
     let mut collection = BookmarkCollectionStore::get(rt.store(), &coll)
         .map_err_trace_exit_unwrap(1)
-        .ok_or(BE::from(format!("No bookmark collection '{}' found", coll)))
+        .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
         .map_err_trace_exit_unwrap(1);
 
     for url in scmd.values_of("urls").unwrap() { // unwrap saved by clap
@@ -135,7 +136,7 @@ fn list(rt: &Runtime) {
 
     let collection = BookmarkCollectionStore::get(rt.store(), &coll)
         .map_err_trace_exit_unwrap(1)
-        .ok_or(BE::from(format!("No bookmark collection '{}' found", coll)))
+        .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
         .map_err_trace_exit_unwrap(1);
 
     let links   = collection.links(rt.store()).map_err_trace_exit_unwrap(1);
@@ -157,7 +158,7 @@ fn remove(rt: &Runtime) {
 
     let mut collection = BookmarkCollectionStore::get(rt.store(), &coll)
         .map_err_trace_exit_unwrap(1)
-        .ok_or(BE::from(format!("No bookmark collection '{}' found", coll)))
+        .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
         .map_err_trace_exit_unwrap(1);
 
     for url in scmd.values_of("urls").unwrap() { // enforced by clap
@@ -182,6 +183,7 @@ fn get_collection_name(rt: &Runtime,
             rt.config()
                 .map(|cfg| {
                     cfg.read_string("bookmark.default_collection")
+                        .map_err(Error::from)
                         .map_err_trace_exit_unwrap(1)
                         .ok_or_else(|| {
                             error!("Missing config: 'bookmark.default_collection'. Set or use commandline to specify.");

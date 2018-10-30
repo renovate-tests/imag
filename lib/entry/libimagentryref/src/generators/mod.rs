@@ -50,24 +50,22 @@ macro_rules! make_unique_ref_path_generator {
     (
         $name:ident
         over $underlying:ty
-        => with error $errtype:ty
         => with collection name $collectionname:expr
     ) => {
         struct $name;
 
         impl $crate::refstore::UniqueRefPathGenerator for $name {
-            type Error = $errtype;
 
             fn collection() -> &'static str {
                 $collectionname
             }
 
-            fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String, Self::Error> {
+            fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String> {
                 $underlying::unique_hash(path)
             }
 
             fn postprocess_storeid(sid: ::libimagstore::storeid::StoreId)
-                -> Result<::libimagstore::storeid::StoreId, Self::Error>
+                -> Result<::libimagstore::storeid::StoreId>
             {
                 Ok(sid)
             }
@@ -77,7 +75,6 @@ macro_rules! make_unique_ref_path_generator {
     (
         $name:ident
         over $underlying:ty
-        => with error $errtype:ty
         => with collection name $collectionname:expr
         => $impl:expr
     ) => {
@@ -90,13 +87,13 @@ macro_rules! make_unique_ref_path_generator {
                 $collectionname
             }
 
-            fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String, Self::Error> {
+            fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String> {
                 debug!("Making unique hash for path: {:?}", path.as_ref());
                 $impl(path)
             }
 
             fn postprocess_storeid(sid: ::libimagstore::storeid::StoreId)
-                -> Result<::libimagstore::storeid::StoreId, Self::Error>
+                -> Result<::libimagstore::storeid::StoreId>
             {
                 Ok(sid)
             }
@@ -106,14 +103,12 @@ macro_rules! make_unique_ref_path_generator {
     (
         pub $name:ident
         over $underlying:ty
-        => with error $errtype:ty
         => with collection name $collectionname:expr
         => $impl:expr
     ) => {
         make_unique_ref_path_generator!(
             pub $name
             over $underlying
-            => with error $errtype
             => with collection name $collectionname
             => $impl => |sid| { Ok(sid) }
             );
@@ -122,7 +117,6 @@ macro_rules! make_unique_ref_path_generator {
     (
         pub $name:ident
         over $underlying:ty
-        => with error $errtype:ty
         => with collection name $collectionname:expr
         => $impl:expr
         => $postproc:expr
@@ -130,19 +124,17 @@ macro_rules! make_unique_ref_path_generator {
         pub struct $name;
 
         impl $crate::refstore::UniqueRefPathGenerator for $name {
-            type Error = $errtype;
-
             fn collection() -> &'static str {
                 $collectionname
             }
 
-            fn unique_hash<A: AsRef<Path>>(path: A) -> ::std::result::Result<String, Self::Error> {
+            fn unique_hash<A: AsRef<Path>>(path: A) -> ::failure::Fallible<String> {
                 debug!("Making unique hash for path: {:?}", path.as_ref());
                 $impl(path)
             }
 
             fn postprocess_storeid(sid: ::libimagstore::storeid::StoreId)
-                -> Result<::libimagstore::storeid::StoreId, Self::Error>
+                -> ::failure::Fallible<::libimagstore::storeid::StoreId>
             {
                 $postproc(sid)
             }
@@ -173,13 +165,10 @@ macro_rules! make_sha_mod {
             use std::fs::OpenOptions;
             use std::io::Read;
 
-            use error::RefError as RE;
-
             use hex;
             make_unique_ref_path_generator! (
                 pub $hashname
                 over generators::base::Base
-                => with error RE
                 => with collection name "ref"
                 => |path| {
                     OpenOptions::new()
@@ -187,7 +176,7 @@ macro_rules! make_sha_mod {
                         .write(false)
                         .create(false)
                         .open(path)
-                        .map_err(RE::from)
+                        .map_err(::failure::Error::from)
                         .and_then(|mut file| {
                             let mut buffer = String::new();
                             let _ = file.read_to_string(&mut buffer)?;
@@ -199,14 +188,14 @@ macro_rules! make_sha_mod {
             impl $hashname {
 
                 /// Function which can be used by a wrapping UniqueRefPathGenerator to hash only N bytes.
-                pub fn hash_n_bytes<A: AsRef<Path>>(path: A, n: usize) -> Result<String, RE> {
+                pub fn hash_n_bytes<A: AsRef<Path>>(path: A, n: usize) -> ::failure::Fallible<String> {
                     debug!("Opening '{}' for hashing", path.as_ref().display());
                     OpenOptions::new()
                         .read(true)
                         .write(false)
                         .create(false)
                         .open(path)
-                        .map_err(RE::from)
+                        .map_err(::failure::Error::from)
                         .and_then(|mut file| {
                             let mut buffer = vec![0; n];
                             debug!("Allocated {} bytes", buffer.capacity());

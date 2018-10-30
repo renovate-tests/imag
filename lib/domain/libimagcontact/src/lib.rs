@@ -36,7 +36,7 @@
 #![recursion_limit="128"]
 
 #[macro_use] extern crate log;
-#[macro_use] extern crate error_chain;
+#[macro_use] extern crate failure;
 extern crate vobject;
 extern crate toml;
 extern crate toml_query;
@@ -51,7 +51,6 @@ extern crate libimagerror;
 module_entry_path_mod!("contact");
 
 pub mod contact;
-pub mod error;
 pub mod iter;
 pub mod store;
 pub mod deser;

@@ -42,14 +42,12 @@ extern crate libimagerror;
 extern crate libimagentrylink;
 extern crate libimagentryref;
 extern crate libimagutil;
-#[macro_use] extern crate error_chain;
+#[macro_use] extern crate failure;
 #[macro_use] extern crate log;
 
 #[cfg(test)]
 extern crate env_logger;
 
-
-pub mod error;
 pub mod html;
 pub mod link;
 pub mod processor;

@@ -35,11 +35,13 @@
 
 #[macro_use] extern crate log;
 extern crate ansi_term;
-extern crate error_chain;
+extern crate failure;
+#[macro_use] extern crate failure_derive;
 
-pub mod io;
+pub mod errors;
 pub mod exit;
-pub mod trace;
+pub mod io;
 pub mod iter;
 pub mod str;
+pub mod trace;
 

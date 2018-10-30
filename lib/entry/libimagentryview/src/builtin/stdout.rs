@@ -24,7 +24,7 @@ use libimagstore::store::Entry;
 use toml::ser::to_string;
 
 use viewer::Viewer;
-use error::Result;
+use failure::Fallible as Result;
 
 pub struct StdoutViewer {
     view_header: bool,

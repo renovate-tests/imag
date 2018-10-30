@@ -23,10 +23,10 @@ use toml_query::insert::TomlValueInsertExt;
 use chrono::NaiveDateTime;
 use chrono::Local;
 use chrono::NaiveDate;
+use failure::Error;
+use failure::Fallible as Result;
+use failure::err_msg;
 
-use error::HabitError as HE;
-use error::HabitErrorKind as HEK;
-use error::*;
 use iter::HabitInstanceStoreIdIterator;
 use util::IsHabitCheck;
 use util::get_string_header_from_entry;
@@ -148,7 +148,7 @@ impl HabitTemplate for Entry {
             match parse(&r)? {
                 Parsed::TimeType(tt) => Ok(tt),
                 Parsed::Iterator(_) => {
-                    Err(format!("'{}' yields an iterator. Cannot use.", r).into())
+                    Err(format_err!("'{}' yields an iterator. Cannot use.", r))
                 },
             }
         };
@@ -166,10 +166,7 @@ impl HabitTemplate for Entry {
                 .calculate()?
                 .get_moment()
                 .map(Clone::clone)
-                .ok_or_else(|| {
-                    let kind : HEK = "until-date seems to have non-date value".to_owned().into();
-                    HE::from_kind(kind)
-                })
+                .ok_or_else(|| Error::from(err_msg("until-date seems to have non-date value")))
         });
 
         debug!("Until-Date is {:?}", basedate);
@@ -192,7 +189,7 @@ impl HabitTemplate for Entry {
                     }
                 }
             } else {
-                return Err("Iterator seems to return bogus values.".to_owned().into());
+                return Err(err_msg("Iterator seems to return bogus values."));
             }
         }
 
@@ -265,7 +262,7 @@ fn instance_id_for_name_and_datestr(habit_name: &String, habit_date: &String) ->
 
     ModuleEntryPath::new(format!("instance/{}-{}", habit_name, habit_date))
         .into_storeid()
-        .map_err(HE::from)
+        .map_err(Error::from)
 }
 
 pub mod builder {
@@ -280,9 +277,10 @@ pub mod builder {
     use libimagentryutil::isa::Is;
     use libimagutil::debug_result::DebugResult;
 
-    use error::HabitError as HE;
-    use error::HabitErrorKind as HEK;
-    use error::*;
+    use failure::Error;
+    use failure::Fallible as Result;
+    use failure::err_msg;
+
     use libimagutil::date::date_to_string;
     use habit::IsHabitTemplate;
 
@@ -324,8 +322,8 @@ pub mod builder {
 
         pub fn build<'a>(self, store: &'a Store) -> Result<FileLockEntry<'a>> {
             #[inline]
-            fn mkerr(s: &'static str) -> HE {
-                HE::from_kind(HEK::HabitBuilderMissing(s))
+            fn mkerr(s: &'static str) -> Error {
+                Error::from(format_err!("Habit builder missing: {}", s))
             }
 
             let name = self.name
@@ -336,21 +334,21 @@ pub mod builder {
                 .ok_or_else(|| mkerr("date"))
                 .map_dbg_str("Success: Date present")?;
 
-            let recur = self.recurspec
+            let recur : String = self.recurspec
                 .ok_or_else(|| mkerr("recurspec"))
                 .map_dbg_str("Success: Recurr spec present")?;
 
             if let Some(until) = self.untildate {
                 debug!("Success: Until-Date present");
                 if dateobj > until {
-                    let e = HE::from_kind(HEK::HabitBuilderLogicError("until-date before start date"));
+                    let e = Error::from(err_msg("Habit builder logic error: until-date before start date"));
                     return Err(e);
                 }
             }
 
-            if let Err(e) = ::kairos::parser::parse(&recur) {
+            if let Err(e) = ::kairos::parser::parse(&recur).map_err(Error::from) {
                 debug!("Kairos failed: {:?}", e);
-                return Err(e).map_err(From::from);
+                return Err(e)
             }
             let date      = date_to_string(&dateobj);
             debug!("Success: Date valid");

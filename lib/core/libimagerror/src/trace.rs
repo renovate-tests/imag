@@ -21,7 +21,7 @@ use std::process::exit;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result as FmtResult;
-use error_chain::ChainedError;
+use failure::Error;
 use ansi_term::Colour::Red;
 
 struct ImagTrace<'a, T: 'a + ?Sized>(&'a T);
@@ -32,32 +32,34 @@ impl<'a, T: 'a + ?Sized> ImagTrace<'a, T> {
     }
 }
 
-impl<'a, T> Display for ImagTrace<'a, T>
-    where T: ChainedError
+impl<'a> Display for ImagTrace<'a, Error>
 {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        try!(writeln!(fmt, "{}: {}", Red.blink().paint("ERROR[   0]"), self.0));
+        let _ = writeln!(fmt, "{}: {}", Red.blink().paint("ERROR[   0]"), self.0)?;
 
-        for (i, e) in self.0.iter().enumerate().skip(1) {
-            try!(writeln!(fmt, "{}: {}", Red.blink().paint(format!("ERROR[{:>4}]", i)), e));
+        {
+            for (i, cause) in self.0.iter_causes().enumerate() {
+                let _ = writeln!(fmt,
+                                 "{prefix}: {error}",
+                                 prefix = Red.blink().paint(format!("ERROR[{:>4}]", i)),
+                                 error = cause)?;
+            }
         }
 
-        if let Some(backtrace) = self.0.backtrace() {
-            try!(writeln!(fmt, "{}", Red.paint("--- BACKTRACE ---")));
-            try!(writeln!(fmt, "{:?}", backtrace));
-        }
+        let _ = writeln!(fmt, "{}", Red.paint("--- BACKTRACE ---"))?;
+        let _ = writeln!(fmt, "{:?}", self.0.backtrace())?;
 
         Ok(())
     }
 }
 
 
-pub fn trace_error<K, C: ChainedError<ErrorKind = K>>(e: &C) {
+pub fn trace_error(e: &Error) {
     eprintln!("{}", ImagTrace::new(e));
 }
 
-pub fn trace_error_dbg<K, C: ChainedError<ErrorKind = K>>(e: &C) {
-    debug!("{}", e.display_chain());
+pub fn trace_error_dbg(e: &Error) {
+    debug!("{}", ImagTrace::new(e));
 }
 
 /// Helper functions for `Result<T, E>` types to reduce overhead in the following situations:
@@ -74,7 +76,7 @@ pub trait MapErrTrace {
     fn map_err_trace_exit_unwrap(self, code: i32) -> Self::Output;
 }
 
-impl<U, K, E: ChainedError<ErrorKind = K>> MapErrTrace for Result<U, E> {
+impl<U> MapErrTrace for Result<U, Error> {
     type Output = U;
 
     /// Simply call `trace_error()` on the Err (if there is one) and return the error.

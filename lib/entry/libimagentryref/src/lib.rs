@@ -43,11 +43,10 @@ extern crate toml_query;
 #[macro_use] extern crate libimagstore;
 extern crate libimagerror;
 #[macro_use] extern crate libimagentryutil;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 module_entry_path_mod!("ref");
 
-pub mod error;
 pub mod reference;
 pub mod refstore;
 

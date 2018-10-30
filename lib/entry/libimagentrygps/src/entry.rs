@@ -17,9 +17,6 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use error::Result;
-use error::GPSErrorKind as GPSEK;
-use error::ResultExt;
 use types::*;
 
 use libimagstore::store::Entry;
@@ -27,6 +24,9 @@ use libimagstore::store::Entry;
 use toml_query::read::TomlValueReadExt;
 use toml_query::insert::TomlValueInsertExt;
 use toml_query::delete::TomlValueDeleteExt;
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::Error;
 
 pub trait GPSEntry {
 
@@ -60,11 +60,11 @@ impl GPSEntry for Entry {
         self.get_header_mut()
             .insert("gps.coordinates", c.into())
             .map(|_| ())
-            .chain_err(|| GPSEK::HeaderWriteError)
+            .map_err(Error::from)
     }
 
     fn get_coordinates(&self) -> Result<Option<Coordinates>> {
-        match self.get_header().read("gps.coordinates").chain_err(|| GPSEK::HeaderWriteError)? {
+        match self.get_header().read("gps.coordinates").map_err(Error::from)?  {
             Some(hdr) => Coordinates::from_value(hdr).map(Some),
             None      => Ok(None),
         }
@@ -88,7 +88,9 @@ impl GPSEntry for Entry {
 
         let hdr = self.get_header_mut();
         for pattern in patterns.iter() {
-            let _ = hdr.delete(pattern).chain_err(|| GPSEK::HeaderWriteError)?;
+            let _ = hdr.delete(pattern)
+                .map_err(Error::from)
+                .context("Error writing header")?;
         }
 
         match coordinates {

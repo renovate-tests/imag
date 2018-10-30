@@ -19,9 +19,8 @@
 
 use chrono::naive::NaiveDateTime;
 
-use error::DateErrorKind as DEK;
-use error::DateError as DE;
-use error::Result;
+use failure::Fallible as Result;
+use failure::err_msg;
 
 /// A Range between two dates
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -40,7 +39,7 @@ impl DateTimeRange {
         if start < end {
             Ok(DateTimeRange(start, end))
         } else {
-            Err(DE::from_kind(DEK::EndDateTimeBeforeStartDateTime))
+            Err(err_msg("End date before start date"))
         }
     }
 

@@ -20,15 +20,16 @@
 use libimagstore::storeid::StoreIdIterator;
 use libimagstore::store::Store;
 use libimagstore::store::FileLockEntry;
+use libimagerror::errors::ErrorMsg as EM;
 
 use toml_query::read::TomlValueReadTypeExt;
 
-use error::Result;
-use error::CategoryError as CE;
-use error::CategoryErrorKind as CEK;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 use store::CATEGORY_REGISTER_NAME_FIELD_PATH;
 use entry::EntryCategory;
-use error::ResultExt;
 
 /// Iterator for Category names
 ///
@@ -61,17 +62,18 @@ impl<'a> Iterator for CategoryNameIter<'a> {
 
         while let Some(sid) = self.1.next() {
             match sid {
-                Err(e) => return Some(Err(e).map_err(CE::from)),
+                Err(e) => return Some(Err(e).map_err(Error::from)),
                 Ok(sid) => {
                     if sid.is_in_collection(&["category"]) {
                         let func = |store: &Store| { // hack for returning Some(Result<_, _>)
                             store
                                 .get(sid)?
-                                .ok_or_else(|| CE::from_kind(CEK::StoreReadError))?
+                                .ok_or_else(|| Error::from(err_msg("Store read error")))?
                                 .get_header()
                                 .read_string(query)
-                                .chain_err(|| CEK::HeaderReadError)?
-                                .ok_or_else(|| CE::from_kind(CEK::StoreReadError))
+                                .map_err(Error::from)
+                                .context(EM::EntryHeaderReadError)?
+                                .ok_or_else(|| Error::from(err_msg("Store read error")))
                         };
 
                     return Some(func(&self.0))
@@ -98,12 +100,12 @@ impl<'a> Iterator for CategoryEntryIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.1.next() {
             match next {
-                Err(e) => return Some(Err(e).map_err(CE::from)),
+                Err(e) => return Some(Err(e).map_err(Error::from)),
                 Ok(next) => {
                     let getter = |next| -> Result<(String, FileLockEntry<'a>)> {
                         let entry = self.0
                             .get(next)?
-                            .ok_or_else(|| CE::from_kind(CEK::StoreReadError))?;
+                            .ok_or_else(|| Error::from(err_msg("Store read error")))?;
                         Ok((entry.get_category()?, entry))
                     };
 

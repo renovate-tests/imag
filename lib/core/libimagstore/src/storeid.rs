@@ -26,10 +26,11 @@ use std::fmt::Error as FmtError;
 use std::result::Result as RResult;
 use std::path::Components;
 
-use error::StoreErrorKind as SEK;
-use error::StoreError as SE;
-use error::ResultExt;
-use store::Result;
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::err_msg;
+use failure::Error;
+
 use store::Store;
 
 use iter::create::StoreCreateIterator;
@@ -64,14 +65,13 @@ impl StoreId {
     ///
     /// Automatically creates a StoreId object which has a `base` set to `store_part` if stripping
     /// the `store_part` from the `full_path` succeeded.
-    ///
-    /// Returns a `StoreErrorKind::StoreIdBuildFromFullPathError` if stripping failes.
     pub fn from_full_path<D>(store_part: &PathBuf, full_path: D) -> Result<StoreId>
         where D: Deref<Target = Path>
     {
         let p = full_path
             .strip_prefix(store_part)
-            .chain_err(|| SEK::StoreIdBuildFromFullPathError)?;
+            .map_err(Error::from)
+            .context(err_msg("Error building Store Id from full path"))?;
         StoreId::new(Some(store_part.clone()), PathBuf::from(p))
     }
 
@@ -79,7 +79,7 @@ impl StoreId {
         debug!("Trying to get a new baseless id from: {:?}", id);
         if id.is_absolute() {
             debug!("Error: Id is absolute!");
-            Err(SE::from_kind(SEK::StoreIdLocalPartAbsoluteError(id)))
+            Err(format_err!("Store Id local part is absolute: {}", id.display()))
         } else {
             debug!("Building Storeid object baseless");
             Ok(StoreId {
@@ -103,7 +103,9 @@ impl StoreId {
     /// specified.
     pub fn into_pathbuf(mut self) -> Result<PathBuf> {
         let base = self.base.take();
-        let mut base = base.ok_or_else(|| SEK::StoreIdHasNoBaseError(self.id.clone()))?;
+        let mut base = base.ok_or_else(|| {
+            format_err!("Store Id has no base: {:?}", self.id.display().to_string())
+        })?;
         base.push(self.id);
         Ok(base)
     }
@@ -125,7 +127,8 @@ impl StoreId {
             .unwrap_or_else(|| self.id.clone())
             .to_str()
             .map(String::from)
-            .ok_or_else(|| SE::from_kind(SEK::StoreIdHandlingError))
+            .ok_or_else(|| err_msg("Store ID Handling error"))
+            .map_err(Error::from)
     }
 
     /// Helper function for creating a displayable String from StoreId
@@ -232,7 +235,7 @@ macro_rules! module_entry_path_mod {
             use std::path::PathBuf;
 
             use $crate::storeid::StoreId;
-            use $crate::store::Result;
+            use failure::Fallible as Result;
 
             /// A Struct giving you the ability to choose store entries assigned
             /// to it.
@@ -313,8 +316,6 @@ impl<'a> Iterator for StoreIdIteratorWithStore<'a> {
     }
 }
 
-use error::StoreError;
-
 impl<'a> StoreIdIteratorWithStore<'a> {
 
     pub fn new(iter: Box<Iterator<Item = Result<StoreId>>>, store: &'a Store) -> Self {
@@ -328,7 +329,7 @@ impl<'a> StoreIdIteratorWithStore<'a> {
     /// Transform the iterator into a StoreCreateIterator
     ///
     /// This immitates the API from `libimagstore::iter`.
-    pub fn into_create_iter(self) -> StoreCreateIterator<'a, StoreError> {
+    pub fn into_create_iter(self) -> StoreCreateIterator<'a> {
         StoreCreateIterator::new(Box::new(self.0), self.1)
     }
 
@@ -336,7 +337,7 @@ impl<'a> StoreIdIteratorWithStore<'a> {
     ///
     ///
     /// This immitates the API from `libimagstore::iter`.
-    pub fn into_delete_iter(self) -> StoreDeleteIterator<'a, StoreError> {
+    pub fn into_delete_iter(self) -> StoreDeleteIterator<'a> {
         StoreDeleteIterator::new(Box::new(self.0), self.1)
     }
 
@@ -344,7 +345,7 @@ impl<'a> StoreIdIteratorWithStore<'a> {
     ///
     ///
     /// This immitates the API from `libimagstore::iter`.
-    pub fn into_get_iter(self) -> StoreGetIterator<'a, StoreError> {
+    pub fn into_get_iter(self) -> StoreGetIterator<'a> {
         StoreGetIterator::new(Box::new(self.0), self.1)
     }
 
@@ -352,7 +353,7 @@ impl<'a> StoreIdIteratorWithStore<'a> {
     ///
     ///
     /// This immitates the API from `libimagstore::iter`.
-    pub fn into_retrieve_iter(self) -> StoreRetrieveIterator<'a, StoreError> {
+    pub fn into_retrieve_iter(self) -> StoreRetrieveIterator<'a> {
         StoreRetrieveIterator::new(Box::new(self.0), self.1)
     }
 
@@ -364,7 +365,6 @@ mod test {
 
     use storeid::StoreId;
     use storeid::IntoStoreId;
-    use error::StoreErrorKind as SEK;
 
     module_entry_path_mod!("test");
 
@@ -444,8 +444,6 @@ mod test {
 
         let pb = id.unwrap().into_pathbuf();
         assert!(pb.is_err());
-
-        assert!(is_match!(pb.unwrap_err().kind(), &SEK::StoreIdHasNoBaseError(_)));
     }
 
     #[test]

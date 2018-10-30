@@ -18,10 +18,10 @@
 //
 
 use chrono::naive::NaiveDateTime as NDT;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 
-use error::TimeTrackError;
-use error::TimeTrackErrorKind as TTEK;
-use error::TimeTrackError as TTE;
 use tag::TimeTrackingTag as TTT;
 use iter::storeid::TagStoreIdIter;
 
@@ -40,7 +40,7 @@ impl TagIter {
 }
 
 impl Iterator for TagIter {
-    type Item = Result<TTT, TimeTrackError>;
+    type Item = Result<TTT>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0
@@ -48,7 +48,7 @@ impl Iterator for TagIter {
             .map(|t| if is_tag_str(&t).is_ok() {
                 Ok(TTT::from(t))
             } else {
-                Err(TTE::from_kind(TTEK::TagFormat))
+                Err(Error::from(err_msg("Error in Tag format")))
             })
     }
 }

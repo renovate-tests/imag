@@ -25,15 +25,15 @@ use libimagstore::storeid::StoreId;
 use libimagstore::storeid::IntoStoreId;
 use libimagstore::store::Entry;
 use libimagstore::store::Store;
-use libimagstore::store::Result as StoreResult;
+use libimagerror::errors::ErrorMsg as EM;
 
 use toml_query::read::TomlValueReadExt;
 use toml_query::insert::TomlValueInsertExt;
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 
-use error::LinkErrorKind as LEK;
-use error::LinkError as LE;
-use error::ResultExt;
-use error::Result;
 use self::iter::LinkIter;
 use self::iter::IntoValues;
 
@@ -101,11 +101,15 @@ impl Link {
     fn to_value(&self) -> Result<Value> {
         match self {
             &Link::Id { link: ref s } =>
-                s.to_str().map(Value::String).chain_err(|| LEK::InternalConversionError),
+                s.to_str()
+                .map(Value::String)
+                .context(EM::ConversionError)
+                .map_err(Error::from),
             &Link::Annotated { ref link, annotation: ref anno } => {
                 link.to_str()
                     .map(Value::String)
-                    .chain_err(|| LEK::InternalConversionError)
+                    .context(EM::ConversionError)
+                    .map_err(Error::from)
                     .map(|link| {
                         let mut tab = BTreeMap::new();
 
@@ -148,7 +152,7 @@ impl Into<StoreId> for Link {
 }
 
 impl IntoStoreId for Link {
-    fn into_storeid(self) -> StoreResult<StoreId> {
+    fn into_storeid(self) -> Result<StoreId> {
         match self {
             Link::Id { link }            => Ok(link),
             Link::Annotated { link, .. } => Ok(link),
@@ -190,15 +194,15 @@ pub mod iter {
     use std::vec::IntoIter;
     use super::Link;
 
-    use error::LinkErrorKind as LEK;
-    use error::ResultExt;
-    use error::Result;
-
+    use failure::Error;
+    use failure::Fallible as Result;
+    use failure::ResultExt;
     use toml::Value;
     use itertools::Itertools;
 
     use libimagstore::store::Store;
     use libimagstore::store::FileLockEntry;
+    use libimagerror::errors::ErrorMsg as EM;
 
     pub struct LinkIter(IntoIter<Link>);
 
@@ -232,7 +236,7 @@ pub mod iter {
                 .unique()
                 .sorted()
                 .into_iter() // Cannot sort toml::Value, hence uglyness here
-                .map(|link| link.to_value().chain_err(|| LEK::InternalConversionError))
+                .map(|link| link.to_value().context(EM::ConversionError).map_err(Error::from))
                 .collect()
         }
     }
@@ -393,7 +397,10 @@ impl InternalLinker for Entry {
         let res = self
             .get_header()
             .read("links.internal")
-            .chain_err(|| LEK::EntryHeaderReadError)
+            .map_err(Error::from)
+            .context(EM::EntryHeaderReadError)
+            .context(EM::EntryHeaderError)
+            .map_err(Error::from)
             .map(|r| r.cloned());
         process_rw_result(res)
     }
@@ -417,19 +424,18 @@ impl InternalLinker for Entry {
         let new_links = LinkIter::new(new_links)
                              .into_values()
                              .into_iter()
-                             .fold(Ok(vec![]), |acc, elem| {
+                             .fold(Ok(vec![]), |acc: Result<Vec<_>>, elem| {
                                 acc.and_then(move |mut v| {
-                                    elem.chain_err(|| LEK::InternalConversionError)
-                                        .map(|e| {
-                                            v.push(e);
-                                            v
-                                        })
+                                    v.push(elem.context(EM::ConversionError)?);
+                                    Ok(v)
                                 })
                             })?;
         let res = self
             .get_header_mut()
             .insert("links.internal", Value::Array(new_links))
-            .chain_err(|| LEK::EntryHeaderReadError);
+            .map_err(Error::from)
+            .context(EM::EntryHeaderReadError)
+            .map_err(Error::from);
         process_rw_result(res)
     }
 
@@ -464,9 +470,9 @@ impl InternalLinker for Entry {
 
     fn unlink(&mut self, store: &Store) -> Result<()> {
         for id in self.get_internal_links()?.map(|l| l.get_store_id().clone()) {
-            match store.get(id).map_err(LE::from)? {
+            match store.get(id).map_err(Error::from)? {
                 Some(mut entry) => self.remove_internal_link(&mut entry)?,
-                None            => return Err(LEK::LinkTargetDoesNotExist.into()),
+                None            => return Err(err_msg("Link target does not exist")),
             }
         }
 
@@ -500,20 +506,19 @@ fn add_internal_link_with_instance(this: &mut Entry, link: &mut Entry, instance:
 fn rewrite_links<I: Iterator<Item = Link>>(header: &mut Value, links: I) -> Result<()> {
     let links = links.into_values()
                      .into_iter()
-                     .fold(Ok(vec![]), |acc, elem| {
+                     .fold(Ok(vec![]), |acc: Result<Vec<_>>, elem| {
                         acc.and_then(move |mut v| {
-                            elem.chain_err(|| LEK::InternalConversionError)
-                                .map(|e| {
-                                    v.push(e);
-                                    v
-                                })
+                            v.push(elem.context(EM::ConversionError)?);
+                            Ok(v)
                         })
                      })?;
 
     debug!("Setting new link array: {:?}", links);
     let process = header
         .insert("links.internal", Value::Array(links))
-        .chain_err(|| LEK::EntryHeaderReadError);
+        .map_err(Error::from)
+        .context(EM::EntryHeaderReadError)
+        .map_err(Error::from);
     process_rw_result(process).map(|_| ())
 }
 
@@ -527,13 +532,10 @@ fn add_foreign_link(target: &mut Entry, from: StoreId) -> Result<()> {
                              .chain(LinkIter::new(vec![from.into()]))
                              .into_values()
                              .into_iter()
-                             .fold(Ok(vec![]), |acc, elem| {
+                             .fold(Ok(vec![]), |acc: Result<Vec<_>>, elem| {
                                 acc.and_then(move |mut v| {
-                                    elem.chain_err(|| LEK::InternalConversionError)
-                                        .map(|e| {
-                                            v.push(e);
-                                            v
-                                        })
+                                    v.push(elem.context(EM::ConversionError)?);
+                                    Ok(v)
                                 })
                              })?;
             debug!("Setting links in {:?}: {:?}", target.get_location(), links);
@@ -541,7 +543,9 @@ fn add_foreign_link(target: &mut Entry, from: StoreId) -> Result<()> {
             let res = target
                 .get_header_mut()
                 .insert("links.internal", Value::Array(links))
-                .chain_err(|| LEK::EntryHeaderReadError);
+                .map_err(Error::from)
+                .context(EM::EntryHeaderReadError)
+                .map_err(Error::from);
 
             process_rw_result(res).map(|_| ())
         })
@@ -553,7 +557,7 @@ fn process_rw_result(links: Result<Option<Value>>) -> Result<LinkIter> {
     let links = match links {
         Err(e) => {
             debug!("RW action on store failed. Generating LinkError");
-            return Err(e).chain_err(|| LEK::EntryHeaderReadError)
+            return Err(e).context(EM::EntryHeaderReadError).map_err(Error::from)
         },
         Ok(None) => {
             debug!("We got no value from the header!");
@@ -562,14 +566,14 @@ fn process_rw_result(links: Result<Option<Value>>) -> Result<LinkIter> {
         Ok(Some(Value::Array(l))) => l,
         Ok(Some(_)) => {
             debug!("We expected an Array for the links, but there was a non-Array!");
-            return Err(LEK::ExistingLinkTypeWrong.into());
+            return Err(err_msg("Link type error"));
         }
     };
 
     if !links.iter().all(|l| is_match!(*l, Value::String(_)) || is_match!(*l, Value::Table(_))) {
         debug!("At least one of the Values which were expected in the Array of links is not a String or a Table!");
         debug!("Generating LinkError");
-        return Err(LEK::ExistingLinkTypeWrong.into());
+        return Err(err_msg("Existing Link type error"));
     }
 
     let links : Vec<Link> = links.into_iter()
@@ -585,13 +589,13 @@ fn process_rw_result(links: Result<Option<Value>>) -> Result<LinkIter> {
                     if !tab.contains_key("link")
                     || !tab.contains_key("annotation") {
                         debug!("Things missing... returning Error instance");
-                        Err(LE::from_kind(LEK::LinkParserError))
+                        Err(err_msg("Link parser error"))
                     } else {
                         let link = tab.remove("link")
-                            .ok_or(LE::from_kind(LEK::LinkParserFieldMissingError))?;
+                            .ok_or(err_msg("Link parser: field missing"))?;
 
                         let anno = tab.remove("annotation")
-                            .ok_or(LE::from_kind(LEK::LinkParserFieldMissingError))?;
+                            .ok_or(err_msg("Link parser: Field missing"))?;
 
                         debug!("Ok, here we go with building a Link::Annotated");
                         match (link, anno) {
@@ -605,7 +609,7 @@ fn process_rw_result(links: Result<Option<Value>>) -> Result<LinkIter> {
                                         }
                                     })
                             },
-                            _ => Err(LE::from_kind(LEK::LinkParserFieldTypeError)),
+                            _ => Err(err_msg("Link parser: Field type error")),
                         }
                     }
                 }
@@ -620,8 +624,11 @@ fn process_rw_result(links: Result<Option<Value>>) -> Result<LinkIter> {
 
 pub mod store_check {
     use libimagstore::store::Store;
-    use error::Result;
-    use error::ResultExt;
+
+    use failure::ResultExt;
+    use failure::Fallible as Result;
+    use failure::Error;
+    use failure::err_msg;
 
     pub trait StoreLinkConsistentExt {
         fn check_link_consistency(&self) -> Result<()>;
@@ -631,9 +638,6 @@ pub mod store_check {
         fn check_link_consistency(&self) -> Result<()> {
             use std::collections::HashMap;
 
-            use error::LinkErrorKind as LEK;
-            use error::LinkError as LE;
-            use error::Result as LResult;
             use internal::InternalLinker;
 
             use libimagstore::storeid::StoreId;
@@ -660,9 +664,7 @@ pub mod store_check {
                     .fold(Ok(HashMap::new()), |map, element| {
                         map.and_then(|mut map| {
                             debug!("Checking element = {:?}", element);
-                            let entry = element?.ok_or_else(|| {
-                                LE::from(String::from("TODO: Not yet handled"))
-                            })?;
+                            let entry = element?.ok_or_else(|| err_msg("TODO: Not yet handled"))?;
 
                             debug!("Checking entry = {:?}", entry.get_location());
 
@@ -687,18 +689,18 @@ pub mod store_check {
             // Helper to check whethre all StoreIds in the network actually exists
             //
             // Because why not?
-            let all_collected_storeids_exist = |network: &HashMap<StoreId, Linking>| -> LResult<()> {
+            let all_collected_storeids_exist = |network: &HashMap<StoreId, Linking>| -> Result<()> {
                 for (id, _) in network.iter() {
                     if is_match!(self.get(id.clone()), Ok(Some(_))) {
                         debug!("Exists in store: {:?}", id);
 
                         if !id.exists()? {
                             warn!("Does exist in store but not on FS: {:?}", id);
-                            return Err(LE::from_kind(LEK::LinkTargetDoesNotExist))
+                            return Err(err_msg("Link target does not exist"))
                         }
                     } else {
                         warn!("Does not exist in store: {:?}", id);
-                        return Err(LE::from_kind(LEK::LinkTargetDoesNotExist))
+                        return Err(err_msg("Link target does not exist"))
                     }
                 }
 
@@ -706,8 +708,10 @@ pub mod store_check {
             };
 
             // Helper function to create a SLCECD::OneDirectionalLink error object
-            let mk_one_directional_link_err = |src: StoreId, target: StoreId| -> LE {
-                LE::from_kind(LEK::DeadLink(src, target))
+            let mk_one_directional_link_err = |src: StoreId, target: StoreId| -> Error {
+                Error::from(format_err!("Dead link: {} -> {}",
+                                        src.local_display_string(),
+                                        target.local_display_string()))
             };
 
             // Helper lambda to check whether the _incoming_ links of each entry actually also
@@ -760,7 +764,8 @@ pub mod store_check {
                 .and_then(|nw| {
                     all_collected_storeids_exist(&nw)
                         .map(|_| nw)
-                        .chain_err(|| LEK::LinkHandlingError)
+                        .context(err_msg("Link handling error"))
+                        .map_err(Error::from)
                 })
                 .and_then(|nw| {
                     for (id, linking) in nw.iter() {

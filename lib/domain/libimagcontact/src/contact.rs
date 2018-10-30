@@ -20,15 +20,15 @@
 use toml::to_string as toml_to_string;
 use toml::from_str as toml_from_str;
 use toml_query::read::TomlValueReadExt;
+use failure::Fallible as Result;
+use failure::Error;
 
 use libimagstore::store::Entry;
 use libimagentryutil::isa::Is;
 use libimagentryutil::isa::IsKindHeaderPathProvider;
+use libimagerror::errors::ErrorMsg as EM;
 
 use deser::DeserVcard;
-use error::Result;
-use error::ContactError as CE;
-use error::ContactErrorKind as CEK;
 
 /// Trait to be implemented on ::libimagstore::store::Entry
 pub trait Contact {
@@ -48,14 +48,14 @@ provide_kindflag_path!(pub IsContact, "contact.is_contact");
 impl Contact for Entry {
 
     fn is_contact(&self) -> Result<bool> {
-        self.is::<IsContact>().map_err(From::from)
+        self.is::<IsContact>()
     }
 
     fn deser(&self) -> Result<DeserVcard> {
         let data = self
             .get_header()
             .read("contact.data")?
-            .ok_or_else(|| CE::from_kind(CEK::HeaderDataMissing("contact.data")))?;
+            .ok_or_else(|| Error::from(EM::EntryHeaderFieldMissing("contact.data")))?;
 
         // ugly hack
         let data_str            = toml_to_string(&data)?;

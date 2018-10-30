@@ -53,7 +53,6 @@ use libimagerror::iter::TraceIterator;
 use libimagstore::storeid::StoreId;
 use libimagstore::store::Store;
 use libimagstore::store::FileLockEntry;
-use libimagstore::error::StoreError;
 use libimagentrylink::internal::InternalLinker;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
 
@@ -93,7 +92,7 @@ fn main() {
             })
             .get_internal_links()
             .map_err_trace_exit_unwrap(1)
-            .map(|link| Ok(link.get_store_id().clone()) as Result<_, StoreError>)
+            .map(|link| Ok(link.get_store_id().clone()) as Result<_, _>)
             .into_get_iter(rt.store())
             .trace_unwrap_exit(1)
             .map(|e| {

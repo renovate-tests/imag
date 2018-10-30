@@ -22,11 +22,12 @@ use toml_query::read::TomlValueReadTypeExt;
 use libimagstore::store::Store;
 use libimagstore::store::FileLockEntry;
 use libimagstore::storeid::StoreIdIterator;
+use libimagerror::errors::ErrorMsg as EM;
 
-use error::Result;
-use error::AnnotationError as AE;
-use error::AnnotationErrorKind as AEK;
-use error::ResultExt;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 
 #[derive(Debug)]
 pub struct AnnotationIter<'a>(StoreIdIterator, &'a Store);
@@ -46,11 +47,20 @@ impl<'a> Iterator for AnnotationIter<'a> {
         loop {
             match self.0.next() {
                 None         => return None, // iterator consumed
-                Some(Err(e)) => return Some(Err(e).map_err(AE::from)),
+                Some(Err(e)) => return Some(Err(e).map_err(Error::from)),
                 Some(Ok(id)) => match self.1.get(id) {
-                    Err(e)          => return Some(Err(e).chain_err(|| AEK::StoreReadError)),
+                    Err(e) => {
+                        return Some(Err(e)
+                                    .context(err_msg("Store read error"))
+                                    .map_err(Error::from))
+                    },
                     Ok(Some(entry)) => {
-                        match entry.get_header().read_bool("annotation.is_annotation").chain_err(|| AEK::HeaderReadError) {
+                        match entry
+                            .get_header()
+                            .read_bool("annotation.is_annotation")
+                            .context(EM::EntryHeaderReadError)
+                            .map_err(Error::from)
+                        {
                             Ok(None)        => continue, // not an annotation
                             Ok(Some(false)) => continue,
                             Ok(Some(true))  => return Some(Ok(entry)),

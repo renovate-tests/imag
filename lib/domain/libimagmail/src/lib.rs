@@ -38,13 +38,12 @@
 #[macro_use] extern crate log;
 extern crate email;
 extern crate filters;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 extern crate libimagerror;
 extern crate libimagstore;
 extern crate libimagentryref;
 
-pub mod error;
 pub mod iter;
 pub mod mail;
 

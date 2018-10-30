@@ -44,11 +44,10 @@ use vobject::write_component;
 use toml_query::read::TomlValueReadExt;
 use toml::Value;
 use uuid::Uuid;
+use failure::Error;
 
 use libimagcontact::store::ContactStore;
-use libimagcontact::error::ContactError as CE;
 use libimagrt::runtime::Runtime;
-use libimagerror::str::ErrFromStr;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::trace::trace_error;
 use libimagutil::warn_result::WarnResult;
@@ -126,8 +125,7 @@ pub fn create(rt: &Runtime) {
                 .create_new(true)
                 .open(fl.clone())
                 .map_warn_err_str("Cannot create/open destination File. Stopping.")
-                .err_from_str()
-                .map_err(CE::from)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1);
 
             let uuid_string = uuid
@@ -161,8 +159,7 @@ pub fn create(rt: &Runtime) {
 
         match ::toml::de::from_str(&template)
             .map(|toml| parse_toml_into_vcard(toml, uuid.clone()))
-            .err_from_str()
-            .map_err(CE::from)
+            .map_err(Error::from)
         {
             Err(e) => {
                 error!("Error parsing template");
@@ -183,7 +180,7 @@ pub fn create(rt: &Runtime) {
                 let vcard_string = write_component(&vcard);
                 let _ = dest
                     .write_all(&vcard_string.as_bytes())
-                    .map_err(CE::from)
+                    .map_err(Error::from)
                     .map_err_trace_exit_unwrap(1);
 
                 break;
@@ -244,7 +241,7 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
     { // parse nicknames
         debug!("Parsing nicknames");
-        match toml.read("nickname").map_err_trace_exit_unwrap(1) {
+        match toml.read("nickname").map_err(Error::from).map_err_trace_exit_unwrap(1) {
             Some(&Value::Array(ref ary)) => {
                 for (i, element) in ary.iter().enumerate() {
                     let nicktype = match read_str_from_toml(element, "type", false) {
@@ -306,7 +303,7 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
     { // parse phone
         debug!("Parse phone");
-        match toml.read("person.phone").map_err_trace_exit_unwrap(1) {
+        match toml.read("person.phone").map_err(Error::from).map_err_trace_exit_unwrap(1) {
             Some(&Value::Array(ref ary)) => {
                 for (i, element) in ary.iter().enumerate() {
                     let phonetype = match read_str_from_toml(element, "type", false) {
@@ -344,7 +341,7 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
     { // parse address
         debug!("Parsing address");
-        match toml.read("addresses").map_err_trace_exit_unwrap(1) {
+        match toml.read("addresses").map_err(Error::from).map_err_trace_exit_unwrap(1) {
             Some(&Value::Array(ref ary)) => {
                 for (i, element) in ary.iter().enumerate() {
                     let adrtype  = match read_str_from_toml(element, "type", false) {
@@ -391,7 +388,7 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
     { // parse email
         debug!("Parsing email");
-        match toml.read("person.email").map_err_trace_exit_unwrap(1) {
+        match toml.read("person.email").map_err(Error::from).map_err_trace_exit_unwrap(1) {
             Some(&Value::Array(ref ary)) => {
                 for (i, element) in ary.iter().enumerate() {
                     let mailtype  = match read_str_from_toml(element, "type", false) {
@@ -456,7 +453,7 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 }
 
 fn read_strary_from_toml(toml: &Value, path: &'static str) -> Option<Vec<String>> {
-    match toml.read(path).map_warn_err_str(&format!("Failed to read value at '{}'", path)) {
+    match toml.read(path).map_err(Error::from).map_warn_err_str(&format!("Failed to read value at '{}'", path)) {
         Ok(Some(&Value::Array(ref vec))) => {
             let mut v = Vec::new();
             for elem in vec {
@@ -486,6 +483,7 @@ fn read_strary_from_toml(toml: &Value, path: &'static str) -> Option<Vec<String>
 
 fn read_str_from_toml(toml: &Value, path: &'static str, must_be_there: bool) -> Option<String> {
     let v = toml.read(path)
+        .map_err(Error::from)
         .map_warn_err_str(&format!("Failed to read value at '{}'", path));
 
     match v {

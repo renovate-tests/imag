@@ -21,9 +21,10 @@ use hoedown::{Markdown, Html as MdHtml};
 use hoedown::renderer::html::Flags as HtmlFlags;
 use hoedown::renderer::Render;
 
-use error::Result;
-use error::MarkdownErrorKind;
-use error::ResultExt;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 
 pub type HTML = String;
 
@@ -33,11 +34,13 @@ pub fn to_html(buffer: &str) -> Result<HTML> {
     html.render(&md)
         .to_str()
         .map(String::from)
-        .chain_err(|| MarkdownErrorKind::MarkdownRenderError)
+        .map_err(Error::from)
+        .context(err_msg("Markdown rendering error"))
+        .map_err(Error::from)
 }
 
 pub mod iter {
-    use error::Result;
+    use failure::Fallible as Result;
     use libimagstore::store::Entry;
     use super::HTML;
     use super::to_html;

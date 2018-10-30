@@ -29,8 +29,9 @@ use libimagerror::exit::ExitUnwrap;
 use libimagutil::debug_result::*;
 use libimagdiary::diaryid::DiaryId;
 use libimagdiary::diaryid::FromStoreId;
-use libimagdiary::error::Result;
 use libimagstore::storeid::IntoStoreId;
+
+use failure::Fallible as Result;
 
 use util::get_diary_name;
 

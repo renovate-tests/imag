@@ -38,7 +38,7 @@ extern crate toml;
 extern crate toml_query;
 extern crate kairos;
 #[macro_use] extern crate log;
-#[macro_use] extern crate error_chain;
+#[macro_use] extern crate failure;
 
 #[macro_use] extern crate libimagstore;
 extern crate libimagerror;
@@ -49,11 +49,9 @@ extern crate libimagutil;
 
 module_entry_path_mod!("habit");
 
-pub mod error;
 pub mod habit;
 pub mod instance;
 pub mod iter;
-pub mod result;
 pub mod store;
 pub mod util;
 

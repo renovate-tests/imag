@@ -24,6 +24,8 @@ use toml::to_string as toml_to_string;
 use toml::from_str as toml_from_str;
 use toml_query::insert::TomlValueInsertExt;
 use vobject::vcard::Vcard;
+use failure::Error;
+use failure::Fallible as Result;
 
 use libimagstore::storeid::IntoStoreId;
 use libimagstore::storeid::StoreId;
@@ -35,9 +37,6 @@ use libimagentryutil::isa::Is;
 use contact::IsContact;
 use deser::DeserVcard;
 use module_path::ModuleEntryPath;
-use error::ContactError as CE;
-use error::ContactErrorKind as CEK;
-use error::Result;
 use util;
 
 pub trait ContactStore<'a> {
@@ -95,10 +94,11 @@ impl<'a> ContactStore<'a> for Store {
 ///
 /// That means calculating the StoreId and the Value from the vcard data
 fn prepare_fetching_from_store(buf: &str) -> Result<(StoreId, Value)> {
-    let vcard = Vcard::build(&buf)?;
+    let vcard = Vcard::build(&buf).map_err(Error::from)?;
     debug!("Parsed: {:?}", vcard);
 
-    let uid = vcard.uid().ok_or_else(|| CE::from_kind(CEK::UidMissing(buf.to_string())))?;
+    let uid = vcard.uid()
+        .ok_or_else(|| Error::from(format_err!("UID Missing: {}", buf.to_string())))?;
 
     let value = { // dirty ugly hack
         let serialized = DeserVcard::from(vcard);

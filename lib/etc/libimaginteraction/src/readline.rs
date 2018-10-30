@@ -17,10 +17,8 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use error::InteractionError as IE;
-use error::InteractionErrorKind as IEK;
-use error::ResultExt;
 
+use failure::ResultExt;
 use toml::Value;
 
 use rustyline::{Config, Editor};
@@ -46,32 +44,32 @@ impl Readline {
             .as_str()
             .map(PathBuf::from)
             .ok_or(IE::from_kind(IEK::ConfigTypeError))
-            .chain_err(|| IEK::ConfigError)
-            .chain_err(|| IEK::ReadlineError)?;
+            .context(IEK::ConfigError)
+            .context(IEK::ReadlineError)?;
 
         let histsize = histsize
             .as_int()
             .ok_or(IE::from_kind(IEK::ConfigTypeError))
-            .chain_err(|| IEK::ConfigError)
-            .chain_err(|| IEK::ReadlineError)?;
+            .context(IEK::ConfigError)
+            .context(IEK::ReadlineError)?;
 
         let histigndups = histigndups
             .as_bool()
             .ok_or(IE::from_kind(IEK::ConfigTypeError))
-            .chain_err(|| IEK::ConfigError)
-            .chain_err(|| IEK::ReadlineError)?;
+            .context(IEK::ConfigError)
+            .context(IEK::ReadlineError)?;
 
         let histignspace = histignspace
             .as_bool()
             .ok_or(IE::from_kind(IEK::ConfigTypeError))
-            .chain_err(|| IEK::ConfigError)
-            .chain_err(|| IEK::ReadlineError)?;
+            .context(IEK::ConfigError)
+            .context(IEK::ReadlineError)?;
 
         let prompt = prompt
             .as_str()
             .ok_or(IE::from_kind(IEK::ConfigTypeError))
-            .chain_err(|| IEK::ConfigError)
-            .chain_err(|| IEK::ReadlineError)?;
+            .context(IEK::ConfigError)
+            .context(IEK::ReadlineError)?;
 
         let config = Config::builder().
             .max_history_size(histsize)
@@ -83,10 +81,10 @@ impl Readline {
 
         if !histfile.exists() {
             let _ = File::create(histfile.clone())
-                         .chain_err(|| IEK::ReadlineHistoryFileCreationError)?;
+                         .context(IEK::ReadlineHistoryFileCreationError)?;
         }
 
-        let _ = editor.load_history(&histfile).chain_err(|| ReadlineError)?;
+        let _ = editor.load_history(&histfile).context(ReadlineError)?;
 
         Ok(Readline {
             editor: editor,

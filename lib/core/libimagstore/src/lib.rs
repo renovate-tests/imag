@@ -44,7 +44,7 @@ extern crate semver;
 extern crate walkdir;
 #[macro_use] extern crate is_match;
 extern crate serde_json;
-#[macro_use] extern crate error_chain;
+#[macro_use] extern crate failure;
 extern crate toml_query;
 
 extern crate libimagerror;
@@ -53,7 +53,6 @@ extern crate libimagutil;
 #[macro_use] mod util;
 
 pub mod storeid;
-pub mod error;
 pub mod iter;
 pub mod store;
 mod configuration;

@@ -20,8 +20,9 @@ is-it-maintained-open-issues      = { repository = "matthiasbeyer/imag" }
 maintenance                       = { status     = "actively-developed" }
 
 [dependencies]
-notify-rust = "3.4.2"
-error-chain = "0.12"
+notify-rust    = "3.4.2"
+failure        = "0.1"
+failure_derive = "0.1"
 
 libimagerror       = { version = "0.9.0", path = "../../../lib/core/libimagerror" }
 

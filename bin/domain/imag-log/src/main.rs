@@ -38,6 +38,7 @@ extern crate clap;
 extern crate toml;
 extern crate toml_query;
 extern crate itertools;
+extern crate failure;
 
 extern crate libimaglog;
 #[macro_use] extern crate libimagrt;
@@ -47,6 +48,9 @@ extern crate libimagdiary;
 
 use std::io::Write;
 
+use failure::Error;
+use failure::err_msg;
+
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
 use libimagerror::trace::MapErrTrace;
@@ -55,7 +59,6 @@ use libimagerror::exit::ExitUnwrap;
 use libimagerror::iter::TraceIterator;
 use libimagdiary::diary::Diary;
 use libimaglog::log::Log;
-use libimaglog::error::LogError as LE;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
 
 mod ui;
@@ -175,16 +178,17 @@ fn get_diary_name(rt: &Runtime) -> String {
 
     let cfg = rt
         .config()
-        .ok_or(LE::from("Configuration not present, cannot continue"))
+        .ok_or_else(|| Error::from(err_msg("Configuration not present, cannot continue")))
         .map_err_trace_exit_unwrap(1);
 
     let logs = cfg
         .read("log.logs")
+        .map_err(Error::from)
         .map_err_trace_exit_unwrap(1)
-        .ok_or(LE::from("Configuration missing: 'log.logs'"))
+        .ok_or_else(|| Error::from(err_msg("Configuration missing: 'log.logs'")))
         .map_err_trace_exit_unwrap(1)
         .as_array()
-        .ok_or(LE::from("Configuration 'log.logs' is not an Array"))
+        .ok_or_else(|| Error::from(err_msg("Configuration 'log.logs' is not an Array")))
         .map_err_trace_exit_unwrap(1);
 
     if !logs.iter().all(|e| is_match!(e, &Value::String(_))) {
@@ -201,8 +205,9 @@ fn get_diary_name(rt: &Runtime) -> String {
 
     let current_log = cfg
         .read_string("log.default")
+        .map_err(Error::from)
         .map_err_trace_exit_unwrap(1)
-        .ok_or(LE::from("Configuration missing: 'log.default'"))
+        .ok_or_else(|| Error::from(err_msg("Configuration missing: 'log.default'")))
         .map_err_trace_exit_unwrap(1);
 
     if !logs.contains(&current_log) {

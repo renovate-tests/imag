@@ -21,8 +21,10 @@ use std::fmt::Display;
 use std::fmt::Error as FmtError;
 use std::fmt::Formatter;
 use std::path::PathBuf;
+use std::result::Result as RResult;
 
-use libimagstore::store::Result as StoreResult;
+use failure::Fallible as Result;
+
 use libimagstore::storeid::IntoStoreId;
 use libimagstore::storeid::StoreId;
 
@@ -38,7 +40,7 @@ impl TimeTrackingTag {
 }
 
 impl Display for TimeTrackingTag {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
+    fn fmt(&self, f: &mut Formatter) -> RResult<(), FmtError> {
         self.0.fmt(f)
     }
 }
@@ -62,7 +64,7 @@ impl<'a> From<&'a String> for TimeTrackingTag {
 }
 
 impl IntoStoreId for TimeTrackingTag {
-    fn into_storeid(self) -> StoreResult<StoreId> {
+    fn into_storeid(self) -> Result<StoreId> {
         StoreId::new_baseless(PathBuf::from(self.0))
     }
 }

@@ -40,7 +40,7 @@ extern crate chrono;
 extern crate toml;
 extern crate toml_query;
 extern crate itertools;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 extern crate filters;
 
 #[macro_use] extern crate libimagstore;
@@ -53,7 +53,6 @@ extern crate libimagrt;
 module_entry_path_mod!("diary");
 
 pub mod config;
-pub mod error;
 pub mod diaryid;
 pub mod diary;
 pub mod is_in_diary;

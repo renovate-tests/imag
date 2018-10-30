@@ -20,8 +20,7 @@
 use libimagstore::storeid::StoreIdIterator;
 use libimagstore::storeid::StoreId;
 
-use error::Result;
-use error::TodoError as TE;
+use failure::Fallible as Result;
 
 pub struct TaskIdIterator(StoreIdIterator);
 
@@ -40,7 +39,7 @@ impl Iterator for TaskIdIterator {
         loop {
             match self.0.next() {
                 None    => return None,
-                Some(Err(e)) => return Some(Err(e).map_err(TE::from)),
+                Some(Err(e)) => return Some(Err(e)),
                 Some(Ok(n)) => if n.is_in_collection(&["todo", "taskwarrior"]) {
                     return Some(Ok(n))
                 }, // else continue

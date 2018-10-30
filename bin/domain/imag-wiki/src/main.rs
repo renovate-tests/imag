@@ -48,7 +48,7 @@ fn main() {
     let version = make_imag_version!();
     let rt = generate_runtime_setup("imag-wiki",
                                     &version,
-                                    "Manage a personal Wiki",
+                                    "Personal wiki",
                                     build_ui);
 
     let wiki_name = rt.cli().value_of("wikiname").unwrap_or("default");

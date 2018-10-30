@@ -20,14 +20,15 @@
 use itertools::Itertools;
 
 use libimagstore::store::Entry;
+use libimagerror::errors::ErrorMsg as EM;
 
 use toml_query::read::TomlValueReadExt;
 use toml_query::insert::TomlValueInsertExt;
 
-use error::TagErrorKind;
-use error::TagError as TE;
-use error::ResultExt;
-use error::Result;
+use failure::Error;
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::err_msg;
 use tag::{Tag, TagSlice};
 use tag::is_tag_str;
 
@@ -50,23 +51,22 @@ impl Tagable for Value {
 
     fn get_tags(&self) -> Result<Vec<Tag>> {
         self.read("tag.values")
-            .chain_err(|| TagErrorKind::HeaderReadError)?
+            .map_err(Error::from)
+            .context(EM::EntryHeaderReadError)?
             .map(|val| {
                 debug!("Got Value of tags...");
                 val.as_array()
                     .map(|tags| {
                         debug!("Got Array<T> of tags...");
                         if !tags.iter().all(|t| is_match!(*t, Value::String(_))) {
-                            debug!("Got Array<T>, T != String of tags: {:?}", tags);
-                            return Err(TagErrorKind::TagTypeError.into());
+                            return Err(format_err!("Tag type error: Got Array<T> where T is not a String: {:?}", tags));
                         }
                         debug!("Got Array<String> of tags...");
                         if tags.iter().any(|t| match *t {
                             Value::String(ref s) => !is_tag_str(s).is_ok(),
                             _ => unreachable!()})
                         {
-                            debug!("At least one tag is not a valid tag string");
-                            return Err(TagErrorKind::NotATag.into());
+                            return Err(format_err!("At least one tag is not a valid tag string"));
                         }
 
                         Ok(tags.iter()
@@ -86,21 +86,23 @@ impl Tagable for Value {
 
     fn set_tags(&mut self, ts: &[Tag]) -> Result<()> {
         if ts.iter().any(|tag| !is_tag_str(tag).is_ok()) {
-            debug!("Not a tag: '{}'", ts.iter().filter(|t| !is_tag_str(t).is_ok()).next().unwrap());
-            return Err(TagErrorKind::NotATag.into());
+            let not_tag = ts.iter().filter(|t| !is_tag_str(t).is_ok()).next().unwrap();
+            return Err(format_err!("Not a tag: '{}'", not_tag));
         }
 
         let a = ts.iter().unique().map(|t| Value::String(t.clone())).collect();
         debug!("Setting tags = {:?}", a);
         self.insert("tag.values", Value::Array(a))
             .map(|_| ())
-            .chain_err(|| TagErrorKind::HeaderWriteError)
+            .map_err(|_| Error::from(EM::EntryHeaderWriteError))
     }
 
     fn add_tag(&mut self, t: Tag) -> Result<()> {
-        if !is_tag_str(&t).map(|_| true).map_err(|_| TE::from_kind(TagErrorKind::NotATag))? {
-            debug!("Not a tag: '{}'", t);
-            return Err(TagErrorKind::NotATag.into());
+        if !is_tag_str(&t).map(|_| true)
+            .map_err(|s| format_err!("{}", s))
+            .context(err_msg("Not a tag"))?
+        {
+            return Err(format_err!("Not a tag: '{}'", t));
         }
 
         self.get_tags()
@@ -113,9 +115,12 @@ impl Tagable for Value {
     }
 
     fn remove_tag(&mut self, t: Tag) -> Result<()> {
-        if !is_tag_str(&t).map(|_| true).map_err(|_| TE::from_kind(TagErrorKind::NotATag))? {
+        if !is_tag_str(&t).map(|_| true)
+            .map_err(|s| format_err!("{}", s))
+            .context(err_msg("Not a tag"))?
+        {
             debug!("Not a tag: '{}'", t);
-            return Err(TagErrorKind::NotATag.into());
+            return Err(format_err!("Not a tag: '{}'", t));
         }
 
         self.get_tags()
@@ -127,10 +132,10 @@ impl Tagable for Value {
     }
 
     fn has_tag(&self, t: TagSlice) -> Result<bool> {
-        let tags = self.read("tag.values").chain_err(|| TagErrorKind::HeaderReadError)?;
+        let tags = self.read("tag.values").context(EM::EntryHeaderReadError)?;
 
         if !tags.iter().all(|t| is_match!(*t, &Value::String(_))) {
-            return Err(TagErrorKind::TagTypeError.into());
+            return Err(err_msg("Tag type error"))
         }
 
         Ok(tags

@@ -19,7 +19,6 @@
 
 pub mod accuracy;
 pub mod compiler;
-pub mod error;
 pub mod format;
 pub mod to_store_id;
 

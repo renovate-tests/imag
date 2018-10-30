@@ -21,10 +21,11 @@ use clap::ArgMatches;
 use chrono::NaiveDateTime;
 use chrono::Local;
 use chrono::Timelike;
+use failure::Error;
+use failure::ResultExt;
+use failure::err_msg;
 
 use libimagdiary::diary::Diary;
-use libimagdiary::error::DiaryErrorKind as DEK;
-use libimagdiary::error::ResultExt;
 use libimagentryedit::edit::Edit;
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
@@ -47,8 +48,7 @@ pub fn create(rt: &Runtime) {
         Ok(())
     } else {
         debug!("Editing new diary entry");
-        entry.edit_content(rt)
-            .chain_err(|| DEK::DiaryEditError)
+        entry.edit_content(rt).context(err_msg("Diary edit error")).map_err(Error::from)
     };
 
     let _ = res.map_err_trace_exit_unwrap(1);
@@ -75,7 +75,9 @@ fn create_entry<'a>(diary: &'a Store, diaryname: &str, rt: &Runtime) -> FileLock
         })
         .map(|timed| {
             let time = create_id_from_clispec(&create, &diaryname, timed);
-            diary.new_entry_at(&diaryname, &time).chain_err(|| DEK::StoreWriteError)
+            diary.new_entry_at(&diaryname, &time)
+                .context(err_msg("Store write error"))
+                .map_err(Error::from)
         })
         .unwrap_or_else(|| {
             debug!("Creating non-timed entry");

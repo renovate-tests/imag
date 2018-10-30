@@ -24,10 +24,12 @@ use toml_query::read::TomlValueReadTypeExt;
 use toml::Value;
 
 use libimagstore::store::Entry;
+use libimagerror::errors::ErrorMsg as EM;
 
-use error::DateErrorKind as DEK;
-use error::DateError as DE;
-use error::*;
+use failure::Error;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::err_msg;
 use range::DateTimeRange;
 
 pub trait EntryDate {
@@ -55,16 +57,18 @@ impl EntryDate for Entry {
         self.get_header_mut()
             .delete(&DATE_HEADER_LOCATION)
             .map(|_| ())
-            .chain_err(|| DEK::DeleteDateError)
+            .context("Delete date error")
+            .map_err(Error::from)
     }
 
     fn read_date(&self) -> Result<NaiveDateTime> {
         self.get_header()
             .read_string(&DATE_HEADER_LOCATION)
-            .chain_err(|| DEK::ReadDateError)?
-            .ok_or(DE::from_kind(DEK::ReadDateError))?
+            .context("Error while reading date")?
+            .ok_or_else(|| err_msg("Error reading date"))?
             .parse::<NaiveDateTime>()
-            .chain_err(|| DEK::DateTimeParsingError)
+            .context("Datetime parse error")
+            .map_err(Error::from)
     }
 
     /// Set a Date for this entry
@@ -88,13 +92,16 @@ impl EntryDate for Entry {
 
         self.get_header_mut()
             .insert(&DATE_HEADER_LOCATION, Value::String(date))
+            .map_err(Error::from)
             .map(|opt| opt.map(|stri| {
                 stri.as_str()
-                    .ok_or(DE::from_kind(DEK::DateHeaderFieldTypeError))?
+                    .ok_or_else(|| Error::from(EM::EntryHeaderTypeError))?
                     .parse::<NaiveDateTime>()
-                    .chain_err(|| DEK::DateTimeParsingError)
+                    .context("Datetime parse error")
+                    .map_err(Error::from)
             }))
-            .chain_err(|| DEK::SetDateError)
+            .context("Error setting date")
+            .map_err(Error::from)
     }
 
 
@@ -110,30 +117,33 @@ impl EntryDate for Entry {
              .get_header_mut()
             .delete(&DATE_RANGE_START_HEADER_LOCATION)
             .map(|_| ())
-            .chain_err(|| DEK::DeleteDateTimeRangeError)?;
+            .context("Delete Datetime range error")?;
 
         self.get_header_mut()
             .delete(&DATE_RANGE_END_HEADER_LOCATION)
             .map(|_| ())
-            .chain_err(|| DEK::DeleteDateTimeRangeError)
+            .context("Delete Datetime range error")
+            .map_err(Error::from)
     }
 
     fn read_date_range(&self) -> Result<DateTimeRange> {
         let start = self
             .get_header()
             .read_string(&DATE_RANGE_START_HEADER_LOCATION)
-            .chain_err(|| DEK::ReadDateTimeRangeError)?
-            .ok_or_else(|| DE::from_kind(DEK::ReadDateError))
+            .context("Error while reading Datetime range")?
+            .ok_or_else(|| err_msg("Error reading date"))
             .and_then(str_to_ndt)?;
 
         let end = self
             .get_header()
             .read_string(&DATE_RANGE_START_HEADER_LOCATION)
-            .chain_err(|| DEK::ReadDateTimeRangeError)?
-            .ok_or_else(|| DE::from_kind(DEK::ReadDateError))
+            .context("Error reading Datetime range")?
+            .ok_or_else(|| err_msg("Error reading date"))
             .and_then(str_to_ndt)?;
 
-        DateTimeRange::new(start, end).chain_err(|| DEK::DateTimeRangeError)
+        DateTimeRange::new(start, end)
+            .context("Datetime Range error")
+            .map_err(Error::from)
     }
 
     /// Set the date range
@@ -153,18 +163,19 @@ impl EntryDate for Entry {
             .get_header_mut()
             .insert(&DATE_RANGE_START_HEADER_LOCATION, Value::String(start))
             .map(|opt| opt.as_ref().map(val_to_ndt))
-            .chain_err(|| DEK::SetDateTimeRangeError)?;
+            .context("Error setting Datetime range")?;
 
         let opt_old_end = self
             .get_header_mut()
             .insert(&DATE_RANGE_END_HEADER_LOCATION, Value::String(end))
             .map(|opt| opt.as_ref().map(val_to_ndt))
-            .chain_err(|| DEK::SetDateTimeRangeError)?;
+            .context("Error setting Datetime range")?;
 
         match (opt_old_start, opt_old_end) {
             (Some(Ok(old_start)), Some(Ok(old_end))) => {
                 let dr = DateTimeRange::new(old_start, old_end)
-                    .chain_err(|| DEK::DateTimeRangeError);
+                    .context("Error processing Datetime range")
+                    .map_err(Error::from);
 
                 Ok(Some(dr))
             },
@@ -181,15 +192,18 @@ impl EntryDate for Entry {
 
 #[inline]
 fn str_to_ndt(v: String) -> Result<NaiveDateTime> {
-    v.parse::<NaiveDateTime>().chain_err(|| DEK::DateTimeParsingError)
+    v.parse::<NaiveDateTime>()
+        .context("Error parsing Datetime")
+        .map_err(Error::from)
 }
 
 #[inline]
 fn val_to_ndt(v: &Value) -> Result<NaiveDateTime> {
     v.as_str()
-        .ok_or(DE::from_kind(DEK::DateHeaderFieldTypeError))?
+        .ok_or_else(|| Error::from(EM::EntryHeaderTypeError))?
         .parse::<NaiveDateTime>()
-        .chain_err(|| DEK::DateTimeParsingError)
+        .context("Datetime parsing error")
+        .map_err(Error::from)
 }
 
 #[cfg(test)]

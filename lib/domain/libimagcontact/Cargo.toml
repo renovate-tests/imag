@@ -20,11 +20,11 @@ is-it-maintained-open-issues      = { repository = "matthiasbeyer/imag" }
 maintenance                       = { status     = "actively-developed" }
 
 [dependencies]
-error-chain  = "0.12"
+failure      = "0.1"
 log          = "0.4"
 toml         = "0.4"
-toml-query   = "0.7"
-vobject      = { git = "https://github.com/matthiasbeyer/rust-vobject", branch = "update-errorchain" }
+toml-query   = { git = "https://github.com/matthiasbeyer/toml-query", branch = "failure" }
+vobject      = { git = "https://github.com/matthiasbeyer/rust-vobject", branch = "master" }
 uuid         = "0.7"
 serde        = "1"
 serde_derive = "1"

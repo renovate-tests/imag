@@ -39,6 +39,7 @@ extern crate toml_query;
 extern crate kairos;
 extern crate chrono;
 extern crate prettytable;
+#[macro_use] extern crate failure;
 
 extern crate libimaghabit;
 extern crate libimagstore;
@@ -53,6 +54,7 @@ use std::process::exit;
 use prettytable::Table;
 use prettytable::Cell;
 use prettytable::Row;
+use failure::Error;
 
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
@@ -232,8 +234,7 @@ fn delete(rt: &Runtime) {
 // future flag. If it is true, the check will not be performed and it is assumed that `--future`
 // was passed.
 fn today(rt: &Runtime, future: bool) {
-    use libimaghabit::error::ResultExt;
-    use libimaghabit::error::HabitErrorKind as HEK;
+    use failure::ResultExt;
 
     let (future, show_done) = {
         if !future {
@@ -296,7 +297,8 @@ fn today(rt: &Runtime, future: bool) {
                 am.value_of("today-show-next-n")
                     .map(|x| {
                         x.parse::<usize>()
-                            .chain_err(|| HEK::from(format!("Cannot parse String '{}' to integer", x)))
+                            .context(format_err!("Cannot parse String '{}' to integer", x))
+                            .map_err(Error::from)
                             .map_err_trace_exit_unwrap(1)
                     })
             }).unwrap_or(5);

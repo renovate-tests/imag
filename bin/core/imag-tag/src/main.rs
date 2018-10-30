@@ -36,6 +36,7 @@ extern crate clap;
 #[macro_use] extern crate log;
 
 #[cfg(test)] extern crate toml;
+#[cfg(test)] extern crate failure;
 
 extern crate libimagstore;
 #[macro_use] extern crate libimagrt;
@@ -80,7 +81,7 @@ fn main() {
     let version = make_imag_version!();
     let rt = generate_runtime_setup("imag-tag",
                                     &version,
-                                    "Add and remove tags for entries",
+                                    "Direct interface to the store. Use with great care!",
                                     build_ui);
 
     let ids : Vec<PathBuf> = rt
@@ -269,11 +270,12 @@ mod tests {
 
     use toml::value::Value;
     use toml_query::read::TomlValueReadExt;
-    use toml_query::error::Result as TomlQueryResult;
+    use failure::Fallible as Result;
+    use failure::Error;
 
     use libimagrt::runtime::Runtime;
     use libimagstore::storeid::StoreId;
-    use libimagstore::store::{Result as StoreResult, FileLockEntry, Entry};
+    use libimagstore::store::{FileLockEntry, Entry};
 
     use super::*;
 
@@ -285,7 +287,7 @@ mod tests {
     }
     use self::mock::generate_test_runtime;
 
-    fn create_test_default_entry<'a, S: AsRef<OsStr>>(rt: &'a Runtime, name: S) -> StoreResult<StoreId> {
+    fn create_test_default_entry<'a, S: AsRef<OsStr>>(rt: &'a Runtime, name: S) -> Result<StoreId> {
         let mut path = PathBuf::new();
         path.set_file_name(name);
 
@@ -300,8 +302,8 @@ mod tests {
         Ok(id)
     }
 
-    fn get_entry_tags<'a>(entry: &'a FileLockEntry<'a>) -> TomlQueryResult<Option<&'a Value>> {
-        entry.get_header().read(&"tag.values".to_owned())
+    fn get_entry_tags<'a>(entry: &'a FileLockEntry<'a>) -> Result<Option<&'a Value>> {
+        entry.get_header().read(&"tag.values".to_owned()).map_err(Error::from)
     }
 
     fn tags_toml_value<'a, I: IntoIterator<Item = &'static str>>(tags: I) -> Value {

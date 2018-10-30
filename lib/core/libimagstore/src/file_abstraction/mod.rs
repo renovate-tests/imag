@@ -22,7 +22,8 @@ use std::fmt::Debug;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use error::StoreError as SE;
+use failure::Fallible as Result;
+
 use store::Entry;
 use storeid::StoreId;
 
@@ -38,20 +39,20 @@ use self::iter::PathIterator;
 
 /// An abstraction trait over filesystem actions
 pub trait FileAbstraction : Debug {
-    fn remove_file(&self, path: &PathBuf) -> Result<(), SE>;
-    fn copy(&self, from: &PathBuf, to: &PathBuf) -> Result<(), SE>;
-    fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<(), SE>;
-    fn create_dir_all(&self, _: &PathBuf) -> Result<(), SE>;
+    fn remove_file(&self, path: &PathBuf) -> Result<()>;
+    fn copy(&self, from: &PathBuf, to: &PathBuf) -> Result<()>;
+    fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<()>;
+    fn create_dir_all(&self, _: &PathBuf) -> Result<()>;
 
-    fn exists(&self, &PathBuf) -> Result<bool, SE>;
-    fn is_file(&self, &PathBuf) -> Result<bool, SE>;
+    fn exists(&self, &PathBuf) -> Result<bool>;
+    fn is_file(&self, &PathBuf) -> Result<bool>;
 
     fn new_instance(&self, p: PathBuf) -> Box<FileAbstractionInstance>;
 
-    fn drain(&self) -> Result<Drain, SE>;
-    fn fill<'a>(&'a mut self, d: Drain) -> Result<(), SE>;
+    fn drain(&self) -> Result<Drain>;
+    fn fill<'a>(&'a mut self, d: Drain) -> Result<()>;
 
-    fn pathes_recursively(&self, basepath: PathBuf, storepath: PathBuf, backend: Arc<FileAbstraction>) -> Result<PathIterator, SE>;
+    fn pathes_recursively(&self, basepath: PathBuf, storepath: PathBuf, backend: Arc<FileAbstraction>) -> Result<PathIterator>;
 }
 
 /// An abstraction trait over actions on files
@@ -61,8 +62,8 @@ pub trait FileAbstractionInstance : Debug {
     ///
     /// The `StoreId` is passed because the backend does not know where the Entry lives, but the
     /// Entry type itself must be constructed with the id.
-    fn get_file_content(&mut self, id: StoreId) -> Result<Entry, SE>;
-    fn write_file_content(&mut self, buf: &Entry) -> Result<(), SE>;
+    fn get_file_content(&mut self, id: StoreId) -> Result<Option<Entry>>;
+    fn write_file_content(&mut self, buf: &Entry) -> Result<()>;
 }
 
 pub struct Drain(HashMap<PathBuf, Entry>);
@@ -119,7 +120,7 @@ version = "{}"
 Hello World"#, env!("CARGO_PKG_VERSION"))).unwrap();
 
         lf.write_file_content(&file).unwrap();
-        let bah = lf.get_file_content(loca).unwrap();
+        let bah = lf.get_file_content(loca).unwrap().unwrap();
         assert_eq!(bah.get_content(), "Hello World");
     }
 
@@ -140,7 +141,7 @@ Hello World
 baz"#, env!("CARGO_PKG_VERSION"))).unwrap();
 
         lf.write_file_content(&file).unwrap();
-        let bah = lf.get_file_content(loca).unwrap();
+        let bah = lf.get_file_content(loca).unwrap().unwrap();
         assert_eq!(bah.get_content(), "Hello World\nbaz");
     }
 
@@ -163,7 +164,7 @@ baz
 "#, env!("CARGO_PKG_VERSION"))).unwrap();
 
         lf.write_file_content(&file).unwrap();
-        let bah = lf.get_file_content(loca).unwrap();
+        let bah = lf.get_file_content(loca).unwrap().unwrap();
         assert_eq!(bah.get_content(), "Hello World\nbaz\n\n");
     }
 

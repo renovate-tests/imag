@@ -21,20 +21,19 @@ use std::path::PathBuf;
 
 use toml::Value;
 use clap::App;
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 
-use error::RuntimeError as RE;
-use error::RuntimeErrorKind as REK;
-use error::Result;
-use error::ResultExt;
+use libimagerror::errors::ErrorMsg as EM;
 
 /// Get a new configuration object.
 ///
 /// The passed runtimepath is used for searching the configuration file, whereas several file
 /// names are tested. If that does not work, the home directory and the XDG basedir are tested
 /// with all variants.
-///
-/// If that doesn't work either, an error is returned.
-pub fn fetch_config(searchpath: &PathBuf) -> Result<Value> {
+pub fn fetch_config(searchpath: &PathBuf) -> Result<Option<Value>> {
     use std::env;
     use std::fs::File;
     use std::io::Read;
@@ -65,7 +64,7 @@ pub fn fetch_config(searchpath: &PathBuf) -> Result<Value> {
                                     .unwrap_or(vec![]),
     ];
 
-    Itertools::flatten(vals.iter())
+    let config = Itertools::flatten(vals.iter())
         .filter(|path| path.exists() && path.is_file())
         .filter_map(|path| {
             let content = {
@@ -90,13 +89,14 @@ pub fn fetch_config(searchpath: &PathBuf) -> Result<Value> {
                         .unwrap_or_else(|| String::from("Line unknown, Column unknown"));
 
                     let _ = write!(stderr(), "Config file parser error at {}", line_col);
-                    let e : RE = RE::from(e);
+                    let e = Error::from(EM::TomlDeserError);
                     trace_error(&e);
                     None
                 })
         })
-        .nth(0)
-        .ok_or(RE::from_kind(REK::ConfigNoConfigFileFound))
+        .nth(0);
+
+    Ok(config)
 }
 
 /// Override the configuration.
@@ -120,16 +120,16 @@ pub fn override_config(val: &mut Value, v: Vec<String>) -> Result<()> {
         .map(|(k, v)| {
             let value = val
                 .read(&k)
-                .chain_err(|| REK::ConfigTOMLParserError)?
-                .ok_or(RE::from_kind(REK::ConfigOverrideKeyNotAvailable))?;
+                .context(EM::TomlQueryError)?
+                .ok_or_else(|| Error::from(err_msg("Confit parser error")))?;
 
             into_value(value, v)
                 .map(|v| info!("Successfully overridden: {} = {}", k, v))
-                .ok_or_else(|| RE::from_kind(REK::ConfigOverrideTypeNotMatching))
+                .ok_or_else(|| Error::from(err_msg("Config override type not matching")))
         });
 
     for elem in iter {
-        let _ = try!(elem.chain_err(|| REK::ConfigOverrideError));
+        let _ = elem.context(err_msg("Config override error"))?;
     }
 
     Ok(())

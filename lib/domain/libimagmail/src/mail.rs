@@ -21,7 +21,6 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Read;
 use std::fs::OpenOptions;
-use std::result::Result as RResult;
 
 use libimagstore::store::Store;
 use libimagstore::storeid::StoreId;
@@ -29,24 +28,25 @@ use libimagstore::store::FileLockEntry;
 use libimagentryref::reference::Ref;
 use libimagentryref::refstore::RefStore;
 use libimagentryref::refstore::UniqueRefPathGenerator;
+use libimagerror::errors::ErrorMsg as EM;
 
 use email::MimeMessage;
 use email::results::ParsingResult as EmailParsingResult;
 
-use error::Result;
-use error::{ResultExt, MailError as ME, MailErrorKind as MEK};
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 
 struct UniqueMailRefGenerator;
 impl UniqueRefPathGenerator for UniqueMailRefGenerator {
-    type Error = ME;
-
     /// The collection the `StoreId` should be created for
     fn collection() -> &'static str {
         "mail"
     }
 
     /// A function which should generate a unique string for a Path
-    fn unique_hash<A: AsRef<Path>>(path: A) -> RResult<String, Self::Error> {
+    fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String> {
         use filters::filter::Filter;
         use email::Header;
 
@@ -59,7 +59,8 @@ impl UniqueRefPathGenerator for UniqueMailRefGenerator {
             .read_to_string(&mut s)?;
 
         MimeMessage::parse(&s)
-            .chain_err(|| MEK::RefCreationError)
+            .context(err_msg("Error creating ref"))
+            .map_err(Error::from)
             .and_then(|mail| {
                 let has_key = |hdr: &Header, exp: &str| hdr.name == exp;
 
@@ -73,7 +74,7 @@ impl UniqueRefPathGenerator for UniqueMailRefGenerator {
                 for hdr in mail.headers.iter().filter(|item| filter.filter(item)) {
                     let s = hdr
                         .get_value()
-                        .chain_err(|| MEK::RefCreationError)?;
+                        .context(err_msg("Ref creation error"))?;
 
                     v.push(s);
                 }
@@ -83,7 +84,7 @@ impl UniqueRefPathGenerator for UniqueMailRefGenerator {
     }
 
     /// Postprocess the generated `StoreId` object
-    fn postprocess_storeid(sid: StoreId) -> RResult<StoreId, Self::Error> {
+    fn postprocess_storeid(sid: StoreId) -> Result<StoreId> {
         Ok(sid)
     }
 }
@@ -113,13 +114,15 @@ impl<'a> Mail<'a> {
             .and_then(|reference| {
                 debug!("Build reference file: {:?}", reference);
                 reference.get_path()
-                    .chain_err(|| MEK::RefHandlingError)
-                    .and_then(|path| File::open(path).chain_err(|| MEK::IOError))
+                    .context(err_msg("Ref handling error"))
+                    .map_err(Error::from)
+                    .and_then(|path| File::open(path).context(EM::IO).map_err(Error::from))
                     .and_then(|mut file| {
                         let mut s = String::new();
                         file.read_to_string(&mut s)
                             .map(|_| s)
-                            .chain_err(|| MEK::IOError)
+                            .context(EM::IO)
+                            .map_err(Error::from)
                     })
                     .map(Buffer::from)
                     .map(|buffer| Mail(reference, buffer))
@@ -130,8 +133,9 @@ impl<'a> Mail<'a> {
     pub fn open<S: AsRef<str>>(store: &Store, hash: S) -> Result<Option<Mail>> {
         debug!("Opening Mail by Hash");
         store.get_ref::<UniqueMailRefGenerator, S>(hash)
-            .chain_err(|| MEK::FetchByHashError)
-            .chain_err(|| MEK::FetchError)
+            .context(err_msg("Fetch by hash error"))
+            .context(err_msg("Fetch error"))
+            .map_err(Error::from)
             .and_then(|o| match o {
                 Some(r) => Mail::from_fle(r).map(Some),
                 None => Ok(None),
@@ -141,13 +145,15 @@ impl<'a> Mail<'a> {
     /// Implement me as TryFrom as soon as it is stable
     pub fn from_fle(fle: FileLockEntry<'a>) -> Result<Mail<'a>> {
         fle.get_path()
-            .chain_err(|| MEK::RefHandlingError)
-            .and_then(|path| File::open(path).chain_err(|| MEK::IOError))
+            .context(err_msg("Ref handling error"))
+            .map_err(Error::from)
+            .and_then(|path| File::open(path).context(EM::IO).map_err(Error::from))
             .and_then(|mut file| {
                 let mut s = String::new();
                 file.read_to_string(&mut s)
                     .map(|_| s)
-                    .chain_err(|| MEK::IOError)
+                    .context(EM::IO)
+                    .map_err(Error::from)
             })
             .map(Buffer::from)
             .map(|buffer| Mail(fle, buffer))
@@ -157,7 +163,8 @@ impl<'a> Mail<'a> {
         debug!("Getting field in mail: {:?}", field);
         self.1
             .parsed()
-            .chain_err(|| MEK::MailParsingError)
+            .context(err_msg("Mail parsing error"))
+            .map_err(Error::from)
             .map(|parsed| {
                 parsed.headers
                     .iter()

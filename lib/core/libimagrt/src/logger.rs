@@ -24,11 +24,12 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::ops::Deref;
 
-use error::RuntimeErrorKind as EK;
-use error::RuntimeError as RE;
-use error::ResultExt;
 use runtime::Runtime;
 
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 use clap::ArgMatches;
 use log::{Log, Level, Record, Metadata};
 use toml::Value;
@@ -36,10 +37,10 @@ use toml_query::read::TomlValueReadExt;
 use toml_query::read::TomlValueReadTypeExt;
 use handlebars::Handlebars;
 
-type ModuleName = String;
-type Result<T> = ::std::result::Result<T, RE>;
+use libimagerror::errors::ErrorMsg as EM;
 
-#[derive(Debug)]
+type ModuleName = String;
+
 enum LogDestination {
     Stderr,
     File(Arc<Mutex<::std::fs::File>>),
@@ -51,7 +52,6 @@ impl Default for LogDestination {
     }
 }
 
-#[derive(Debug)]
 struct ModuleSettings {
     enabled:        bool,
     level:          Option<Level>,
@@ -89,32 +89,39 @@ impl ImagLogger {
 
         {
             let fmt = aggregate_global_format_trace(config)?;
-            handlebars.register_template_string("TRACE", fmt)?; // name must be uppercase
+            handlebars.register_template_string("TRACE", fmt)
+                .map_err(Error::from)
+                .context(err_msg("Handlebars template error"))?; // name must be uppercase
         }
         {
             let fmt = aggregate_global_format_debug(config)?;
-            handlebars.register_template_string("DEBUG", fmt)?; // name must be uppercase
+            handlebars.register_template_string("DEBUG", fmt)
+                .map_err(Error::from)
+                .context(err_msg("Handlebars template error"))?; // name must be uppercase
         }
         {
             let fmt = aggregate_global_format_info(config)?;
-            handlebars.register_template_string("INFO", fmt)?; // name must be uppercase
+            handlebars.register_template_string("INFO", fmt)
+                .map_err(Error::from)
+                .context(err_msg("Handlebars template error"))?; // name must be uppercase
         }
         {
             let fmt = aggregate_global_format_warn(config)?;
-            handlebars.register_template_string("WARN", fmt)?; // name must be uppercase
+            handlebars.register_template_string("WARN", fmt)
+                .map_err(Error::from)
+                .context(err_msg("Handlebars template error"))?; // name must be uppercase
         }
         {
             let fmt = aggregate_global_format_error(config)?;
-            handlebars.register_template_string("ERROR", fmt)?; // name must be uppercase
+            handlebars.register_template_string("ERROR", fmt)
+                .map_err(Error::from)
+                .context(err_msg("Handlebars template error"))?; // name must be uppercase
         }
-
-        let module_settings = aggregate_module_settings(matches, config)?;
-        eprintln!("Logging: {:?}", module_settings);
 
         Ok(ImagLogger {
             global_loglevel     : aggregate_global_loglevel(matches, config)?,
             global_destinations : aggregate_global_destinations(matches, config)?,
-            module_settings     : module_settings,
+            module_settings     : aggregate_module_settings(matches, config)?,
             handlebars          : handlebars,
         })
     }
@@ -179,35 +186,28 @@ impl Log for ImagLogger {
         self.module_settings
             .get(record_target)
             .map(|module_setting| {
-                // We have a module setting some
-                // * Check whether logging is enabled for this module and
-                // * check whether the module logging level is >= or, if there is no module logging
-                // level,
-                // * check whether the global logging level is >= the record level.
                 let set = module_setting.enabled &&
                     module_setting.level.unwrap_or(self.global_loglevel) >= record.level();
 
-                if set { // if we want to log from a setting standpoint
-                    // get the destinations for the module and log to all of them
+                if set {
                     module_setting.destinations.as_ref().map(|destinations| for d in destinations {
-                        let _ = log_to_destination(&d); // ignore errors, because what else?
+                        // If there's an error, we cannot do anything, can we?
+                        let _ = log_to_destination(&d);
                     });
 
-                    // after that, log to the global destinations as well
                     for d in self.global_destinations.iter() {
-                        let _ = log_to_destination(&d); // ignore errors, because what else?
+                        // If there's an error, we cannot do anything, can we?
+                        let _ = log_to_destination(&d);
                     }
                 }
             })
-
-        // if we do not have a setting for the record target
         .unwrap_or_else(|| {
-            if self.global_loglevel >= record.level() { // if logging is enabled for that level
-                self.global_destinations
-                    .iter()
-                    .for_each(|d| { // log to all global destinations
-                        let _ = log_to_destination(&d); // ignore errors, because what else?
-                    });
+            if self.global_loglevel >= record.level() {
+                // Yes, we log
+                for d in self.global_destinations.iter() {
+                    // If there's an error, we cannot do anything, can we?
+                    let _ = log_to_destination(&d);
+                }
             }
         });
     }
@@ -220,7 +220,7 @@ fn match_log_level_str(s: &str) -> Result<Level> {
         "info"  => Ok(Level::Info),
         "warn"  => Ok(Level::Warn),
         "error" => Ok(Level::Error),
-        _       => return Err(RE::from_kind(EK::InvalidLogLevelSpec)),
+        lvl     => return Err(format_err!("Invalid logging level: {}", lvl)),
     }
 }
 
@@ -243,8 +243,10 @@ fn aggregate_global_loglevel(matches: &ArgMatches, config: Option<&Value>) -> Re
 
     if let Some(cfg) = config {
         let cfg_loglevel = cfg
-            .read_string("imag.logging.level")?
-            .ok_or(RE::from_kind(EK::GlobalLogLevelConfigMissing))
+            .read_string("imag.logging.level")
+            .map_err(Error::from)
+            .context(EM::TomlQueryError)?
+            .ok_or(err_msg("Global log level config missing"))
             .and_then(|s| match_log_level_str(&s))?;
 
         if let Some(cli_loglevel) = get_arg_loglevel(matches)? {
@@ -273,7 +275,9 @@ fn translate_destination(raw: &str) -> Result<LogDestination> {
                 .map(Mutex::new)
                 .map(Arc::new)
                 .map(LogDestination::File)
-                .chain_err(|| EK::IOLogFileOpenError)
+                .map_err(Error::from)
+                .context(EM::IO)
+                .map_err(Error::from)
         }
     }
 }
@@ -285,9 +289,9 @@ fn translate_destinations(raw: &Vec<Value>) -> Result<Vec<LogDestination>> {
             acc.and_then(|mut v| {
                 let dest = val.as_str()
                     .ok_or_else(|| {
-                        let path = "imag.logging.modules.<mod>.destinations".to_owned();
+                        let path = "imag.logging.modules.<mod>.destinations";
                         let ty   = "Array<String>";
-                        RE::from_kind(EK::ConfigTypeError(path, ty))
+                        Error::from(format_err!("Type error at {}, expected {}", path, ty))
                     })
                     .and_then(translate_destination)?;
                 v.push(dest);
@@ -299,16 +303,18 @@ fn translate_destinations(raw: &Vec<Value>) -> Result<Vec<LogDestination>> {
 fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
     -> Result<Vec<LogDestination>>
 {
-    let config_log_dest_path = "imag.logging.destinations";
+
     match config {
         Some(cfg) => cfg
-            .read(&config_log_dest_path)?
-            .ok_or_else(|| RE::from_kind(EK::GlobalDestinationConfigMissing))?
+            .read("imag.logging.destinations")
+            .map_err(Error::from)
+            .context(EM::TomlQueryError)?
+            .ok_or_else(|| err_msg("Global log destination config missing"))?
             .as_array()
             .ok_or_else(|| {
-                let path = config_log_dest_path.to_owned();
+                let path = "imag.logging.destinations";
                 let ty   = "Array";
-                RE::from_kind(EK::ConfigTypeError(path, ty))
+                Error::from(format_err!("Type error at {}, expected {}", path, ty))
             })
             .and_then(translate_destinations),
         None => {
@@ -330,10 +336,12 @@ fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
 }
 
 macro_rules! aggregate_global_format {
-    ($read_str:expr, $error_kind_if_missing:expr, $config:expr) => {
-        try!($config.ok_or(RE::from_kind($error_kind_if_missing)))
-            .read_string($read_str)?
-            .ok_or_else(|| RE::from_kind($error_kind_if_missing))
+    ($read_str:expr, $error_msg_if_missing:expr, $config:expr) => {
+        try!($config.ok_or_else(|| Error::from(err_msg($error_msg_if_missing))))
+            .read_string($read_str)
+            .map_err(Error::from)
+            .context(EM::TomlQueryError)?
+            .ok_or_else(|| Error::from(err_msg($error_msg_if_missing)))
     };
 }
 
@@ -341,43 +349,43 @@ fn aggregate_global_format_trace(config: Option<&Value>)
     -> Result<String>
 {
     aggregate_global_format!("imag.logging.format.trace",
-                            EK::ConfigMissingLoggingFormatTrace,
-                            config)
+                             "Config missing: Logging format: Trace",
+                             config)
 }
 
 fn aggregate_global_format_debug(config: Option<&Value>)
     -> Result<String>
 {
     aggregate_global_format!("imag.logging.format.debug",
-                            EK::ConfigMissingLoggingFormatDebug,
-                            config)
+                             "Config missing: Logging format: Debug",
+                             config)
 }
 
 fn aggregate_global_format_info(config: Option<&Value>)
     -> Result<String>
 {
     aggregate_global_format!("imag.logging.format.info",
-                            EK::ConfigMissingLoggingFormatInfo,
-                            config)
+                             "Config missing: Logging format: Info",
+                             config)
 }
 
 fn aggregate_global_format_warn(config: Option<&Value>)
     -> Result<String>
 {
     aggregate_global_format!("imag.logging.format.warn",
-                            EK::ConfigMissingLoggingFormatWarn,
-                            config)
+                             "Config missing: Logging format: Warn",
+                             config)
 }
 
 fn aggregate_global_format_error(config: Option<&Value>)
     -> Result<String>
 {
     aggregate_global_format!("imag.logging.format.error",
-                            EK::ConfigMissingLoggingFormatError,
-                            config)
+                             "Config missing: Logging format: Error",
+                             config)
 }
 
-fn aggregate_module_settings(matches: &ArgMatches, config: Option<&Value>)
+fn aggregate_module_settings(_matches: &ArgMatches, config: Option<&Value>)
     -> Result<BTreeMap<ModuleName, ModuleSettings>>
 {
     // Helper macro to return the error from Some(Err(_)) and map everything else to an
@@ -393,44 +401,43 @@ fn aggregate_module_settings(matches: &ArgMatches, config: Option<&Value>)
     };
 
     match config {
-        Some(cfg) => match cfg.read("imag.logging.modules") {
+        Some(cfg) => match cfg.read("imag.logging.modules").map_err(Error::from) {
             Ok(Some(&Value::Table(ref t))) => {
                 // translate the module settings from the table `t`
                 let mut settings = BTreeMap::new();
 
                 for (module_name, v) in t {
                     let destinations = inner_try! {
-                        v.read("destinations")?
+                        v.read("destinations")
+                            .map_err(Error::from)
+                            .context(EM::TomlQueryError)?
                             .map(|val| {
                                 val.as_array()
                                     .ok_or_else(|| {
-                                        let path = "imag.logging.modules.<mod>.destinations".to_owned();
+                                        let path = "imag.logging.modules.<mod>.destinations";
                                         let ty = "Array";
-                                        RE::from_kind(EK::ConfigTypeError(path, ty))
+                                        Error::from(format_err!("Type error at {}, expected {}", path, ty))
                                     })
                                     .and_then(translate_destinations)
                             })
                     };
 
-
-                    let (pre_enabled, level) = if matches.is_present(Runtime::arg_debugging_name()) {
-                        (true, Some(Level::Debug))
-                    } else {
-                        let level = inner_try! {
-                            v.read_string("level")?.map(|s| match_log_level_str(&s))
-                        };
-
-                        (false, level)
+                    let level = inner_try! {
+                        v.read_string("level")
+                            .map_err(Error::from)
+                            .context(EM::TomlQueryError)?
+                            .map(|s| match_log_level_str(&s))
                     };
 
-                    let enabled = pre_enabled ||
-                        v.read("enabled")?
-                            .map(|v| v.as_bool().unwrap_or(false))
-                            .ok_or_else(|| {
-                                let path = "imag.logging.modules.<mod>.enabled".to_owned();
-                                let ty = "Boolean";
-                                RE::from_kind(EK::ConfigTypeError(path, ty))
-                            })?;
+                    let enabled = v.read("enabled")
+                        .map_err(Error::from)
+                        .context(EM::TomlQueryError)?
+                        .map(|v| v.as_bool().unwrap_or(false))
+                        .ok_or_else(|| {
+                            let path = "imag.logging.modules.<mod>.enabled";
+                            let ty = "Boolean";
+                            Error::from(format_err!("Type error at {}, expected {}", path, ty))
+                        })?;
 
                     let module_settings = ModuleSettings {
                         enabled: enabled,
@@ -445,15 +452,15 @@ fn aggregate_module_settings(matches: &ArgMatches, config: Option<&Value>)
                 Ok(settings)
             },
             Ok(Some(_)) => {
-                let path = "imag.logging.modules".to_owned();
+                let path = "imag.logging.modules";
                 let ty = "Table";
-                Err(RE::from_kind(EK::ConfigTypeError(path, ty)))
+                Err(Error::from(format_err!("Type error at {}, expected {}", path, ty)))
             },
             Ok(None)    => {
                 // No modules configured. This is okay!
                 Ok(BTreeMap::new())
             },
-            Err(e) => Err(e).map_err(From::from),
+            Err(e) => Err(e).context(EM::TomlQueryError).map_err(Error::from),
         },
         None => {
             write!(stderr(), "No Configuration.").ok();

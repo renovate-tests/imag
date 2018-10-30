@@ -36,17 +36,16 @@
 )]
 
 #[macro_use] extern crate log;
-#[macro_use] extern crate error_chain;
 extern crate itertools;
 #[cfg(unix)] extern crate xdg_basedir;
 extern crate env_logger;
 extern crate ansi_term;
 extern crate handlebars;
+#[macro_use] extern crate failure;
 
 extern crate clap;
 extern crate toml;
 extern crate toml_query;
-#[macro_use] extern crate is_match;
 extern crate atty;
 
 extern crate libimagstore;
@@ -54,7 +53,6 @@ extern crate libimagutil;
 extern crate libimagerror;
 extern crate libimaginteraction;
 
-pub mod error;
 pub mod configuration;
 pub mod logger;
 pub mod io;

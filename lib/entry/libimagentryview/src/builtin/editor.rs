@@ -24,9 +24,10 @@ use libimagrt::runtime::Runtime;
 use libimagentryedit::edit::edit_in_tmpfile;
 
 use viewer::Viewer;
-use error::Result;
-use error::ResultExt;
-use error::ViewErrorKind as VEK;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 
 pub struct EditorView<'a>(&'a Runtime<'a>);
 
@@ -41,7 +42,9 @@ impl<'a> Viewer for EditorView<'a> {
         where W: Write
     {
         let mut entry = e.to_str()?.clone().to_string();
-        edit_in_tmpfile(self.0, &mut entry).chain_err(|| VEK::ViewError)
+        edit_in_tmpfile(self.0, &mut entry)
+            .context(err_msg("Error while viewing"))
+            .map_err(Error::from)
     }
 }
 

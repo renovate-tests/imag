@@ -18,14 +18,16 @@
 //
 
 use std::path::PathBuf;
-
-use error::StoreError as SE;
-use error::StoreErrorKind as SEK;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::cell::RefCell;
 use std::sync::Arc;
 use std::ops::Deref;
+
+use libimagerror::errors::ErrorMsg as EM;
+
+use failure::Fallible as Result;
+use failure::Error;
 
 use super::FileAbstraction;
 use super::FileAbstractionInstance;
@@ -62,21 +64,21 @@ impl FileAbstractionInstance for InMemoryFileAbstractionInstance {
     /**
      * Get the mutable file behind a InMemoryFileAbstraction object
      */
-    fn get_file_content(&mut self, _: StoreId) -> Result<Entry, SE> {
+    fn get_file_content(&mut self, _: StoreId) -> Result<Option<Entry>> {
         debug!("Getting lazy file: {:?}", self);
 
         self.fs_abstraction
             .lock()
-            .map_err(|_| SE::from_kind(SEK::LockError))
-            .and_then(|mut mtx| {
+            .map_err(|_| Error::from(EM::LockError))
+            .map(|mut mtx| {
                 mtx.get_mut()
                     .get(&self.absent_path)
                     .cloned()
-                    .ok_or_else(|| SE::from_kind(SEK::FileNotFound))
             })
+            .map_err(Error::from)
     }
 
-    fn write_file_content(&mut self, buf: &Entry) -> Result<(), SE> {
+    fn write_file_content(&mut self, buf: &Entry) -> Result<()> {
         match *self {
             InMemoryFileAbstractionInstance { ref absent_path, .. } => {
                 let mut mtx = self.fs_abstraction.lock().expect("Locking Mutex failed");
@@ -99,18 +101,19 @@ impl InMemoryFileAbstraction {
         &self.virtual_filesystem
     }
 
-    fn backend_cloned<'a>(&'a self) -> Result<HashMap<PathBuf, Entry>, SE> {
+    fn backend_cloned<'a>(&'a self) -> Result<HashMap<PathBuf, Entry>> {
         self.virtual_filesystem
             .lock()
-            .map_err(|_| SE::from_kind(SEK::LockError))
+            .map_err(|_| Error::from(EM::LockError))
             .map(|mtx| mtx.deref().borrow().clone())
+            .into()
     }
 
 }
 
 impl FileAbstraction for InMemoryFileAbstraction {
 
-    fn remove_file(&self, path: &PathBuf) -> Result<(), SE> {
+    fn remove_file(&self, path: &PathBuf) -> Result<()> {
         debug!("Removing: {:?}", path);
         self.backend()
             .lock()
@@ -118,43 +121,43 @@ impl FileAbstraction for InMemoryFileAbstraction {
             .get_mut()
             .remove(path)
             .map(|_| ())
-            .ok_or_else(|| SE::from_kind(SEK::FileNotFound))
+            .ok_or_else(|| EM::FileNotFound.into())
     }
 
-    fn copy(&self, from: &PathBuf, to: &PathBuf) -> Result<(), SE> {
+    fn copy(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
         debug!("Copying : {:?} -> {:?}", from, to);
         let mut mtx = self.backend().lock().expect("Locking Mutex failed");
         let backend = mtx.get_mut();
 
-        let a = backend.get(from).cloned().ok_or_else(|| SE::from_kind(SEK::FileNotFound))?;
+        let a = backend.get(from).cloned().ok_or_else(|| EM::FileNotFound)?;
         backend.insert(to.clone(), a);
         debug!("Copying: {:?} -> {:?} worked", from, to);
         Ok(())
     }
 
-    fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<(), SE> {
+    fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
         debug!("Renaming: {:?} -> {:?}", from, to);
         let mut mtx = self.backend().lock().expect("Locking Mutex failed");
         let backend = mtx.get_mut();
 
-        let a = backend.remove(from).ok_or_else(|| SE::from_kind(SEK::FileNotFound))?;
+        let a = backend.get(from).cloned().ok_or_else(|| EM::FileNotFound)?;
         backend.insert(to.clone(), a);
         debug!("Renaming: {:?} -> {:?} worked", from, to);
         Ok(())
     }
 
-    fn create_dir_all(&self, _: &PathBuf) -> Result<(), SE> {
+    fn create_dir_all(&self, _: &PathBuf) -> Result<()> {
         Ok(())
     }
 
-    fn exists(&self, pb: &PathBuf) -> Result<bool, SE> {
+    fn exists(&self, pb: &PathBuf) -> Result<bool> {
         let mut mtx = self.backend().lock().expect("Locking Mutex failed");
         let backend = mtx.get_mut();
 
         Ok(backend.contains_key(pb))
     }
 
-    fn is_file(&self, pb: &PathBuf) -> Result<bool, SE> {
+    fn is_file(&self, pb: &PathBuf) -> Result<bool> {
         // Because we only store Entries in the memory-internal backend, we only have to check for
         // existance here, as if a path exists in the inmemory storage, it is always mapped to an
         // entry. hence it is always a path to a file
@@ -165,13 +168,15 @@ impl FileAbstraction for InMemoryFileAbstraction {
         Box::new(InMemoryFileAbstractionInstance::new(self.backend().clone(), p))
     }
 
-    fn drain(&self) -> Result<Drain, SE> {
+    fn drain(&self) -> Result<Drain> {
         self.backend_cloned().map(Drain::new)
     }
 
-    fn fill<'a>(&'a mut self, mut d: Drain) -> Result<(), SE> {
+    fn fill<'a>(&'a mut self, mut d: Drain) -> Result<()> {
         debug!("Draining into : {:?}", self);
-        let mut mtx = self.backend().lock().map_err(|_| SEK::LockError)?;
+        let mut mtx = self.backend()
+            .lock()
+            .map_err(|_| EM::LockError)?;
         let backend = mtx.get_mut();
 
         for (path, element) in d.iter() {
@@ -182,17 +187,17 @@ impl FileAbstraction for InMemoryFileAbstraction {
         Ok(())
     }
 
-    fn pathes_recursively(&self, _basepath: PathBuf, storepath: PathBuf, backend: Arc<FileAbstraction>) -> Result<PathIterator, SE> {
+    fn pathes_recursively(&self, _basepath: PathBuf, storepath: PathBuf, backend: Arc<FileAbstraction>) -> Result<PathIterator> {
         trace!("Building PathIterator object (inmemory implementation)");
         let keys : Vec<PathBuf> = self
             .backend()
             .lock()
-            .map_err(|_| SE::from_kind(SEK::FileError))?
+            .map_err(|_| EM::LockError)?
             .get_mut()
             .keys()
             .map(PathBuf::from)
             .map(Ok)
-            .collect::<Result<_, SE>>()?; // we have to collect() because of the lock() above.
+            .collect::<Result<_>>()?; // we have to collect() because of the lock() above.
 
         Ok(PathIterator::new(Box::new(InMemPathIterBuilder(keys)), storepath, backend))
     }
@@ -201,7 +206,7 @@ impl FileAbstraction for InMemoryFileAbstraction {
 pub(crate) struct InMemPathIterBuilder(Vec<PathBuf>);
 
 impl PathIterBuilder for InMemPathIterBuilder {
-    fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf, SE>>> {
+    fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf>>> {
         Box::new(self.0.clone().into_iter().map(Ok))
     }
 

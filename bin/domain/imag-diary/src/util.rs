@@ -18,10 +18,13 @@
 //
 
 use libimagrt::runtime::Runtime;
-use libimagdiary::error::*;
+use libimagerror::errors::ErrorMsg as EM;
 
 use toml::Value;
 use toml_query::read::TomlValueReadExt;
+use failure::Error;
+use failure::Fallible as Result;
+use failure::ResultExt;
 
 pub fn get_diary_name(rt: &Runtime) -> Option<String> {
     use libimagdiary::config::get_default_diary_name;
@@ -58,14 +61,15 @@ pub fn get_diary_timed_config(rt: &Runtime, diary_name: &str) -> Result<Option<T
         Some(cfg) => {
             let v = cfg
                 .read(&format!("diary.diaries.{}.timed", diary_name))
-                .chain_err(|| DiaryErrorKind::IOError);
+                .context(EM::IO)
+                .map_err(Error::from);
 
             match v {
                 Ok(Some(&Value::String(ref s))) => parse_timed_string(s, diary_name).map(Some),
 
                 Ok(Some(_)) => {
                     let s = format!("Type error at 'diary.diaryies.{}.timed': should be either 'd'/'daily', 'h'/'hourly', 'm'/'minutely' or 's'/'secondly'", diary_name);
-                    Err(s).map_err(From::from)
+                    Err(format_err!("{}", s))
                 },
 
                 Ok(None) => Ok(None),
@@ -87,6 +91,6 @@ pub fn parse_timed_string(s: &str, diary_name: &str) -> Result<Timed> {
     } else {
         let s = format!("Cannot parse config: 'diary.diaries.{}.timed = {}'",
                         diary_name, s);
-        Err(s).map_err(From::from)
+        Err(format_err!("{}", s))
     }
 }

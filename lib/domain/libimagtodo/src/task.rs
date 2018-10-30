@@ -17,12 +17,13 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use error::TodoError as TE;
-use error::TodoErrorKind as TEK;
-use error::ResultExt;
-use error::Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
+use failure::Fallible as Result;
 
 use libimagstore::store::Entry;
+use libimagerror::errors::ErrorMsg as EM;
 
 use uuid::Uuid;
 use toml_query::read::TomlValueReadTypeExt;
@@ -35,8 +36,10 @@ impl Task for Entry {
     fn get_uuid(&self) -> Result<Uuid> {
         self.get_header()
             .read_string("todo.uuid")?
-            .ok_or(TE::from_kind(TEK::HeaderFieldMissing))
-            .and_then(|u| Uuid::parse_str(&u).chain_err(|| TEK::UuidParserError))
+            .ok_or_else(|| Error::from(EM::EntryHeaderFieldMissing("todo.uuid")))
+            .and_then(|u| {
+                Uuid::parse_str(&u).context(err_msg("UUID Parser error")).map_err(Error::from)
+            })
     }
 }
 

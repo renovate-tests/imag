@@ -37,7 +37,7 @@
 
 extern crate url;
 extern crate regex;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 #[macro_use] extern crate libimagstore;
 extern crate libimagerror;
@@ -46,5 +46,4 @@ extern crate libimagentrylink;
 module_entry_path_mod!("bookmark");
 
 pub mod collection;
-pub mod error;
 pub mod link;

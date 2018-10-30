@@ -17,9 +17,10 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use error::MarkdownErrorKind as MEK;
-use error::ResultExt;
-use error::Result;
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 
 use hoedown::renderer::Render;
 use hoedown::Buffer;
@@ -38,7 +39,8 @@ impl Link {
     pub fn into_urllink(self) -> Result<UrlLink> {
         Url::parse(&self.link[..])
             .map(move |link| UrlLink { title: self.title, link: link, })
-            .chain_err(|| MEK::LinkParsingError)
+            .context(err_msg("Link parsing error"))
+            .map_err(Error::from)
     }
 
 }

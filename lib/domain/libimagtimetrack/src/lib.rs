@@ -43,7 +43,7 @@ extern crate toml_query;
 extern crate lazy_static;
 #[macro_use]
 extern crate is_match;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 #[macro_use]
 extern crate libimagstore;
@@ -52,7 +52,6 @@ extern crate libimagentrytag;
 extern crate libimagerror;
 
 mod constants;
-pub mod error;
 pub mod timetracking;
 pub mod timetrackingstore;
 pub mod iter;

@@ -20,8 +20,10 @@
 use std::fmt::Write;
 
 use toml::Value;
+use failure::Fallible as Result;
+use failure::ResultExt;
 
-use store::Result;
+use libimagerror::errors::ErrorMsg as EM;
 
 #[cfg(feature = "early-panic")]
 #[macro_export]
@@ -40,6 +42,7 @@ macro_rules! if_cfg_panic {
 }
 
 pub fn entry_buffer_to_header_content(buf: &str) -> Result<(Value, String)> {
+
     debug!("Building entry from string");
     let mut header          = String::new();
     let mut content         = String::new();
@@ -52,15 +55,16 @@ pub fn entry_buffer_to_header_content(buf: &str) -> Result<(Value, String)> {
             header_consumed = true;
             // do not further process the line
         } else if !header_consumed {
-            let _ = writeln!(header, "{}", line)?;
+            let _ = writeln!(header, "{}", line).context(EM::FormatError)?;
         } else if iter.peek().is_some() {
-            let _ = writeln!(content, "{}", line)?;
+            let _ = writeln!(content, "{}", line).context(EM::FormatError)?;
         } else {
-            let _ = write!(content, "{}", line)?;
+            let _ = write!(content, "{}", line).context(EM::FormatError)?;
         }
     }
 
-    ::toml::de::from_str(&header).map_err(From::from).map(|h| (h, content))
+    let h = ::toml::de::from_str(&header).context(EM::TomlDeserError)?;
+    Ok((h, content))
 }
 
 #[cfg(test)]

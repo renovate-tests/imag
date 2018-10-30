@@ -22,21 +22,20 @@
 
 use std::path::Path;
 use std::path::PathBuf;
-use std::result::Result as RResult;
 
 use libimagentryutil::isa::Is;
 use libimagentryutil::isa::IsKindHeaderPathProvider;
 use libimagstore::store::Entry;
+use libimagerror::errors::ErrorMsg as EM;
 
 use toml::Value;
 use toml_query::read::TomlValueReadExt;
 use toml_query::delete::TomlValueDeleteExt;
 use toml_query::insert::TomlValueInsertExt;
+use failure::Fallible as Result;
+use failure::Error;
 
 use refstore::UniqueRefPathGenerator;
-use error::Result;
-use error::RefError as RE;
-use error::RefErrorKind as REK;
 
 pub trait Ref {
 
@@ -57,7 +56,7 @@ pub trait Ref {
     fn get_path(&self) -> Result<PathBuf>;
 
     /// Check whether the referenced file still matches its hash
-    fn hash_valid<RPG: UniqueRefPathGenerator>(&self) -> RResult<bool, RPG::Error>;
+    fn hash_valid<RPG: UniqueRefPathGenerator>(&self) -> Result<bool>;
 
     fn remove_ref(&mut self) -> Result<()>;
 
@@ -84,15 +83,17 @@ impl Ref for Entry {
 
     /// Check whether the underlying object is actually a ref
     fn is_ref(&self) -> Result<bool> {
-        self.is::<IsRef>().map_err(From::from)
+        self.is::<IsRef>().map_err(Error::from)
     }
 
     fn get_hash(&self) -> Result<&str> {
         self.get_header()
             .read("ref.hash")
-            .map_err(RE::from)?
-            .ok_or_else(|| REK::HeaderFieldMissingError("ref.hash").into())
-            .and_then(|v| v.as_str().ok_or_else(|| REK::HeaderTypeError("ref.hash", "string").into()))
+            .map_err(Error::from)?
+            .ok_or_else(|| Error::from(EM::EntryHeaderFieldMissing("ref.hash")))
+            .and_then(|v| {
+                v.as_str().ok_or_else(|| Error::from(EM::EntryHeaderTypeError2("ref.hash", "string")))
+            })
     }
 
     fn make_ref<P: AsRef<Path>>(&mut self, hash: String, path: P) -> Result<()> {
@@ -100,7 +101,7 @@ impl Ref for Entry {
             .as_ref()
             .to_str()
             .map(String::from)
-            .ok_or_else(|| RE::from(REK::PathUTF8Error))?;
+            .ok_or_else(|| EM::UTF8Error)?;
 
         let _   = self.set_isflag::<IsRef>()?;
         let hdr = self.get_header_mut();
@@ -113,17 +114,20 @@ impl Ref for Entry {
     fn get_path(&self) -> Result<PathBuf> {
         self.get_header()
             .read("ref.path")
-            .map_err(RE::from)?
-            .ok_or_else(|| REK::HeaderFieldMissingError("ref.path").into())
-            .and_then(|v| v.as_str().ok_or_else(|| REK::HeaderTypeError("ref.path", "string").into()))
+            .map_err(Error::from)?
+            .ok_or_else(|| Error::from(EM::EntryHeaderFieldMissing("ref.path")))
+            .and_then(|v| {
+                v.as_str()
+                    .ok_or_else(|| EM::EntryHeaderTypeError2("ref.path", "string"))
+                    .map_err(Error::from)
+            })
             .map(PathBuf::from)
     }
 
-    fn hash_valid<RPG: UniqueRefPathGenerator>(&self) -> RResult<bool, RPG::Error> {
+    fn hash_valid<RPG: UniqueRefPathGenerator>(&self) -> Result<bool> {
         self.get_path()
             .map(PathBuf::from)
-            .map_err(RE::from)
-            .map_err(RPG::Error::from)
+            .map_err(Error::from)
             .and_then(|pb| RPG::unique_hash(pb))
             .and_then(|h| Ok(h == self.get_hash()?))
     }

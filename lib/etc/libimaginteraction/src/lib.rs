@@ -43,13 +43,12 @@ extern crate clap;
 extern crate toml;
 extern crate handlebars;
 extern crate serde_json;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 extern crate libimagstore;
 extern crate libimagerror;
 
 pub mod ask;
-pub mod error;
 pub mod filter;
 pub mod format;
 pub mod ui;

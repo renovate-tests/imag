@@ -22,10 +22,10 @@ use std::process::exit;
 use clap::ArgMatches;
 use chrono::naive::NaiveDate;
 use chrono::naive::NaiveDateTime;
+use failure::Error;
 
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::trace_error;
-use libimagtimetrack::error::TimeTrackError as TTE;
 use libimagtimetrack::tag::TimeTrackingTag;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
 use libimagerror::trace::MapErrTrace;
@@ -43,10 +43,10 @@ pub fn track(rt: &Runtime) -> i32 {
         match cmd.value_of(clap_name) {
             Some("now") => Some(::chrono::offset::Local::now().naive_local()),
             Some(els) => {
-                match NaiveDateTime::parse_from_str(els, DATE_TIME_PARSE_FMT).map_err(TTE::from) {
+                match NaiveDateTime::parse_from_str(els, DATE_TIME_PARSE_FMT).map_err(Error::from) {
                     Ok(ndt) => Some(ndt),
                     Err(e_ndt) => {
-                        match NaiveDate::parse_from_str(els, DATE_PARSE_FMT).map_err(TTE::from) {
+                        match NaiveDate::parse_from_str(els, DATE_PARSE_FMT).map_err(Error::from) {
                             Ok(ndt) => Some(ndt.and_hms(0, 0, 0)),
                             Err(e_nd) => {
                                 error!("Cannot parse date {}:", errname);

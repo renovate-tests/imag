@@ -43,12 +43,11 @@ extern crate toml;
 extern crate toml_query;
 #[macro_use] extern crate is_match;
 extern crate filters;
-#[macro_use] extern crate error_chain;
+#[macro_use] extern crate failure;
 
 extern crate libimagstore;
 extern crate libimagerror;
 
-pub mod error;
 pub mod tag;
 pub mod tagable;
 

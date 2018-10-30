@@ -21,8 +21,9 @@ use std::path::Path;
 
 use libimagstore::storeid::StoreId;
 
-use error::RefError;
 use refstore::UniqueRefPathGenerator;
+
+use failure::Fallible as Result;
 
 /// A base UniqueRefPathGenerator which must be overridden by the actual UniqueRefPathGenerator
 /// which is provided by this crate
@@ -30,18 +31,16 @@ use refstore::UniqueRefPathGenerator;
 pub struct Base;
 
 impl UniqueRefPathGenerator for Base {
-    type Error = RefError;
-
     fn collection() -> &'static str {
         "ref"
     }
 
-    fn unique_hash<A: AsRef<Path>>(_path: A) -> Result<String, Self::Error> {
+    fn unique_hash<A: AsRef<Path>>(_path: A) -> Result<String> {
         // This has to be overridden
         panic!("Not overridden base functionality. This is a BUG!")
     }
 
-    fn postprocess_storeid(sid: StoreId) -> Result<StoreId, Self::Error> {
+    fn postprocess_storeid(sid: StoreId) -> Result<StoreId> {
         Ok(sid) // default implementation
     }
 }

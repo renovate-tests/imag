@@ -28,7 +28,8 @@ use syntect::parsing::SyntaxSet;
 use mdcat;
 
 use viewer::Viewer;
-use error::Result;
+use failure::Fallible as Result;
+use failure::Error;
 
 pub struct MarkdownViewer<'a> {
     rt:                 &'a Runtime<'a>,
@@ -66,8 +67,7 @@ impl<'a> Viewer for MarkdownViewer<'a> {
                         base_dir,
                         self.resource_access.clone(),
                         syntax_set)
-        .map_err(|e| e.compat())
-        .map_err(::error::ViewError::from)
+        .map_err(Error::from)
     }
 }
 

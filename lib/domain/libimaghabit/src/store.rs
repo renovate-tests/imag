@@ -17,7 +17,8 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use error::Result;
+use failure::Fallible as Result;
+
 use habit::builder::HabitBuilder;
 use iter::HabitTemplateStoreIdIterator;
 use iter::HabitInstanceStoreIdIterator;

@@ -18,11 +18,10 @@
 //
 
 use std::path::Path;
-use std::result::Result as RResult;
 
-use error::MarkdownError as ME;
-use error::MarkdownErrorKind as MEK;
-use error::*;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
 use link::extract_links;
 
 use libimagentrylink::external::ExternalLinker;
@@ -42,17 +41,15 @@ use url::Url;
 pub struct UniqueMarkdownRefGenerator;
 
 impl UniqueRefPathGenerator for UniqueMarkdownRefGenerator {
-    type Error = ME;
-
     fn collection() -> &'static str {
         "ref" // we can only use this collection, as we don't know about context
     }
 
-    fn unique_hash<A: AsRef<Path>>(path: A) -> RResult<String, Self::Error> {
-        Sha512::unique_hash(path).map_err(ME::from)
+    fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String> {
+        Sha512::unique_hash(path).map_err(Error::from)
     }
 
-    fn postprocess_storeid(sid: StoreId) -> RResult<StoreId, Self::Error> {
+    fn postprocess_storeid(sid: StoreId) -> Result<StoreId> {
         Ok(sid) // don't do anything
     }
 }
@@ -142,7 +139,7 @@ impl LinkProcessor {
                         store.retrieve(id)?
                     } else {
                         store.get(id.clone())?
-                            .ok_or(ME::from_kind(MEK::StoreGetError(id)))?
+                            .ok_or_else(|| Error::from(format_err!("Store get error: {}", id)))?
                     };
 
                     let _ = entry.add_internal_link(&mut target)?;
@@ -170,7 +167,9 @@ impl LinkProcessor {
                 },
                 LinkQualification::Undecidable(e) => {
                     // error
-                    return Err(e).chain_err(|| MEK::UndecidableLinkType(link.link.clone()))
+                    return Err(e)
+                        .context(format_err!("Undecidable link type: {}", link.link.clone()))
+                        .map_err(Error::from)
                 },
             }
         }
@@ -185,7 +184,7 @@ enum LinkQualification {
     InternalLink,
     ExternalLink(Url),
     RefLink(Url),
-    Undecidable(ME),
+    Undecidable(Error),
 }
 
 impl LinkQualification {
@@ -210,7 +209,7 @@ impl LinkQualification {
                         LinkQualification::InternalLink
                     },
 
-                    _ => LinkQualification::Undecidable(ME::from(e)),
+                    _ => LinkQualification::Undecidable(Error::from(e)),
                 }
             }
         }

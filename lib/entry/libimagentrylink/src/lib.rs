@@ -43,7 +43,7 @@ extern crate url;
 extern crate sha1;
 extern crate hex;
 #[macro_use] extern crate is_match;
-#[macro_use] extern crate error_chain;
+#[macro_use] extern crate failure;
 
 #[cfg(test)]
 extern crate env_logger;
@@ -54,7 +54,6 @@ extern crate libimagutil;
 
 module_entry_path_mod!("links");
 
-pub mod error;
 pub mod external;
 pub mod internal;
 

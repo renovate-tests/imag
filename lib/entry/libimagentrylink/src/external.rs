@@ -39,16 +39,18 @@ use libimagstore::store::Store;
 use libimagstore::storeid::StoreId;
 use libimagstore::storeid::IntoStoreId;
 use libimagutil::debug_result::*;
+use libimagerror::errors::ErrorMsg as EM;
 
 use toml_query::read::TomlValueReadExt;
 use toml_query::read::TomlValueReadTypeExt;
 use toml_query::insert::TomlValueInsertExt;
+use failure::Error;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::err_msg;
 
-use error::LinkErrorKind as LEK;
-use error::Result;
 use internal::InternalLinker;
 use module_path::ModuleEntryPath;
-use error::ResultExt;
 
 use self::iter::*;
 
@@ -70,14 +72,21 @@ impl Link for Entry {
     fn get_link_uri_from_filelockentry(&self) -> Result<Option<Url>> {
         self.get_header()
             .read_string("links.external.content.url")
-            .chain_err(|| LEK::EntryHeaderReadError)
+            .map_err(Error::from)
+            .context(EM::EntryHeaderReadError)
+            .map_err(Error::from)
             .and_then(|opt| match opt {
                 None        => Ok(None),
                 Some(ref s) => {
                     debug!("Found url, parsing: {:?}", s);
-                    Url::parse(&s[..]).chain_err(|| LEK::InvalidUri).map(Some)
+                    Url::parse(&s[..])
+                        .map_err(Error::from)
+                        .context(err_msg("Invalid URI"))
+                        .map_err(Error::from)
+                        .map(Some)
                 },
             })
+            .map_err(Error::from)
     }
 
     fn get_url(&self) -> Result<Option<Url>> {
@@ -85,7 +94,9 @@ impl Link for Entry {
             None        => Ok(None),
             Some(ref s) => Url::parse(&s[..])
                 .map(Some)
-                .chain_err(|| LEK::EntryHeaderReadError),
+                .map_err(Error::from)
+                .context(EM::EntryHeaderReadError)
+                .map_err(Error::from),
         }
     }
 
@@ -125,7 +136,7 @@ pub mod iter {
 
     use internal::Link;
     use internal::iter::LinkIter;
-    use error::Result;
+    use failure::Fallible as Result;
 
     use url::Url;
 

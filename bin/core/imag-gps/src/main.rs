@@ -35,6 +35,7 @@
 extern crate clap;
 #[macro_use]
 extern crate log;
+extern crate failure;
 
 extern crate libimagentrygps;
 #[macro_use] extern crate libimagrt;
@@ -47,8 +48,9 @@ use std::process::exit;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use libimagentrygps::error::GPSError as GE;
-use libimagentrygps::error::GPSErrorKind as GEK;
+use failure::Error;
+use failure::err_msg;
+
 use libimagentrygps::types::*;
 use libimagentrygps::entry::*;
 use libimagrt::setup::generate_runtime_setup;
@@ -100,7 +102,7 @@ fn add(rt: &Runtime) {
                 .map(|v| {debug!("Parsing = {}", v); v})
                 .map(FromStr::from_str)
                 .map(|elem| {
-                    elem.or_else(|_| Err(GE::from(GEK::NumberConversionError)))
+                    elem.or_else(|_| Err(Error::from(err_msg("Error while converting number"))))
                         .map_err_trace_exit_unwrap(1)
                 })
                 .collect::<Vec<i64>>();

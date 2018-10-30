@@ -39,6 +39,7 @@ extern crate filters;
 #[macro_use] extern crate is_match;
 extern crate toml;
 extern crate toml_query;
+extern crate failure;
 
 #[cfg(test)]
 extern crate env_logger;
@@ -68,7 +69,7 @@ fn main() {
     let version = make_imag_version!();
     let rt = generate_runtime_setup("imag-ids",
                                     &version,
-                                    "Print all ids, optionally filtered with a user-defined filter",
+                                    "print all ids",
                                     build_ui);
 
     let print_storepath = rt.cli().is_present("print-storepath");

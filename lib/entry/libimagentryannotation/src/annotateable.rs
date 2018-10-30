@@ -31,9 +31,10 @@ use libimagentryutil::isa::IsKindHeaderPathProvider;
 use toml_query::read::TomlValueReadTypeExt;
 use toml_query::insert::TomlValueInsertExt;
 
-use error::Result;
-use error::AnnotationErrorKind as AEK;
-use error::ResultExt;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 
 use iter::*;
 
@@ -52,7 +53,6 @@ impl Annotateable for Entry {
     fn annotate<'a>(&mut self, store: &'a Store, ann_name: &str) -> Result<FileLockEntry<'a>> {
         use module_path::ModuleEntryPath;
         store.retrieve(ModuleEntryPath::new(ann_name).into_storeid()?)
-            .map_err(From::from)
             .and_then(|mut anno| {
                 {
                     let _ = anno.set_isflag::<IsAnnotation>()?;
@@ -64,7 +64,8 @@ impl Annotateable for Entry {
             })
             .and_then(|mut anno| {
                 anno.add_internal_link(self)
-                    .chain_err(|| AEK::LinkingError)
+                    .context(err_msg("Linking error"))
+                    .map_err(Error::from)
                     .map(|_| anno)
             })
     }
@@ -91,13 +92,12 @@ impl Annotateable for Entry {
     /// Get all annotations of an entry
     fn annotations<'a>(&self, store: &'a Store) -> Result<AnnotationIter<'a>> {
         self.get_internal_links()
-            .map_err(From::from)
             .map(|iter| StoreIdIterator::new(Box::new(iter.map(|e| e.get_store_id().clone()).map(Ok))))
             .map(|i| AnnotationIter::new(i, store))
     }
 
     fn is_annotation(&self) -> Result<bool> {
-        self.is::<IsAnnotation>().map_err(From::from)
+        self.is::<IsAnnotation>()
     }
 
 }

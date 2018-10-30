@@ -19,7 +19,7 @@
 
 use libimagstore::store::Store;
 
-use error::Result;
+use failure::Fallible as Result;
 use iter::*;
 
 pub trait AnnotationFetcher<'a> {

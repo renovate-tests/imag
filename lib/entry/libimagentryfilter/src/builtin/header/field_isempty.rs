@@ -22,8 +22,9 @@ use toml_query::read::TomlValueReadExt;
 
 use builtin::header::field_path::FieldPath;
 use filters::failable::filter::FailableFilter;
-use error::Result;
-use error::FilterError as FE;
+
+use failure::Fallible as Result;
+use failure::Error;
 
 use toml::Value;
 
@@ -42,7 +43,7 @@ impl FieldIsEmpty {
 }
 
 impl FailableFilter<Entry> for FieldIsEmpty {
-    type Error = FE;
+    type Error = Error;
 
     fn filter(&self, e: &Entry) -> Result<bool> {
         Ok(e

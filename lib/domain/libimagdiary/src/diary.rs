@@ -29,13 +29,12 @@ use chrono::Datelike;
 use itertools::Itertools;
 use chrono::naive::NaiveDateTime;
 use chrono::Timelike;
+use failure::Fallible as Result;
+use failure::Error;
 
 use entry::IsDiaryEntry;
 use diaryid::DiaryId;
 use diaryid::FromStoreId;
-use error::DiaryErrorKind as DEK;
-use error::ResultExt;
-use error::Result;
 use iter::DiaryEntryIterator;
 use iter::DiaryNameIterator;
 
@@ -67,7 +66,7 @@ impl Diary for Store {
         let ndt = dt.naive_local();
         let id  = DiaryId::new(String::from(diary_name), ndt.year(), ndt.month(), ndt.day(), 0, 0, 0);
 
-        let mut entry = self.retrieve(id).chain_err(|| DEK::StoreReadError)?;
+        let mut entry = self.retrieve(id)?;
         let _         = entry.set_isflag::<IsDiaryEntry>()?;
         Ok(entry)
     }
@@ -87,7 +86,7 @@ impl Diary for Store {
                                ndt.minute(),
                                ndt.second());
 
-        let mut entry = self.retrieve(id).chain_err(|| DEK::StoreReadError)?;
+        let mut entry = self.retrieve(id)?;
         let _         = entry.set_isflag::<IsDiaryEntry>()?;
         Ok(entry)
     }
@@ -97,15 +96,12 @@ impl Diary for Store {
         debug!("Building iterator for module 'diary' with diary name = '{}'", diary_name);
         Store::entries(self)
             .map(|iter| DiaryEntryIterator::new(String::from(diary_name), iter.without_store()))
-            .chain_err(|| DEK::StoreReadError)
     }
 
     /// get the id of the youngest entry
     ///
     /// TODO: We collect internally here. We shouldn't do that. Solution unclear.
     fn get_youngest_entry_id(&self, diary_name: &str) -> Option<Result<DiaryId>> {
-        use error::DiaryError as DE;
-
         match Diary::entries(self, diary_name) {
             Err(e) => Some(Err(e)),
             Ok(entries) => {
@@ -114,7 +110,7 @@ impl Diary for Store {
                 for entry in entries {
                     let entry = match entry {
                         Ok(e) => DiaryId::from_storeid(&e),
-                        Err(e) => return Some(Err(e).map_err(DE::from)),
+                        Err(e) => return Some(Err(e)),
                     };
 
                     sorted_entries.push(entry);
@@ -156,7 +152,7 @@ impl Diary for Store {
     fn diary_names(&self) -> Result<DiaryNameIterator> {
         self.entries()
             .map(|it| DiaryNameIterator::new(it.without_store()))
-            .map_err(::error::DiaryError::from)
+            .map_err(Error::from)
     }
 
 }

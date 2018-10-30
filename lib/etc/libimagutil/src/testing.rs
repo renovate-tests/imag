@@ -50,9 +50,9 @@ macro_rules! make_mock_app {
             use clap::{App, ArgMatches};
             use libimagrt::spec::CliSpec;
             use libimagrt::runtime::Runtime;
-            use libimagrt::error::RuntimeError;
             use libimagrt::configuration::InternalConfiguration;
             use toml::Value;
+            use failure::Error;
 
             #[derive(Clone)]
             struct MockLinkApp<'a> {
@@ -95,8 +95,8 @@ macro_rules! make_mock_app {
             }
 
             #[allow(unused)]
-            pub fn generate_test_runtime<'a>(mut args: Vec<&'static str>) -> Result<Runtime<'a>, RuntimeError> {
-                let mut cli_args = vec![$appname];
+            pub fn generate_test_runtime<'a>(mut args: Vec<&'static str>) -> Result<Runtime<'a>, Error> {
+                let mut cli_args = vec![$appname, "--rtp", "/tmp"];
 
                 cli_args.append(&mut args);
 
@@ -106,7 +106,7 @@ macro_rules! make_mock_app {
 
             #[allow(unused)]
             pub fn reset_test_runtime<'a>(mut args: Vec<&'static str>, old_runtime: Runtime)
-                -> Result<Runtime<'a>, RuntimeError>
+                -> Result<Runtime<'a>, Error>
             {
                 let mut cli_args = vec![$appname, "--rtp", "/tmp"];
 

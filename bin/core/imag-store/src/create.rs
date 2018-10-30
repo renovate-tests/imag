@@ -20,12 +20,13 @@
 use std::path::PathBuf;
 use std::io::stdin;
 use std::fs::OpenOptions;
-use std::result::Result as RResult;
 use std::io::Read;
 use std::ops::DerefMut;
 
 use clap::ArgMatches;
 use toml::Value;
+use failure::Fallible as Result;
+use failure::err_msg;
 
 use libimagrt::runtime::Runtime;
 use libimagstore::store::Entry;
@@ -33,12 +34,7 @@ use libimagstore::storeid::StoreId;
 use libimagerror::trace::MapErrTrace;
 use libimagutil::debug_result::*;
 
-use error::StoreError;
-use error::StoreErrorKind;
-use error::ResultExt;
 use util::build_toml_header;
-
-type Result<T> = RResult<T, StoreError>;
 
 pub fn create(rt: &Runtime) {
     let scmd = rt.cli().subcommand_matches("create").unwrap();
@@ -95,13 +91,9 @@ fn create_from_cli_spec(rt: &Runtime, matches: &ArgMatches, path: &StoreId) -> R
 fn create_from_source(rt: &Runtime, matches: &ArgMatches, path: &StoreId) -> Result<()> {
     let content = matches
         .value_of("from-raw")
-        .ok_or(StoreError::from_kind(StoreErrorKind::NoCommandlineCall))
-        .map(string_from_raw_src);
+        .ok_or_else(|| err_msg("No Commandline call"))
+        .map(string_from_raw_src)?;
 
-    if content.is_err() {
-        return content.map(|_| ());
-    }
-    let content = content.unwrap();
     debug!("Content with len = {}", content.len());
 
     Entry::from_str(path.clone(), &content[..])
@@ -118,7 +110,6 @@ fn create_from_source(rt: &Runtime, matches: &ArgMatches, path: &StoreId) -> Res
             r
         })
         .map_dbg_err(|e| format!("Error storing entry: {:?}", e))
-        .chain_err(|| StoreErrorKind::BackendError)
 }
 
 fn create_with_content_and_header(rt: &Runtime,
@@ -142,7 +133,6 @@ fn create_with_content_and_header(rt: &Runtime,
                 debug!("New header set");
             }
         })
-        .chain_err(|| StoreErrorKind::BackendError)
 }
 
 fn string_from_raw_src(raw_src: &str) -> String {
