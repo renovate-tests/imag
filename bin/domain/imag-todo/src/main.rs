@@ -37,6 +37,7 @@ extern crate clap;
 extern crate toml;
 extern crate toml_query;
 #[macro_use] extern crate is_match;
+extern crate failure;
 
 #[macro_use] extern crate libimagrt;
 extern crate libimagerror;
@@ -45,6 +46,7 @@ extern crate libimagtodo;
 use std::process::{Command, Stdio};
 use std::io::stdin;
 use std::io::Write;
+use failure::Error;
 
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
@@ -119,7 +121,7 @@ fn list(rt: &Runtime) {
     // return Result<T> instead of Result<Option<T>>, which is a real inconvenience.
     //
     let no_identifier = |e: &::toml_query::error::Error| -> bool {
-        is_match!(e.kind(), &::toml_query::error::ErrorKind::IdentifierNotFoundInDocument(_))
+        is_match!(e, &::toml_query::error::Error::IdentifierNotFoundInDocument(_))
     };
 
     let res = rt.store().all_tasks() // get all tasks
@@ -136,7 +138,7 @@ fn list(rt: &Runtime) {
                             },
                             Err(e) => {
                                 if !no_identifier(&e) {
-                                    trace_error(&e);
+                                    trace_error(&Error::from(e));
                                 }
                                 None
                             }
