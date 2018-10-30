@@ -26,10 +26,9 @@ use libimagstore::storeid::StoreIdIterator;
 use libimagstore::storeid::StoreId;
 
 use is_in_diary::IsInDiary;
-use error::DiaryErrorKind as DEK;
-use error::DiaryError as DE;
-use error::ResultExt;
-use error::Result;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 
 /// A iterator for iterating over diary entries
 pub struct DiaryEntryIterator {
@@ -109,7 +108,7 @@ impl Iterator for DiaryEntryIterator {
         loop {
             match self.iter.next() {
                 None         => return None,
-                Some(Err(e)) => return Some(Err(e).map_err(DE::from)),
+                Some(Err(e)) => return Some(Err(e)),
                 Some(Ok(s))  => {
                     debug!("Next element: {:?}", s);
                     if Filter::filter(self, &s) {
@@ -143,16 +142,15 @@ impl Iterator for DiaryNameIterator {
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.0.next() {
             match next {
-                Err(e) => return Some(Err(e).map_err(DE::from)),
+                Err(e) => return Some(Err(e)),
                 Ok(next) => if next.is_in_collection(&["diary"]) {
                     return Some(next
                         .to_str()
-                        .chain_err(|| DEK::DiaryNameFindingError)
                         .and_then(|s| {
                             s.split("diary/")
                                 .nth(1)
                                 .and_then(|n| n.split("/").nth(0).map(String::from))
-                                .ok_or(DE::from_kind(DEK::DiaryNameFindingError))
+                                .ok_or_else(|| Error::from(err_msg("Error finding diary name")))
                         }));
                 },
             }

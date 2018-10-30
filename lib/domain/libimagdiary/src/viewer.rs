@@ -22,11 +22,13 @@
 use std::io::Write;
 use std::ops::Deref;
 
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::err_msg;
+use failure::Error;
+
 use libimagstore::store::Entry;
 use libimagentryview::viewer::Viewer;
-use libimagentryview::error::ViewErrorKind as VEK;
-use libimagentryview::error::ResultExt;
-use libimagentryview::error::Result as ViewResult;
 use libimagentryview::builtin::plain::PlainViewer;
 use entry::DiaryEntry;
 
@@ -51,7 +53,7 @@ impl DiaryViewer {
 
 impl Viewer for DiaryViewer {
 
-    fn view_entry<W>(&self, e: &Entry, sink: &mut W) -> ViewResult<()>
+    fn view_entry<W>(&self, e: &Entry, sink: &mut W) -> Result<()>
         where W: Write
     {
         self.0.view_entry(e, sink)
@@ -59,14 +61,20 @@ impl Viewer for DiaryViewer {
 
     /// View all entries from the iterator, or stop immediately if an error occurs, returning that
     /// error.
-    fn view_entries<I, E, W>(&self, entries: I, sink: &mut W) -> ViewResult<()>
+    fn view_entries<I, E, W>(&self, entries: I, sink: &mut W) -> Result<()>
         where I: Iterator<Item = E>,
               E: Deref<Target = Entry>,
               W: Write
     {
         let mut entries = entries
-            .map(|e| e.deref().diary_id().map(|id| (id, e)).chain_err(|| VEK::ViewError))
-            .collect::<ViewResult<Vec<_>>>()?;
+            .map(|e| {
+                e.deref()
+                    .diary_id()
+                    .map(|id| (id, e))
+                    .context(err_msg("View error"))
+                    .map_err(Error::from)
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         entries.sort_by_key(|&(ref id, _)| {
             [id.year() as u32, id.month(), id.day(), id.hour(), id.minute(), id.second()]

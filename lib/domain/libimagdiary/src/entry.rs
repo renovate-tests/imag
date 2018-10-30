@@ -21,9 +21,10 @@ use libimagstore::store::Entry;
 use libimagentryutil::isa::Is;
 use libimagentryutil::isa::IsKindHeaderPathProvider;
 
+use failure::Fallible as Result;
+
 use diaryid::DiaryId;
 use diaryid::FromStoreId;
-use error::Result;
 
 provide_kindflag_path!(pub IsDiaryEntry, "diary.is_diary_entry");
 

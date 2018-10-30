@@ -19,20 +19,20 @@
 
 use std::convert::Into;
 use std::fmt::{Display, Formatter, Error as FmtError};
+use std::result::Result as RResult;
 
 use chrono::naive::NaiveDateTime;
 use chrono::naive::NaiveTime;
 use chrono::naive::NaiveDate;
 use chrono::Datelike;
 use chrono::Timelike;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 
 use libimagstore::storeid::StoreId;
 use libimagstore::storeid::IntoStoreId;
-use libimagstore::store::Result as StoreResult;
-
-use error::DiaryError as DE;
-use error::DiaryErrorKind as DEK;
-use error::ResultExt;
 
 use module_path::ModuleEntryPath;
 
@@ -149,7 +149,7 @@ impl DiaryId {
 
 impl IntoStoreId for DiaryId {
 
-    fn into_storeid(self) -> StoreResult<StoreId> {
+    fn into_storeid(self) -> Result<StoreId> {
         let s : String = self.into();
         ModuleEntryPath::new(s).into_storeid()
     }
@@ -167,7 +167,7 @@ impl Into<String> for DiaryId {
 
 impl Display for DiaryId {
 
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), FmtError> {
+    fn fmt(&self, fmt: &mut Formatter) -> RResult<(), FmtError> {
         write!(fmt, "{}/{:0>4}/{:0>2}/{:0>2}/{:0>2}:{:0>2}:{:0>2}",
                 self.name, self.year, self.month, self.day, self.hour, self.minute, self.second)
     }
@@ -185,32 +185,30 @@ impl Into<NaiveDateTime> for DiaryId {
 }
 
 pub trait FromStoreId : Sized {
-
-    fn from_storeid(&StoreId) -> Result<Self, DE>;
-
+    fn from_storeid(&StoreId) -> Result<Self>;
 }
 
 use std::path::Component;
 
-fn component_to_str<'a>(com: Component<'a>) -> Result<&'a str, DE> {
+fn component_to_str<'a>(com: Component<'a>) -> Result<&'a str> {
     match com {
         Component::Normal(s) => Some(s),
         _ => None,
     }.and_then(|s| s.to_str())
-    .ok_or(DE::from_kind(DEK::IdParseError))
+    .ok_or_else(|| Error::from(err_msg("ID Parse error")))
 }
 
 impl FromStoreId for DiaryId {
 
-    fn from_storeid(s: &StoreId) -> Result<DiaryId, DE> {
+    fn from_storeid(s: &StoreId) -> Result<DiaryId> {
         use std::str::FromStr;
 
         use std::path::Components;
         use std::iter::Rev;
 
-        fn next_component<'a>(components: &'a mut Rev<Components>) -> Result<&'a str, DE> {
+        fn next_component<'a>(components: &'a mut Rev<Components>) -> Result<&'a str> {
             components.next()
-                .ok_or(DE::from_kind(DEK::IdParseError))
+                .ok_or_else(|| Error::from(err_msg("ID parse error")))
                 .and_then(component_to_str)
         }
 
@@ -228,21 +226,33 @@ impl FromStoreId for DiaryId {
 
             match (hour, minute, second) {
                 (Some(h), Some(m), Some(s)) => Ok((h, m, s)),
-                _ => return Err(DE::from_kind(DEK::IdParseError)),
+                _ => return Err(Error::from(err_msg("ID Parse error"))),
             }
         })?;
 
-        let day: Result<u32,_> = next_component(&mut cmps)
-            .and_then(|s| s.parse::<u32>()
-                      .chain_err(|| DEK::IdParseError));
+        let day: Result<u32> = next_component(&mut cmps)
+            .and_then(|s| {
+                s.parse::<u32>()
+                    .map_err(Error::from)
+                    .context(err_msg("ID parse error"))
+                    .map_err(Error::from)
+            });
 
-        let month: Result<u32,_> = next_component(&mut cmps)
-            .and_then(|s| s.parse::<u32>()
-                      .chain_err(|| DEK::IdParseError));
+        let month: Result<u32> = next_component(&mut cmps)
+            .and_then(|s| {
+                s.parse::<u32>()
+                    .map_err(Error::from)
+                    .context(err_msg("ID Parse error"))
+                    .map_err(Error::from)
+            });
 
-        let year: Result<i32,_> = next_component(&mut cmps)
-            .and_then(|s| s.parse::<i32>()
-                      .chain_err(|| DEK::IdParseError));
+        let year: Result<i32> = next_component(&mut cmps)
+            .and_then(|s| {
+                s.parse::<i32>()
+                    .map_err(Error::from)
+                    .context(err_msg("ID Parse error"))
+                    .map_err(Error::from)
+            });
 
         let name = next_component(&mut cmps).map(String::from);
 
