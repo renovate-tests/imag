@@ -26,7 +26,8 @@
 
 use regex::Regex;
 
-use error::Result;
+use failure::Fallible as Result;
+use failure::Error;
 use module_path::ModuleEntryPath;
 
 use libimagstore::store::Store;
@@ -53,22 +54,22 @@ impl<'a> BookmarkCollectionStore<'a> for Store {
     fn new(&'a self, name: &str) -> Result<FileLockEntry<'a>> {
         ModuleEntryPath::new(name)
             .into_storeid()
-            .and_then(|id| self.create(id).map_err(From::from))
-            .map_err(From::from)
+            .and_then(|id| self.create(id).map_err(Error::from))
+            .map_err(Error::from)
     }
 
     fn get(&'a self, name: &str) -> Result<Option<FileLockEntry<'a>>> {
         ModuleEntryPath::new(name)
             .into_storeid()
-            .and_then(|id| self.get(id).map_err(From::from))
-            .map_err(From::from)
+            .and_then(|id| self.get(id).map_err(Error::from))
+            .map_err(Error::from)
     }
 
     fn delete(&'a self, name: &str) -> Result<()> {
         ModuleEntryPath::new(name)
             .into_storeid()
-            .and_then(|id| self.delete(id).map_err(From::from))
-            .map_err(From::from)
+            .and_then(|id| self.delete(id).map_err(Error::from))
+            .map_err(Error::from)
     }
 
 }
@@ -84,47 +85,35 @@ pub trait BookmarkCollection : Sized + InternalLinker + ExternalLinker {
 impl BookmarkCollection for Entry {
 
     fn links<'a>(&self, store: &'a Store) -> Result<UrlIter<'a>> {
-        self.get_external_links(store).map_err(From::from)
+        self.get_external_links(store)
     }
 
     fn link_entries(&self) -> Result<Vec<StoreLink>> {
         use libimagentrylink::external::is_external_link_storeid;
-
-        self.get_internal_links()
-            .map(|v| v.filter(|id| is_external_link_storeid(id)).collect())
-            .map_err(From::from)
+        self.get_internal_links().map(|v| v.filter(|id| is_external_link_storeid(id)).collect())
     }
 
     fn add_link(&mut self, store: &Store, l: Link) -> Result<()> {
         use link::IntoUrl;
-
-        l.into_url()
-            .and_then(|url| self.add_external_link(store, url).map_err(From::from))
-            .map_err(From::from)
+        l.into_url().and_then(|url| self.add_external_link(store, url))
     }
 
     fn get_links_matching<'a>(&self, store: &'a Store, r: Regex) -> Result<LinksMatchingRegexIter<'a>> {
         use self::iter::IntoLinksMatchingRegexIter;
-
-        self.get_external_links(store)
-            .map(|iter| iter.matching_regex(r))
-            .map_err(From::from)
+        self.get_external_links(store).map(|iter| iter.matching_regex(r))
     }
 
     fn remove_link(&mut self, store: &Store, l: Link) -> Result<()> {
         use link::IntoUrl;
-
-        l.into_url()
-            .and_then(|url| self.remove_external_link(store, url).map_err(From::from))
-            .map_err(From::from)
+        l.into_url().and_then(|url| self.remove_external_link(store, url))
     }
 
 }
 
 pub mod iter {
     use link::Link;
-    use error::Result;
-    use error::BookmarkError as BE;
+    use failure::Fallible as Result;
+    use failure::Error;
 
     pub struct LinkIter<I>(I)
         where I: Iterator<Item = Link>;
@@ -167,7 +156,7 @@ pub mod iter {
             loop {
                 let n = match self.0.next() {
                     Some(Ok(n))  => n,
-                    Some(Err(e)) => return Some(Err(BE::from(e))),
+                    Some(Err(e)) => return Some(Err(Error::from(e))),
                     None         => return None,
                 };
 

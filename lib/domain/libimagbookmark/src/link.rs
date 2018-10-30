@@ -19,7 +19,10 @@
 
 use std::ops::{Deref, DerefMut};
 
-use error::Result;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 
 use url::Url;
 
@@ -66,10 +69,7 @@ pub trait IntoUrl {
 impl IntoUrl for Link {
 
     fn into_url(self) -> Result<Url> {
-        use error::BookmarkErrorKind as BEK;
-        use error::ResultExt;
-
-        Url::parse(&self[..]).chain_err(|| BEK::LinkParsingError)
+        Url::parse(&self[..]).context(err_msg("Link parsing error")).map_err(Error::from)
     }
 
 }
