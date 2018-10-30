@@ -23,8 +23,9 @@ use builtin::header::field_path::FieldPath;
 use builtin::header::field_predicate::FieldPredicate;
 use builtin::header::field_predicate::Predicate;
 use filters::failable::filter::FailableFilter;
-use error::Result;
-use error::FilterError as FE;
+
+use failure::Fallible as Result;
+use failure::Error;
 
 use toml::Value;
 
@@ -81,7 +82,7 @@ impl FieldIsType {
 }
 
 impl FailableFilter<Entry> for FieldIsType {
-    type Error = FE;
+    type Error = Error;
 
     fn filter(&self, e: &Entry) -> Result<bool> {
         self.filter.filter(e)

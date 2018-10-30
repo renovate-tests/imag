@@ -38,16 +38,16 @@ extern crate regex;
 extern crate semver;
 extern crate toml;
 extern crate toml_query;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 extern crate libimagstore;
 extern crate libimagentrytag;
+extern crate libimagerror;
 
 // core functionality modules of the crate,
 // these depend only on libimagstore
 
 pub mod builtin;
-pub mod error;
 
 // extended functionality of the crate
 // these depend on other internal libraries than libimagstore and use the upper core modules for

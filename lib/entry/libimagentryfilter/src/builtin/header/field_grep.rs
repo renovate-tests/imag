@@ -26,8 +26,9 @@ use builtin::header::field_path::FieldPath;
 use builtin::header::field_predicate::FieldPredicate;
 use builtin::header::field_predicate::Predicate;
 use filters::failable::filter::FailableFilter;
-use error::Result;
-use error::FilterError as FE;
+
+use failure::Fallible as Result;
+use failure::Error;
 
 struct EqGrep{
     regex: Regex
@@ -60,7 +61,7 @@ impl FieldGrep {
 }
 
 impl FailableFilter<Entry> for FieldGrep {
-    type Error = FE;
+    type Error = Error;
 
     fn filter(&self, e: &Entry) -> Result<bool> {
         self.filter.filter(e)

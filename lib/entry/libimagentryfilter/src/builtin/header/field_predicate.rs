@@ -24,8 +24,9 @@ use toml::Value;
 
 use builtin::header::field_path::FieldPath;
 use filters::failable::filter::FailableFilter;
-use error::Result;
-use error::FilterError as FE;
+
+use failure::Fallible as Result;
+use failure::Error;
 
 pub trait Predicate {
     fn evaluate(&self, &Value) -> bool;
@@ -53,7 +54,7 @@ impl<P: Predicate> FieldPredicate<P> {
 }
 
 impl<P: Predicate> FailableFilter<Entry> for FieldPredicate<P> {
-    type Error = FE;
+    type Error = Error;
 
     fn filter(&self, e: &Entry) -> Result<bool> {
         Ok(e.get_header()
