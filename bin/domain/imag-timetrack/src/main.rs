@@ -41,6 +41,7 @@ extern crate filters;
 extern crate itertools;
 extern crate prettytable;
 extern crate kairos;
+extern crate failure;
 
 extern crate libimagerror;
 extern crate libimagstore;

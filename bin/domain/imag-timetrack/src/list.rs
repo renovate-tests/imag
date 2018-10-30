@@ -25,15 +25,17 @@ use prettytable::Cell;
 use kairos::parser::Parsed;
 use kairos::parser::parse as kairos_parse;
 use clap::ArgMatches;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::err_msg;
+use failure::Error;
 
 use libimagerror::trace::trace_error;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
 use libimagstore::store::FileLockEntry;
-use libimagtimetrack::error::TimeTrackError;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
 use libimagtimetrack::timetracking::TimeTracking;
-use libimagtimetrack::error::Result;
 
 use libimagrt::runtime::Runtime;
 
@@ -63,6 +65,7 @@ pub fn list(rt: &Runtime) -> i32 {
                 ::std::process::exit(1)
             },
             Some(Err(e)) => {
+                let e = Error::from(e);
                 trace_error(&e);
                 ::std::process::exit(1)
             }
@@ -164,7 +167,8 @@ pub fn list_impl(rt: &Runtime,
         })
         .map_err_trace_exit_unwrap(1)
         .print(&mut rt.stdout())
-        .map_err(|_| TimeTrackError::from(String::from("Failed printing table")))
+        .context(err_msg("Failed to print table"))
+        .map_err(Error::from)
         .map(|_| 0)
         .map_err_trace()
         .unwrap_or(1)

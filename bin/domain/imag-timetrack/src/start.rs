@@ -20,10 +20,10 @@
 use std::str::FromStr;
 
 use chrono::naive::NaiveDateTime;
+use failure::Error;
 
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::trace_error;
-use libimagtimetrack::error::TimeTrackError as TTE;
 use libimagtimetrack::tag::TimeTrackingTag;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
 use libimagerror::trace::MapErrTrace;
@@ -34,7 +34,7 @@ pub fn start(rt: &Runtime) -> i32 {
 
     let start = match cmd.value_of("start-time") {
         None | Some("now") => ::chrono::offset::Local::now().naive_local(),
-        Some(ndt)          => match NaiveDateTime::from_str(ndt).map_err(TTE::from) {
+        Some(ndt)          => match NaiveDateTime::from_str(ndt).map_err(Error::from) {
             Ok(ndt) => ndt,
             Err(e) =>  {
                 trace_error(&e);

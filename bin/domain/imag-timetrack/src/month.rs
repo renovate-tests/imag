@@ -22,13 +22,13 @@ use std::str::FromStr;
 
 use filters::filter::Filter;
 use chrono::NaiveDateTime;
+use failure::Error;
 
 use libimagerror::trace::trace_error;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::io::ToExitCode;
 use libimagerror::iter::TraceIterator;
 use libimagstore::store::FileLockEntry;
-use libimagtimetrack::error::TimeTrackError as TTE;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
 use libimagtimetrack::timetracking::TimeTracking;
 use libimagtimetrack::tag::TimeTrackingTag;
@@ -48,7 +48,7 @@ pub fn month(rt: &Runtime) -> i32 {
 
         let start = match cmd.value_of("start").map(::chrono::naive::NaiveDateTime::from_str) {
             None    => NaiveDate::from_ymd(now.year(), now.month(), 1).and_hms(0, 0, 0),
-            Some(s) => match s.map_err(TTE::from) {
+            Some(s) => match s.map_err(Error::from) {
                 Ok(dt) => dt,
                 Err(e) => {
                     trace_error(&e);
@@ -70,7 +70,7 @@ pub fn month(rt: &Runtime) -> i32 {
 
                 NaiveDate::from_ymd(year, month, 1).and_hms(0, 0, 0)
             },
-            Some(s) => match s.map_err(TTE::from) {
+            Some(s) => match s.map_err(Error::from) {
                 Ok(dt) => dt,
                 Err(e) => {
                     trace_error(&e);
@@ -106,7 +106,7 @@ pub fn month(rt: &Runtime) -> i32 {
         .map_err_trace_exit_unwrap(1)
         .trace_unwrap()
         .filter(|e| filter.filter(e))
-        .map(|e| -> Result<_, TTE> {
+        .map(|e| -> Result<_, Error> {
             debug!("Processing {:?}", e.get_location());
 
             let tag   = e.get_timetrack_tag()?;
