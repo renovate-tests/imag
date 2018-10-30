@@ -41,6 +41,7 @@ extern crate handlebars;
 extern crate walkdir;
 extern crate uuid;
 extern crate serde_json;
+extern crate failure;
 
 extern crate libimagcontact;
 extern crate libimagstore;
@@ -58,16 +59,16 @@ use handlebars::Handlebars;
 use clap::ArgMatches;
 use toml_query::read::TomlValueReadTypeExt;
 use walkdir::WalkDir;
+use failure::Error;
+use failure::err_msg;
 
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
-use libimagerror::str::ErrFromStr;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::io::ToExitCode;
 use libimagerror::exit::ExitUnwrap;
 use libimagerror::iter::TraceIterator;
 use libimagcontact::store::ContactStore;
-use libimagcontact::error::ContactError as CE;
 use libimagcontact::contact::Contact;
 use libimagcontact::deser::DeserVcard;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
@@ -121,7 +122,7 @@ fn list(rt: &Runtime) {
         .map(|fle| {
              let fle = fle
                 .map_err_trace_exit_unwrap(1)
-                .ok_or_else(|| CE::from("StoreId not found".to_owned()))
+                .ok_or_else(|| Error::from(err_msg("StoreId not found".to_owned())))
                 .map_err_trace_exit_unwrap(1);
 
             fle.deser().map_err_trace_exit_unwrap(1)
@@ -144,8 +145,7 @@ fn list(rt: &Runtime) {
                 let data = build_data_object_for_handlebars(i, &deservcard);
 
                 list_format.render("format", &data)
-                    .err_from_str()
-                    .map_err(CE::from)
+                    .map_err(Error::from)
                     .map_err_trace_exit_unwrap(1)
             })
 
@@ -175,8 +175,7 @@ fn import(rt: &Runtime) {
     } else if path.is_dir() {
         for entry in WalkDir::new(path).min_depth(1).into_iter() {
             let entry = entry
-                .err_from_str()
-                .map_err(CE::from)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1);
             if entry.file_type().is_file() {
                 let pb = PathBuf::from(entry.path());
@@ -233,8 +232,7 @@ fn show(rt: &Runtime) {
 
             let s = show_format
                 .render("format", &data)
-                .err_from_str()
-                .map_err(CE::from)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1);
             let _ = writeln!(outlock, "{}", s).to_exit_code().unwrap_or_exit();
         });
@@ -324,8 +322,7 @@ fn find(rt: &Runtime) {
             let data = build_data_object_for_handlebars(i, &card);
             let s = fmt
                 .render("format", &data)
-                .err_from_str()
-                .map_err(CE::from)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1);
 
             let _ = writeln!(rt.stdout(), "{}", s)
@@ -341,19 +338,19 @@ fn get_contact_print_format(config_value_path: &'static str, rt: &Runtime, scmd:
         .map(String::from)
         .unwrap_or_else(|| {
             rt.config()
-                .ok_or_else(|| CE::from("No configuration file".to_owned()))
+                .ok_or_else(|| Error::from(err_msg("No configuration file")))
                 .map_err_trace_exit_unwrap(1)
                 .read_string(config_value_path)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1)
-                .ok_or_else(|| CE::from("Configuration 'contact.list_format' does not exist".to_owned()))
+                .ok_or_else(|| Error::from(err_msg("Configuration 'contact.list_format' does not exist")))
                 .map_err_trace_exit_unwrap(1)
         });
 
     let mut hb = Handlebars::new();
     let _ = hb
         .register_template_string("format", fmt)
-        .err_from_str()
-        .map_err(CE::from)
+        .map_err(Error::from)
         .map_err_trace_exit_unwrap(1);
 
     hb.register_escape_fn(::handlebars::no_escape);
