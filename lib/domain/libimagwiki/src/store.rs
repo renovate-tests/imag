@@ -21,8 +21,8 @@ use libimagstore::store::Store;
 use libimagstore::storeid::StoreId;
 use libimagstore::storeid::IntoStoreId;
 
-use error::WikiError as WE;
-use error::Result;
+use failure::Fallible as Result;
+
 use wiki::Wiki;
 
 pub trait WikiStore {
@@ -79,6 +79,6 @@ impl WikiStore for Store {
 }
 
 fn wiki_path(name: &str) -> Result<StoreId> {
-    ::module_path::ModuleEntryPath::new(name).into_storeid().map_err(WE::from)
+    ::module_path::ModuleEntryPath::new(name).into_storeid()
 }
 

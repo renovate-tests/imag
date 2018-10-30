@@ -21,9 +21,9 @@ use libimagstore::store::Store;
 use libimagstore::store::Entry;
 use libimagentrymarkdown::processor::LinkProcessor;
 
-use error::Result;
-use error::WikiErrorKind as WEK;
-use error::ResultExt;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
 
 pub trait WikiEntry {
     fn autolink(&mut self, store: &Store) -> Result<()>;
@@ -67,7 +67,9 @@ impl WikiEntry for Entry {
     ///
     /// See the documentation of `::libimagentrymarkdown::processor::LinkProcessor`.
     fn autolink_with_processor(&mut self, store: &Store, processor: LinkProcessor) -> Result<()> {
-        processor.process(self, store).chain_err(|| WEK::AutoLinkError(self.get_location().clone()))
+        processor.process(self, store)
+            .context(format_err!("Auto Link error: {}", self.get_location()))
+            .map_err(Error::from)
     }
 
 }
