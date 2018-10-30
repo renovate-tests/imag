@@ -23,10 +23,11 @@ use std::fmt::Formatter;
 use std::fmt::Result as FmtResult;
 
 use toml::Value;
+use failure::Fallible as Result;
+use failure::err_msg;
+use failure::Error;
 
-use error::GPSErrorKind as GPSEK;
-use error::GPSError as GPSE;
-use error::Result;
+use libimagerror::errors::ErrorMsg as EM;
 
 pub trait FromValue : Sized {
     fn from_value(v: &Value) -> Result<Self>;
@@ -80,28 +81,28 @@ impl FromValue for GPSValue {
     fn from_value(v: &Value) -> Result<Self> {
         let int_to_appropriate_width = |v: &Value| {
             v.as_integer()
-             .ok_or(GPSE::from_kind(GPSEK::HeaderTypeError))
+             .ok_or_else(|| Error::from(EM::EntryHeaderTypeError))
         };
 
         match *v {
             Value::Table(ref map) => {
                 Ok(GPSValue::new(
                     map.get("degree")
-                        .ok_or_else(|| GPSE::from_kind(GPSEK::DegreeMissing))
+                        .ok_or_else(|| Error::from(err_msg("Degree missing")))
                         .and_then(&int_to_appropriate_width)?,
 
                     map
                         .get("minutes")
-                        .ok_or_else(|| GPSE::from_kind(GPSEK::MinutesMissing))
+                        .ok_or_else(|| Error::from(err_msg("Minutes missing")))
                         .and_then(&int_to_appropriate_width)?,
 
                     map
                         .get("seconds")
-                        .ok_or_else(|| GPSE::from_kind(GPSEK::SecondsMissing))
+                        .ok_or_else(|| Error::from(err_msg("Seconds missing")))
                         .and_then(&int_to_appropriate_width)?
                 ))
             }
-            _ => Err(GPSE::from_kind(GPSEK::TypeError))
+            _ => Err(Error::from(EM::EntryHeaderTypeError))
         }
     }
 
@@ -151,15 +152,17 @@ impl Into<Value> for Coordinates {
 impl FromValue for Coordinates {
     fn from_value(v: &Value) -> Result<Self> {
         v.as_table()
-            .ok_or(GPSE::from_kind(GPSEK::TypeError))
+            .ok_or_else(|| Error::from(EM::EntryHeaderTypeError))
             .and_then(|t| {
                 let get = |m: &BTreeMap<_, _>, what: &'static str, ek| -> Result<GPSValue> {
-                    m.get(what).ok_or(GPSE::from_kind(ek)).and_then(GPSValue::from_value)
+                    m.get(what)
+                        .ok_or_else(|| Error::from(err_msg(ek)))
+                        .and_then(GPSValue::from_value)
                 };
 
                 Ok(Coordinates::new(
-                    get(t, "longitude", GPSEK::LongitudeMissing)?,
-                    get(t, "latitude", GPSEK::LatitudeMissing)?
+                    get(t, "longitude", "Longitude missing")?,
+                    get(t, "latitude", "Latitude missing")?
                 ))
             })
     }
