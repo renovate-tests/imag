@@ -35,6 +35,7 @@
 extern crate clap;
 #[macro_use]
 extern crate log;
+extern crate failure;
 
 extern crate libimagentryannotation;
 extern crate libimagentryedit;
@@ -46,9 +47,11 @@ extern crate libimagutil;
 use std::io::Write;
 use std::path::PathBuf;
 
+use failure::Error;
+use failure::err_msg;
+
 use libimagentryannotation::annotateable::*;
 use libimagentryannotation::annotation_fetcher::*;
-use libimagentryannotation::error::AnnotationError as AE;
 use libimagentryedit::edit::*;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::exit::ExitUnwrap;
@@ -97,7 +100,7 @@ fn add(rt: &Runtime) {
     let _ = rt.store()
         .get(entry_name)
         .map_err_trace_exit_unwrap(1)
-        .ok_or(AE::from("Entry does not exist".to_owned()))
+        .ok_or_else(|| Error::from(err_msg("Entry does not exist".to_owned())))
         .map_err_trace_exit_unwrap(1)
         .annotate(rt.store(), annotation_name)
         .map_err_trace_exit_unwrap(1)
@@ -114,7 +117,7 @@ fn remove(rt: &Runtime) {
     let mut entry = rt.store()
         .get(PathBuf::from(entry_name).into_storeid().map_err_trace_exit_unwrap(1))
         .map_err_trace_exit_unwrap(1)
-        .ok_or(AE::from("Entry does not exist".to_owned()))
+        .ok_or_else(|| Error::from(err_msg("Entry does not exist".to_owned())))
         .map_err_trace_exit_unwrap(1);
 
     let annotation = entry
@@ -148,7 +151,7 @@ fn list(rt: &Runtime) {
                 .store()
                 .get(pb.into_storeid().map_err_trace_exit_unwrap(1))
                 .map_err_trace_exit_unwrap(1)
-                .ok_or(AE::from("Entry does not exist".to_owned()))
+                .ok_or_else(|| Error::from(err_msg("Entry does not exist")))
                 .map_err_trace_exit_unwrap(1)
                 .annotations(rt.store())
                 .map_err_trace_exit_unwrap(1)
