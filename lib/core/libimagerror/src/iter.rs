@@ -17,7 +17,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use error_chain::ChainedError;
+use failure::Error;
 
 /// An iterator that unwraps the `Ok` items of `iter`, while passing the `Err` items to its
 /// closure `f`.
@@ -31,9 +31,10 @@ pub struct UnwrapWith<I, F>{
     f: F
 }
 
-impl<I, F, T, E> Iterator for UnwrapWith<I, F> where
-    I: Iterator<Item = Result<T, E>>,
-    F: FnMut(E)
+impl<I, F, T> Iterator for UnwrapWith<I, F>
+    where
+        I: Iterator<Item = Result<T, Error>>,
+        F: FnMut(Error)
 {
     type Item = T;
 
@@ -41,14 +42,13 @@ impl<I, F, T, E> Iterator for UnwrapWith<I, F> where
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self.iter.next() {
-                Some(Err(e)) => {
-                    (self.f)(e);
-                },
+                Some(Err(e))   => { (self.f)(e); },
                 Some(Ok(item)) => return Some(item),
-                None => return None,
+                None           => return None,
             }
         }
     }
+
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         let (_, upper) = self.iter.size_hint();
@@ -56,32 +56,14 @@ impl<I, F, T, E> Iterator for UnwrapWith<I, F> where
     }
 }
 
-impl<I, F, T, E> DoubleEndedIterator for UnwrapWith<I, F> where
-    I: DoubleEndedIterator<Item = Result<T, E>>,
-    F: FnMut(E)
-{
-    #[inline]
-    fn next_back(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.iter.next_back() {
-                Some(Err(e)) => {
-                    (self.f)(e);
-                },
-                Some(Ok(item)) => return Some(item),
-                None => return None,
-            }
-        }
-    }
-}
+
 
 /// Iterator helper for Unwrap with exiting on error
-pub struct UnwrapExit<I, T, E>(I, i32)
-    where I: Iterator<Item = Result<T, E>>,
-          E: ChainedError;
+pub struct UnwrapExit<I, T>(I, i32)
+    where I: Iterator<Item = Result<T, Error>>;
 
-impl<I, T, E> Iterator for UnwrapExit<I, T, E>
-    where I: Iterator<Item = Result<T, E>>,
-          E: ChainedError
+impl<I, T> Iterator for UnwrapExit<I, T>
+    where I: Iterator<Item = Result<T, Error>>,
 {
     type Item = T;
 
@@ -91,9 +73,8 @@ impl<I, T, E> Iterator for UnwrapExit<I, T, E>
     }
 }
 
-impl<I, T, E> DoubleEndedIterator for UnwrapExit<I, T, E>
-    where I: DoubleEndedIterator<Item = Result<T, E>>,
-          E: ChainedError
+impl<I, T> DoubleEndedIterator for UnwrapExit<I, T>
+    where I: DoubleEndedIterator<Item = Result<T, Error>>,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         use trace::MapErrTrace;
@@ -102,18 +83,21 @@ impl<I, T, E> DoubleEndedIterator for UnwrapExit<I, T, E>
 }
 
 /// This trait provides methods that make it easier to work with iterators that yield a `Result`.
-pub trait TraceIterator<T, E> : Iterator<Item = Result<T, E>> + Sized {
-    /// Creates an iterator that yields the item in each `Ok` item, while filtering out the `Err`
+pub trait TraceIterator<T> : Iterator<Item = Result<T, Error>> + Sized {
+    /// Creates an iterator that yields the item in each `Ok` item, while filtering out the
+    /// `Err`
     /// items. Each filtered `Err` will be trace-logged with [`::trace::trace_error`].
     ///
     /// As with all iterators, the processing is lazy. If you do not use the result of this method,
     /// nothing will be passed to `::trace::trace_error`, no matter how many `Err` items might
     /// be present.
     #[inline]
-    fn trace_unwrap<K>(self) -> UnwrapWith<Self, fn(E)> where E: ChainedError<ErrorKind = K> {
+    fn trace_unwrap(self) -> UnwrapWith<Self, fn(Error)> {
         #[inline]
-        fn trace_error<K, E: ChainedError<ErrorKind = K>>(err: E) {
-            eprintln!("{}", err.display_chain());
+        fn trace_error(err: Error) {
+            err.iter_chain().for_each(|cause| {
+                eprintln!("{}", cause);
+            });
         }
 
         self.unwrap_with(trace_error)
@@ -127,11 +111,10 @@ pub trait TraceIterator<T, E> : Iterator<Item = Result<T, E>> + Sized {
     /// nothing will be passed to `::trace::trace_error_exit`, no matter how many `Err` items might
     /// be present.
     #[inline]
-    fn trace_unwrap_exit(self, exitcode: i32) -> UnwrapExit<Self, T, E>
-        where E: ChainedError
-    {
+    fn trace_unwrap_exit(self, exitcode: i32) -> UnwrapExit<Self, T> {
         UnwrapExit(self, exitcode)
     }
+
 
     /// Takes a closure and creates an iterator that will yield the items inside all `Ok` items
     /// yielded by the original iterator. All `Err` items will be filtered out, and the contents
@@ -141,50 +124,13 @@ pub trait TraceIterator<T, E> : Iterator<Item = Result<T, E>> + Sized {
     /// for the closure to be called.
     #[inline]
     fn unwrap_with<F>(self, f: F) -> UnwrapWith<Self, F>
-        where F: FnMut(E)
+        where F: FnMut(Error)
     {
         UnwrapWith { iter: self, f }
     }
 }
 
-impl<I, T, E> TraceIterator<T, E> for I where
-    I: Iterator<Item = Result<T, E>>
+impl<I, T> TraceIterator<T> for I where
+    I: Iterator<Item = Result<T, Error>>
 {}
 
-#[cfg(test)]
-mod test {
-    use super::TraceIterator;
-
-    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-    struct TestError(i32);
-
-    #[test]
-    fn test_unwrap_with() {
-        let original = vec![Ok(1), Err(TestError(2)), Ok(3), Err(TestError(4))];
-        let mut errs = vec![];
-
-        let oks = original
-            .into_iter()
-            .unwrap_with(|e|errs.push(e))
-            .collect::<Vec<_>>();
-
-        assert_eq!(&oks, &[1, 3]);
-        assert_eq!(&errs, &[TestError(2), TestError(4)]);
-    }
-
-    #[test]
-    fn test_unwrap_with_backward() {
-        let original = vec![Ok(1), Err(TestError(2)), Ok(3), Err(TestError(4))];
-        let mut errs = vec![];
-
-        let oks = original
-            .into_iter()
-            .rev()
-            .unwrap_with(|e|errs.push(e))
-            .collect::<Vec<_>>();
-
-        assert_eq!(&oks, &[3, 1]);
-        assert_eq!(&errs, &[TestError(4), TestError(2)]);
-    }
-
-}
