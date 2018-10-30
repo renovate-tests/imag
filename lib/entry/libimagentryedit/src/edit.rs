@@ -20,10 +20,12 @@
 use libimagrt::runtime::Runtime;
 use libimagstore::store::Entry;
 
-use error::Result;
-use error::EditErrorKind;
-use error::EditError as EE;
-use error::ResultExt;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::ResultExt;
+use failure::err_msg;
+
+use libimagerror::errors::ErrorMsg as EM;
 
 pub trait Edit {
     fn edit_content(&mut self, rt: &Runtime) -> Result<()>;
@@ -64,7 +66,7 @@ impl EditHeader for Entry {
     fn edit_header_and_content(&mut self, rt: &Runtime) -> Result<()> {
         let mut header_and_content = self.to_str()?;
         let _                      = edit_in_tmpfile(rt, &mut header_and_content)?;
-        self.replace_from_buffer(&header_and_content).map_err(EE::from)
+        self.replace_from_buffer(&header_and_content).map_err(Error::from)
     }
 
 }
@@ -74,17 +76,16 @@ pub fn edit_in_tmpfile(rt: &Runtime, s: &mut String) -> Result<()> {
 
     let editor = rt
         .editor()
-        .chain_err(|| EditErrorKind::NoEditor)?
-        .ok_or_else(|| EE::from_kind(EditErrorKind::NoEditor))?;
+        .context(err_msg("No editor"))?
+        .ok_or_else(|| Error::from(err_msg("No editor")))?;
 
     edit_in_tmpfile_with_command(editor, s)
-        .chain_err(|| EditErrorKind::IOError)
-        .and_then(|worked| {
-            if !worked {
-                Err(EditErrorKind::ProcessExitFailure.into())
-            } else {
-                Ok(())
-            }
+        .context(EM::IO)
+        .map_err(Error::from)
+        .and_then(|worked| if !worked {
+            Err(Error::from(EM::ExternalProcessError))
+        } else {
+            Ok(())
         })
 }
 
