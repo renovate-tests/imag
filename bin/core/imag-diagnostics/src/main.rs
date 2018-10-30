@@ -36,6 +36,7 @@ extern crate clap;
 extern crate toml;
 extern crate toml_query;
 extern crate indicatif;
+extern crate failure;
 #[macro_use] extern crate log;
 
 #[macro_use] extern crate libimagrt;
@@ -52,12 +53,14 @@ use libimagerror::io::ToExitCode;
 use libimagerror::exit::ExitUnwrap;
 use libimagstore::store::FileLockEntry;
 use libimagstore::storeid::StoreId;
-use libimagstore::error::StoreError as Error;
 use libimagentrylink::internal::*;
 
 use toml::Value;
 use toml_query::read::TomlValueReadExt;
 use indicatif::{ProgressBar, ProgressStyle};
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 
 use std::collections::BTreeMap;
 
@@ -76,7 +79,7 @@ struct Diagnostic {
 
 impl Diagnostic {
 
-    fn for_entry<'a>(entry: &FileLockEntry<'a>) -> Result<Diagnostic, ::libimagstore::error::StoreError> {
+    fn for_entry<'a>(entry: &FileLockEntry<'a>) -> Result<Diagnostic> {
         Ok(Diagnostic {
             id: entry.get_location().clone(),
             entry_store_version: entry
@@ -142,7 +145,7 @@ fn main() {
         .into_get_iter()
         .map(|e| {
             e.map_err_trace_exit_unwrap(1)
-                .ok_or(Error::from("Unable to get entry".to_owned()))
+                .ok_or_else(|| Error::from(err_msg("Unable to get entry".to_owned())))
                 .map_err_trace_exit_unwrap(1)
         })
         .map(|e| {
@@ -163,7 +166,7 @@ fn main() {
 
             diag
         })
-        .collect::<Result<Vec<_>, _>>()
+        .collect::<Result<Vec<_>>>()
         .map_err_trace_exit_unwrap(1);
 
     spinner.finish();
@@ -265,6 +268,7 @@ fn main() {
 fn get_config(rt: &Runtime, s: &'static str) -> Option<String> {
     rt.config().and_then(|cfg| {
         cfg.read(s)
+            .map_err(Error::from)
             .map_err_trace_exit_unwrap(1)
             .map(|opt| match opt {
                 &Value::String(ref s) => s.to_owned(),
