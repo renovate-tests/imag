@@ -33,6 +33,7 @@
 )]
 
 #[macro_use] extern crate log;
+#[macro_use] extern crate failure;
 extern crate clap;
 extern crate chrono;
 extern crate toml;
