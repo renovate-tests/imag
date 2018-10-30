@@ -26,15 +26,16 @@ use uuid::Uuid;
 
 use task_hookrs::task::Task as TTask;
 use task_hookrs::import::{import_task, import_tasks};
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 
 use libimagstore::store::{FileLockEntry, Store};
 use libimagstore::storeid::IntoStoreId;
+use libimagerror::errors::ErrorMsg as EM;
 use module_path::ModuleEntryPath;
 
-use error::TodoErrorKind as TEK;
-use error::TodoError as TE;
-use error::Result;
-use error::ResultExt;
 use iter::TaskIdIterator;
 
 /// Task struct containing a `FileLockEntry`
@@ -55,9 +56,10 @@ impl<'a> TaskStore<'a> for Store {
 
     fn import_task_from_reader<R: BufRead>(&'a self, mut r: R) -> Result<(FileLockEntry<'a>, String, Uuid)> {
         let mut line = String::new();
-        r.read_line(&mut line).map_err(|_| TE::from_kind(TEK::UTF8Error))?;
+        r.read_line(&mut line).context(EM::UTF8Error)?;
         import_task(&line.as_str())
-            .map_err(|_| TE::from_kind(TEK::ImportError))
+            .context(err_msg("Error importing"))
+            .map_err(Error::from)
             .and_then(|t| {
                 let uuid = t.uuid().clone();
                 self.new_from_twtask(t).map(|t| (t, line, uuid))
@@ -75,7 +77,7 @@ impl<'a> TaskStore<'a> for Store {
     ///
     fn get_task_from_import<R: BufRead>(&'a self, mut r: R) -> Result<RResult<FileLockEntry<'a>, String>> {
         let mut line = String::new();
-        r.read_line(&mut line).chain_err(|| TEK::UTF8Error)?;
+        r.read_line(&mut line).context(EM::UTF8Error)?;
         self.get_task_from_string(line)
     }
 
@@ -85,7 +87,8 @@ impl<'a> TaskStore<'a> for Store {
     /// For an explanation on the return values see `Task::get_from_import()`.
     fn get_task_from_string(&'a self, s: String) -> Result<RResult<FileLockEntry<'a>, String>> {
         import_task(s.as_str())
-            .map_err(|_| TE::from_kind(TEK::ImportError))
+            .context(err_msg("Import error"))
+            .map_err(Error::from)
             .map(|t| t.uuid().clone())
             .and_then(|uuid| self.get_task_from_uuid(uuid))
             .and_then(|o| match o {
@@ -101,14 +104,13 @@ impl<'a> TaskStore<'a> for Store {
         ModuleEntryPath::new(format!("taskwarrior/{}", uuid))
             .into_storeid()
             .and_then(|store_id| self.get(store_id))
-            .map_err(TE::from)
     }
 
     /// Same as Task::get_from_import() but uses Store::retrieve() rather than Store::get(), to
     /// implicitely create the task if it does not exist.
     fn retrieve_task_from_import<R: BufRead>(&'a self, mut r: R) -> Result<FileLockEntry<'a>> {
         let mut line = String::new();
-        r.read_line(&mut line).chain_err(|| TEK::UTF8Error)?;
+        r.read_line(&mut line).context(EM::UTF8Error)?;
         self.retrieve_task_from_string(line)
     }
 
@@ -119,7 +121,8 @@ impl<'a> TaskStore<'a> for Store {
             .and_then(|opt| match opt {
                 Ok(task)    => Ok(task),
                 Err(string) => import_task(string.as_str())
-                    .map_err(|_| TE::from_kind(TEK::ImportError))
+                    .context(err_msg("Import error"))
+                    .map_err(Error::from)
                     .and_then(|t| self.new_from_twtask(t)),
             })
     }
@@ -129,33 +132,25 @@ impl<'a> TaskStore<'a> for Store {
         use task_hookrs::status::TaskStatus;
 
         for (counter, res_ttask) in import_tasks(r).into_iter().enumerate() {
-            match res_ttask {
-                Ok(ttask) => {
-                    if counter % 2 == 1 {
-                        // Only every second task is needed, the first one is the
-                        // task before the change, and the second one after
-                        // the change. The (maybe modified) second one is
-                        // expected by taskwarrior.
-                        match serde_to_string(&ttask).chain_err(|| TEK::ImportError) {
-                            // use println!() here, as we talk with TW
-                            Ok(val) => println!("{}", val),
-                            Err(e)  => return Err(e),
-                        }
+            let ttask = res_ttask.context(err_msg("Import error"))?;
 
-                        // Taskwarrior does not have the concept of deleted tasks, but only modified
-                        // ones.
-                        //
-                        // Here we check if the status of a task is deleted and if yes, we delete it
-                        // from the store.
-                        if *ttask.status() == TaskStatus::Deleted {
-                            match self.delete_task_by_uuid(*ttask.uuid()) {
-                                Ok(_)  => info!("Deleted task {}", *ttask.uuid()),
-                                Err(e) => return Err(e),
-                            }
-                        }
-                    } // end if c % 2
-                },
-                Err(_) => return Err(TE::from_kind(TEK::ImportError)),
+            if counter % 2 == 1 {
+                // Only every second task is needed, the first one is the
+                // task before the change, and the second one after
+                // the change. The (maybe modified) second one is
+                // expected by taskwarrior.
+                let val = serde_to_string(&ttask).context(err_msg("Import error"))?;
+                println!("{}", val);
+
+                // Taskwarrior does not have the concept of deleted tasks, but only modified
+                // ones.
+                //
+                // Here we check if the status of a task is deleted and if yes, we delete it
+                // from the store.
+                if *ttask.status() == TaskStatus::Deleted {
+                    let _ = self.delete_task_by_uuid(*ttask.uuid())?;
+                    info!("Deleted task {}", *ttask.uuid());
+                }
             }
         }
         Ok(())
@@ -165,13 +160,10 @@ impl<'a> TaskStore<'a> for Store {
         ModuleEntryPath::new(format!("taskwarrior/{}", uuid))
             .into_storeid()
             .and_then(|id| self.delete(id))
-            .map_err(TE::from)
     }
 
     fn all_tasks(&self) -> Result<TaskIdIterator> {
-        self.entries()
-            .map(|i| TaskIdIterator::new(i.without_store()))
-            .map_err(TE::from)
+        self.entries().map(|i| TaskIdIterator::new(i.without_store()))
     }
 
     fn new_from_twtask(&'a self, task: TTask) -> Result<FileLockEntry<'a>> {
@@ -181,10 +173,8 @@ impl<'a> TaskStore<'a> for Store {
         let uuid     = task.uuid();
         ModuleEntryPath::new(format!("taskwarrior/{}", uuid))
             .into_storeid()
-            .chain_err(|| TEK::StoreIdError)
             .and_then(|id| {
                 self.retrieve(id)
-                    .map_err(TE::from)
                     .and_then(|mut fle| {
                         {
                             let hdr = fle.get_header_mut();

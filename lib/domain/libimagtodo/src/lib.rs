@@ -40,7 +40,7 @@ extern crate toml;
 extern crate toml_query;
 #[macro_use] extern crate log;
 extern crate serde_json;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 #[macro_use] extern crate libimagstore;
 extern crate libimagerror;
@@ -48,7 +48,6 @@ extern crate task_hookrs;
 
 module_entry_path_mod!("todo");
 
-pub mod error;
 pub mod task;
 pub mod taskstore;
 pub mod iter;
