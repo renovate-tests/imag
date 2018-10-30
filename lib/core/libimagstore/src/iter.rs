@@ -31,41 +31,34 @@ macro_rules! mk_iterator_mod {
             #[allow(unused_imports)]
             use store::FileLockEntry;
             use store::Store;
-            use error::StoreError;
-            use std::result::Result as RResult;
+            use failure::Fallible as Result;
 
-            pub struct $itername<'a, E>(Box<Iterator<Item = RResult<StoreId, E>> + 'a>, &'a Store)
-                where E: From<StoreError>;
+            pub struct $itername<'a>(Box<Iterator<Item = Result<StoreId>> + 'a>, &'a Store);
 
-            impl<'a, E> $itername<'a, E>
-                where E: From<StoreError>
+            impl<'a> $itername<'a>
             {
-                pub fn new(inner: Box<Iterator<Item = RResult<StoreId, E>> + 'a>, store: &'a Store) -> Self {
+                pub fn new(inner: Box<Iterator<Item = Result<StoreId>> + 'a>, store: &'a Store) -> Self {
                     $itername(inner, store)
                 }
             }
 
-            impl<'a, E> Iterator for $itername<'a, E>
-                where E: From<StoreError>
+            impl<'a> Iterator for $itername<'a>
             {
-                type Item = RResult<$yield, E>;
+                type Item = Result<$yield>;
 
                 fn next(&mut self) -> Option<Self::Item> {
-                    self.0.next().map(|id| $fun(id?, self.1).map_err(E::from))
+                    self.0.next().map(|id| $fun(id?, self.1))
                 }
             }
 
-            pub trait $extname<'a, E>
-                where E: From<StoreError>
-            {
-                fn $extfnname(self, store: &'a Store) -> $itername<'a, E>;
+            pub trait $extname<'a> {
+                fn $extfnname(self, store: &'a Store) -> $itername<'a>;
             }
 
-            impl<'a, I, E> $extname<'a, E> for I
-                where I: Iterator<Item = RResult<StoreId, E>> + 'a,
-                      E: From<StoreError>
+            impl<'a, I> $extname<'a> for I
+                where I: Iterator<Item = Result<StoreId>> + 'a
             {
-                fn $extfnname(self, store: &'a Store) -> $itername<'a, E> {
+                fn $extfnname(self, store: &'a Store) -> $itername<'a> {
                     $itername(Box::new(self), store)
                 }
             }
@@ -151,8 +144,7 @@ use self::get::StoreGetIterator;
 use self::retrieve::StoreRetrieveIterator;
 use file_abstraction::iter::PathIterator;
 use store::Store;
-use error::StoreError;
-use error::Result;
+use failure::Fallible as Result;
 
 /// Iterator for iterating over all (or a subset of all) entries
 ///
@@ -194,21 +186,21 @@ impl<'a> Entries<'a> {
     /// Transform the iterator into a StoreDeleteIterator
     ///
     /// This immitates the API from `libimagstore::iter`.
-    pub fn into_delete_iter(self) -> StoreDeleteIterator<'a, StoreError> {
+    pub fn into_delete_iter(self) -> StoreDeleteIterator<'a> {
         StoreDeleteIterator::new(Box::new(self.0), self.1)
     }
 
     /// Transform the iterator into a StoreGetIterator
     ///
     /// This immitates the API from `libimagstore::iter`.
-    pub fn into_get_iter(self) -> StoreGetIterator<'a, StoreError> {
+    pub fn into_get_iter(self) -> StoreGetIterator<'a> {
         StoreGetIterator::new(Box::new(self.0), self.1)
     }
 
     /// Transform the iterator into a StoreRetrieveIterator
     ///
     /// This immitates the API from `libimagstore::iter`.
-    pub fn into_retrieve_iter(self) -> StoreRetrieveIterator<'a, StoreError> {
+    pub fn into_retrieve_iter(self) -> StoreRetrieveIterator<'a> {
         StoreRetrieveIterator::new(Box::new(self.0), self.1)
     }
 

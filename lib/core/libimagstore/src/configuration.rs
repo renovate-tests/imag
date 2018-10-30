@@ -19,9 +19,11 @@
 
 use toml::Value;
 
-use store::Result;
-use error::StoreError as SE;
-use error::StoreErrorKind as SEK;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+
+use libimagerror::errors::ErrorMsg as EM;
 
 /// Checks whether the store configuration has a key "implicit-create" which maps to a boolean
 /// value. If that key is present, the boolean is returned, otherwise false is returned.
@@ -31,7 +33,10 @@ pub fn config_implicit_store_create_allowed(config: &Option<Value>) -> Result<bo
     let key = "store.implicit-create";
 
     if let Some(ref t) = *config {
-        t.read_bool(key)?.ok_or_else(|| SE::from_kind(SEK::ConfigKeyMissingError(key)))
+        t.read_bool(key)
+            .map_err(Error::from)
+            .context(EM::TomlQueryError)?
+            .ok_or_else(|| format_err!("Config key missing: {}", key))
     } else {
         Ok(false)
     }

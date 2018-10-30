@@ -22,8 +22,7 @@ use std::io::{Seek, SeekFrom, Read};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use error::{StoreError as SE, StoreErrorKind as SEK};
-use error::ResultExt;
+use libimagerror::errors::ErrorMsg as EM;
 
 use super::FileAbstraction;
 use super::FileAbstractionInstance;
@@ -34,6 +33,9 @@ use file_abstraction::iter::PathIterator;
 use file_abstraction::iter::PathIterBuilder;
 
 use walkdir::WalkDir;
+use failure::ResultExt;
+use failure::Fallible as Result;
+use failure::Error;
 
 #[derive(Debug)]
 pub struct FSFileAbstractionInstance(PathBuf);
@@ -43,34 +45,41 @@ impl FileAbstractionInstance for FSFileAbstractionInstance {
     /**
      * Get the content behind this file
      */
-    fn get_file_content(&mut self, id: StoreId) -> Result<Entry, SE> {
+    fn get_file_content(&mut self, id: StoreId) -> Result<Option<Entry>> {
         debug!("Getting lazy file: {:?}", self);
 
-        let mut file = open_file(&self.0)
-            .chain_err(|| SEK::FileNotFound)?;
+        let mut file = match open_file(&self.0) {
+            Err(err)       => return Err(Error::from(err)),
+            Ok(None)       => return Ok(None),
+            Ok(Some(file)) => file,
+        };
 
-        file.seek(SeekFrom::Start(0)).chain_err(|| SEK::FileNotSeeked)?;
+        file.seek(SeekFrom::Start(0)).context(EM::FileNotSeeked)?;
 
         let mut s = String::new();
 
         file.read_to_string(&mut s)
-            .chain_err(|| SEK::IoError)
+            .context(EM::IO)
+            .map_err(Error::from)
             .map(|_| s)
-            .and_then(|s| Entry::from_str(id, &s))
+            .and_then(|s: String| Entry::from_str(id, &s))
+            .map(Some)
     }
 
     /**
      * Write the content of this file
      */
-    fn write_file_content(&mut self, buf: &Entry) -> Result<(), SE> {
+    fn write_file_content(&mut self, buf: &Entry) -> Result<()> {
         use std::io::Write;
 
         let buf      = buf.to_str()?.into_bytes();
-        let mut file = create_file(&self.0).chain_err(|| SEK::FileNotCreated)?;
+        let mut file = create_file(&self.0).context(EM::FileNotCreated)?;
 
-        file.seek(SeekFrom::Start(0)).chain_err(|| SEK::FileNotCreated)?;
-        file.set_len(buf.len() as u64).chain_err(|| SEK::FileNotWritten)?;
-        file.write_all(&buf).chain_err(|| SEK::FileNotWritten)
+        file.seek(SeekFrom::Start(0)).context(EM::FileNotCreated)?;
+        file.set_len(buf.len() as u64).context(EM::FileNotWritten)?;
+        file.write_all(&buf)
+            .context(EM::FileNotWritten)
+            .map_err(Error::from)
     }
 }
 
@@ -82,19 +91,24 @@ pub struct FSFileAbstraction {}
 
 impl FileAbstraction for FSFileAbstraction {
 
-    fn remove_file(&self, path: &PathBuf) -> Result<(), SE> {
-        remove_file(path).chain_err(|| SEK::FileNotRemoved)
+    fn remove_file(&self, path: &PathBuf) -> Result<()> {
+        remove_file(path)
+            .context(EM::FileNotRemoved)
+            .map_err(Error::from)
     }
 
-    fn copy(&self, from: &PathBuf, to: &PathBuf) -> Result<(), SE> {
-        copy(from, to).chain_err(|| SEK::FileNotCopied).map(|_| ())
+    fn copy(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
+        copy(from, to)
+            .map(|_| ())
+            .context(EM::FileNotCopied)
+            .map_err(Error::from)
     }
 
-    fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<(), SE> {
+    fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
         match to.parent() {
             Some(p) => if !p.exists() {
                 debug!("Creating: {:?}", p);
-                let _ = create_dir_all(&PathBuf::from(p))?;
+                let _ = create_dir_all(&PathBuf::from(p)).context(EM::DirNotCreated)?;
             },
             None => {
                 debug!("Failed to find parent. This looks like it will fail now");
@@ -103,19 +117,23 @@ impl FileAbstraction for FSFileAbstraction {
         }
 
         debug!("Renaming {:?} to {:?}", from, to);
-        rename(from, to).chain_err(|| SEK::FileNotRenamed)
+        rename(from, to)
+            .context(EM::FileNotRenamed)
+            .map_err(Error::from)
     }
 
-    fn create_dir_all(&self, path: &PathBuf) -> Result<(), SE> {
+    fn create_dir_all(&self, path: &PathBuf) -> Result<()> {
         debug!("Creating: {:?}", path);
-        create_dir_all(path).chain_err(|| SEK::DirNotCreated)
+        create_dir_all(path)
+            .context(EM::DirNotCreated)
+            .map_err(Error::from)
     }
 
-    fn exists(&self, path: &PathBuf) -> Result<bool, SE> {
+    fn exists(&self, path: &PathBuf) -> Result<bool> {
         Ok(path.exists())
     }
 
-    fn is_file(&self, path: &PathBuf) -> Result<bool, SE> {
+    fn is_file(&self, path: &PathBuf) -> Result<bool> {
         Ok(path.is_file())
     }
 
@@ -124,13 +142,13 @@ impl FileAbstraction for FSFileAbstraction {
     }
 
     /// We return nothing from the FS here.
-    fn drain(&self) -> Result<Drain, SE> {
+    fn drain(&self) -> Result<Drain> {
         Ok(Drain::empty())
     }
 
     /// FileAbstraction::fill implementation that consumes the Drain and writes everything to the
     /// filesystem
-    fn fill(&mut self, mut d: Drain) -> Result<(), SE> {
+    fn fill(&mut self, mut d: Drain) -> Result<()> {
         d.iter()
             .fold(Ok(()), |acc, (path, element)| {
                 acc.and_then(|_| self.new_instance(path).write_file_content(&element))
@@ -141,7 +159,7 @@ impl FileAbstraction for FSFileAbstraction {
                           basepath: PathBuf,
                           storepath: PathBuf,
                           backend: Arc<FileAbstraction>)
-        -> Result<PathIterator, SE>
+        -> Result<PathIterator>
     {
         trace!("Building PathIterator object");
         Ok(PathIterator::new(Box::new(WalkDirPathIterBuilder { basepath }), storepath, backend))
@@ -153,13 +171,15 @@ pub(crate) struct WalkDirPathIterBuilder {
 }
 
 impl PathIterBuilder for WalkDirPathIterBuilder {
-    fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf, SE>>> {
+    fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf>>> {
         Box::new(WalkDir::new(self.basepath.clone())
             .min_depth(1)
             .max_open(100)
             .into_iter()
             .map(|r| {
-                r.map(|e| PathBuf::from(e.path())).chain_err(|| SE::from_kind(SEK::FileError))
+                r.map(|e| PathBuf::from(e.path()))
+                    .context(format_err!("Error in Walkdir"))
+                    .map_err(Error::from)
             }))
     }
 
@@ -168,8 +188,16 @@ impl PathIterBuilder for WalkDirPathIterBuilder {
     }
 }
 
-fn open_file<A: AsRef<Path>>(p: A) -> ::std::io::Result<File> {
-    OpenOptions::new().write(true).read(true).open(p)
+fn open_file<A: AsRef<Path>>(p: A) -> ::std::io::Result<Option<File>> {
+    match OpenOptions::new().write(true).read(true).open(p) {
+        Err(e) => {
+            match e.kind() {
+                ::std::io::ErrorKind::NotFound => return Ok(None),
+                _ => return Err(e),
+            }
+        },
+        Ok(file) => Ok(Some(file))
+    }
 }
 
 fn create_file<A: AsRef<Path>>(p: A) -> ::std::io::Result<File> {

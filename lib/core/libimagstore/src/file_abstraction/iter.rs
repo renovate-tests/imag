@@ -20,7 +20,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use error::Result;
+use failure::Fallible as Result;
+
 use storeid::StoreId;
 use file_abstraction::FileAbstraction;
 
