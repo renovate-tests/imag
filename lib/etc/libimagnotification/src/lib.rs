@@ -34,11 +34,10 @@
 )]
 
 extern crate notify_rust;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 extern crate libimagerror;
 
-pub mod error;
 pub mod notificator;
 pub mod result_notification;
 

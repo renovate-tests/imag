@@ -31,12 +31,11 @@ pub mod err {
     use notify_rust::Notification as RustNotification;
     use notify_rust::NotificationUrgency;
 
-    use error::ResultExt;
-    use error::NotificationErrorKind as NEK;
     use notificator::default::Urgency;
     use notificator::default::Notification;
     use notificator::Notificator;
-    use error::Result;
+    use failure::Fallible as Result;
+    use failure::err_msg;
 
     #[derive(Debug, Default, Clone)]
     pub struct ErrorNotification(Notification, usize);
@@ -64,7 +63,9 @@ pub mod err {
                 n.summary("[Error]");
                 n.urgency(urgency);
                 n.body(e.description());
-                try!(n.finalize().show().map(|_| ()).chain_err(|| NEK::Unknown));
+                let _ = n.finalize()
+                    .show()
+                    .map_err(|_| err_msg("Notification error"))?;
 
                 if u > 0 {
                     e.cause().map(|cause| trace_notify(urgency, cause, u - 1));
@@ -105,7 +106,8 @@ pub mod ok {
 
     use notificator::default::Notification;
     use notificator::Notificator;
-    use error::Result;
+    use failure::Fallible as Result;
+    use failure::err_msg;
 
     #[derive(Debug, Default, Clone)]
     pub struct OkNotification(Notification);
@@ -127,8 +129,10 @@ pub mod ok {
             n.summary("[Ok]");
             n.urgency(self.0.urgency.clone().into());
             n.body(&"< >".to_owned());
-            n.finalize().show().map(|_| ())?;
-            Ok(())
+            n.finalize()
+                .show()
+                .map(|_| ())
+                .map_err(|_| err_msg("Notification error"))
         }
 
     }
