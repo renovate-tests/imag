@@ -39,7 +39,7 @@ extern crate toml_query;
 extern crate toml;
 #[macro_use]
 extern crate log;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 extern crate libimagerror;
 #[macro_use] extern crate libimagstore;
@@ -49,7 +49,6 @@ extern crate libimagentrylink;
 
 pub mod category;
 pub mod entry;
-pub mod error;
 pub mod store;
 pub mod iter;
 

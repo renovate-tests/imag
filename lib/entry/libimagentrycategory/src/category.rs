@@ -26,9 +26,9 @@ use libimagentrylink::internal::InternalLinker;
 
 use toml_query::read::TomlValueReadTypeExt;
 
-use error::Result;
-use error::CategoryError as CE;
-use error::CategoryErrorKind as CEK;
+use failure::Fallible as Result;
+use failure::Error;
+use failure::err_msg;
 use store::CATEGORY_REGISTER_NAME_FIELD_PATH;
 use iter::CategoryEntryIterator;
 
@@ -42,15 +42,15 @@ pub trait Category {
 
 impl Category for Entry {
     fn is_category(&self) -> Result<bool> {
-        self.is::<IsCategory>().map_err(CE::from)
+        self.is::<IsCategory>()
     }
 
     fn get_name(&self) -> Result<String> {
         trace!("Getting category name of '{:?}'", self.get_location());
         self.get_header()
             .read_string(CATEGORY_REGISTER_NAME_FIELD_PATH)
-            .map_err(CE::from)?
-            .ok_or_else(|| CE::from_kind(CEK::CategoryNameMissing))
+            .map_err(Error::from)?
+            .ok_or_else(|| Error::from(err_msg("Category name missing")))
     }
 
     fn get_entries<'a>(&self, store: &'a Store) -> Result<CategoryEntryIterator<'a>> {

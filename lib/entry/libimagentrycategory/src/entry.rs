@@ -24,11 +24,12 @@ use toml::Value;
 
 use libimagstore::store::Entry;
 use libimagentrylink::internal::InternalLinker;
+use libimagerror::errors::ErrorMsg as EM;
 
-use error::CategoryErrorKind as CEK;
-use error::CategoryError as CE;
-use error::ResultExt;
-use error::Result;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 use store::CategoryStore;
 
 pub trait EntryCategory {
@@ -51,7 +52,9 @@ impl EntryCategory for Entry {
         trace!("Setting category '{}' UNCHECKED", s);
         self.get_header_mut()
             .insert(&String::from("category.value"), Value::String(s.to_string()))
-            .chain_err(|| CEK::HeaderWriteError)
+            .map_err(Error::from)
+            .context(EM::EntryHeaderWriteError)
+            .map_err(Error::from)
             .map(|_| ())
     }
 
@@ -62,7 +65,7 @@ impl EntryCategory for Entry {
         trace!("Setting category '{}' checked", s);
         let mut category = register
             .get_category_by_name(s)?
-            .ok_or_else(|| CE::from_kind(CEK::CategoryDoesNotExist))?;
+            .ok_or_else(|| Error::from(err_msg("Category does not exist")))?;
 
         let _ = self.set_category(s)?;
         let _ = self.add_internal_link(&mut category)?;
@@ -74,13 +77,16 @@ impl EntryCategory for Entry {
         trace!("Getting category from '{}'", self.get_location());
         self.get_header()
             .read_string("category.value")?
-            .ok_or_else(|| CE::from_kind(CEK::CategoryNameMissing))
+            .ok_or_else(|| Error::from(err_msg("Category name missing")))
     }
 
     fn has_category(&self) -> Result<bool> {
         trace!("Has category? '{}'", self.get_location());
-        self.get_header().read("category.value")
-            .chain_err(|| CEK::HeaderReadError)
+        self.get_header()
+            .read("category.value")
+            .map_err(Error::from)
+            .context(EM::EntryHeaderReadError)
+            .map_err(Error::from)
             .map(|x| x.is_some())
     }
 
@@ -95,9 +101,10 @@ impl EntryCategory for Entry {
 
         self.get_header_mut()
             .delete("category.value")
-            .chain_err(|| CEK::HeaderWriteError)
+            .map_err(Error::from)
+            .context(EM::EntryHeaderWriteError)
+            .map_err(Error::from)
             .map(|_| ())
     }
-
 
 }

@@ -27,11 +27,12 @@ use libimagstore::store::Store;
 use libimagstore::store::FileLockEntry;
 use libimagstore::storeid::StoreId;
 use libimagentryutil::isa::Is;
+use libimagerror::errors::ErrorMsg as EM;
 
-use error::CategoryErrorKind as CEK;
-use error::CategoryError as CE;
-use error::ResultExt;
-use error::Result;
+use failure::Fallible as Result;
+use failure::ResultExt;
+use failure::Error;
+use failure::err_msg;
 use iter::CategoryNameIter;
 use category::IsCategory;
 
@@ -93,8 +94,8 @@ impl CategoryStore for Store {
 
         {
             let mut category = self.get(sid.clone())?
-                .ok_or_else(|| CEK::CategoryDoesNotExist)
-                .map_err(CE::from_kind)?;
+                .ok_or_else(|| Error::from(err_msg("Category does not exist")))
+                .map_err(Error::from)?;
 
             for entry in category.get_entries(self)? {
                 let mut entry = entry?;
@@ -102,7 +103,7 @@ impl CategoryStore for Store {
             }
         }
 
-        self.delete(sid).map_err(CE::from)
+        self.delete(sid)
     }
 
     /// Get all category names
@@ -120,7 +121,8 @@ impl CategoryStore for Store {
         let sid = mk_category_storeid(self.path().clone(), name)?;
 
         self.get(sid)
-            .chain_err(|| CEK::StoreWriteError)
+            .context(err_msg("Store write error"))
+            .map_err(Error::from)
     }
 }
 
@@ -215,23 +217,26 @@ fn mk_category_storeid(base: PathBuf, s: &str) -> Result<StoreId> {
     ::module_path::ModuleEntryPath::new(s)
         .into_storeid()
         .map(|id| id.with_base(base))
-        .chain_err(|| CEK::StoreIdHandlingError)
+        .context(err_msg("Store id handling error"))
+        .map_err(Error::from)
 }
 
 #[inline]
 fn represents_category(store: &Store, sid: StoreId, name: &str) -> Result<bool> {
     sid.exists()
-        .chain_err(|| CEK::StoreIdHandlingError)
+        .context(err_msg("Store id handling error"))
+        .map_err(Error::from)
         .and_then(|bl| {
             if bl {
                 store.get(sid)
-                    .chain_err(|| CEK::StoreReadError)
+                    .context(err_msg("Store read error"))
+                    .map_err(Error::from)
                     .and_then(|fle| {
                         if let Some(fle) = fle {
                             fle.get_header()
                                 .read_string(&String::from(CATEGORY_REGISTER_NAME_FIELD_PATH))
-                                .chain_err(|| CEK::HeaderReadError)?
-                                .ok_or(CE::from_kind(CEK::TypeError))
+                                .context(EM::EntryHeaderReadError)?
+                                .ok_or_else(|| Error::from(EM::EntryHeaderTypeError))
                                 .map(|s| s == name)
                         } else {
                             Ok(false)
