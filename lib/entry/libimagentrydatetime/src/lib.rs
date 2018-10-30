@@ -39,13 +39,12 @@
 extern crate chrono;
 extern crate toml_query;
 extern crate toml;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 extern crate libimagerror;
 extern crate libimagstore;
 
 pub mod datepath;
 pub mod datetime;
-pub mod error;
 pub mod range;
 

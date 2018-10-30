@@ -27,9 +27,7 @@ use libimagstore::storeid::StoreId;
 
 use datepath::accuracy::Accuracy;
 use datepath::format::Format;
-use datepath::error::Result;
-use datepath::error::DatePathCompilerErrorKind as DPCEK;
-use datepath::error::ResultExt;
+use failure::Fallible as Result;
 
 pub struct DatePathCompiler {
     accuracy : Accuracy,
@@ -122,7 +120,6 @@ impl DatePathCompiler {
         }
 
         StoreId::new_baseless(PathBuf::from(s))
-            .chain_err(|| DPCEK::StoreIdBuildFailed)
     }
 
 }
