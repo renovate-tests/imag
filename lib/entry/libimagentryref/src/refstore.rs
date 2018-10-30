@@ -24,26 +24,26 @@ use libimagstore::store::FileLockEntry;
 use libimagstore::store::Store;
 use libimagstore::storeid::StoreId;
 
-use error::RefError as RE;
 use reference::Ref;
+
+use failure::Fallible as Result;
+use failure::Error;
 
 /// A UniqueRefPathGenerator generates unique Pathes
 ///
 /// It is basically a functor which generates a StoreId from a &Path.
 /// For more information have a look at the documentation of RefStore.
 pub trait UniqueRefPathGenerator {
-    type Error: From<RE>;
-
     /// The collection the `StoreId` should be created for
     fn collection() -> &'static str {
         "ref"
     }
 
     /// A function which should generate a unique string for a Path
-    fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String, Self::Error>;
+    fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String>;
 
     /// Postprocess the generated `StoreId` object
-    fn postprocess_storeid(sid: StoreId) -> Result<StoreId, Self::Error> {
+    fn postprocess_storeid(sid: StoreId) -> Result<StoreId> {
         Ok(sid)
     }
 }
@@ -80,45 +80,43 @@ pub trait UniqueRefPathGenerator {
 ///
 pub trait RefStore<'a> {
 
-    fn get_ref<RPG: UniqueRefPathGenerator, H: AsRef<str>>(&'a self, hash: H) -> Result<Option<FileLockEntry<'a>>, RPG::Error>;
-    fn create_ref<RPG: UniqueRefPathGenerator, A: AsRef<Path>>(&'a self, path: A) -> Result<FileLockEntry<'a>, RPG::Error>;
-    fn retrieve_ref<RPG: UniqueRefPathGenerator, A: AsRef<Path>>(&'a self, path: A) -> Result<FileLockEntry<'a>, RPG::Error>;
+    fn get_ref<RPG: UniqueRefPathGenerator, H: AsRef<str>>(&'a self, hash: H) -> Result<Option<FileLockEntry<'a>>>;
+    fn create_ref<RPG: UniqueRefPathGenerator, A: AsRef<Path>>(&'a self, path: A) -> Result<FileLockEntry<'a>>;
+    fn retrieve_ref<RPG: UniqueRefPathGenerator, A: AsRef<Path>>(&'a self, path: A) -> Result<FileLockEntry<'a>>;
 
 }
 
 impl<'a> RefStore<'a> for Store {
 
     fn get_ref<RPG: UniqueRefPathGenerator, H: AsRef<str>>(&'a self, hash: H)
-        -> Result<Option<FileLockEntry<'a>>, RPG::Error>
+        -> Result<Option<FileLockEntry<'a>>>
     {
         let sid = StoreId::new_baseless(PathBuf::from(format!("{}/{}", RPG::collection(), hash.as_ref())))
-            .map_err(RE::from)?;
+            .map_err(Error::from)?;
 
         debug!("Getting: {:?}", sid);
         self.get(sid)
-            .map_err(RE::from)
-            .map_err(RPG::Error::from)
+            .map_err(Error::from)
     }
 
     fn create_ref<RPG: UniqueRefPathGenerator, A: AsRef<Path>>(&'a self, path: A)
-        -> Result<FileLockEntry<'a>, RPG::Error>
+        -> Result<FileLockEntry<'a>>
     {
         let hash     = RPG::unique_hash(&path)?;
         let pathbuf  = PathBuf::from(format!("{}/{}", RPG::collection(), hash));
-        let sid      = StoreId::new_baseless(pathbuf.clone()).map_err(RE::from)?;
+        let sid      = StoreId::new_baseless(pathbuf.clone())?;
 
         debug!("Creating: {:?}", sid);
         self.create(sid)
-            .map_err(RE::from)
+            .map_err(Error::from)
             .and_then(|mut fle| {
                 fle.make_ref(hash, path)?;
                 Ok(fle)
             })
-            .map_err(RPG::Error::from)
     }
 
     fn retrieve_ref<RPG: UniqueRefPathGenerator, A: AsRef<Path>>(&'a self, path: A)
-        -> Result<FileLockEntry<'a>, RPG::Error>
+        -> Result<FileLockEntry<'a>>
     {
         match self.get_ref::<RPG, String>(RPG::unique_hash(path.as_ref())?)? {
             Some(r) => Ok(r),
