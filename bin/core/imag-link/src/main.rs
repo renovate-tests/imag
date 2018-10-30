@@ -35,6 +35,7 @@
 #[macro_use] extern crate log;
 extern crate clap;
 extern crate url;
+extern crate failure;
 #[macro_use] extern crate prettytable;
 #[cfg(test)] extern crate toml;
 #[cfg(test)] extern crate toml_query;
@@ -55,22 +56,24 @@ extern crate libimagutil;
 use std::io::Write;
 use std::path::PathBuf;
 
+use failure::Error;
+use failure::err_msg;
+
 use libimagentrylink::external::ExternalLinker;
 use libimagentrylink::internal::InternalLinker;
 use libimagentrylink::internal::store_check::StoreLinkConsistentExt;
-use libimagentrylink::error::LinkError as LE;
 use libimagerror::trace::{MapErrTrace, trace_error};
 use libimagerror::exit::ExitUnwrap;
 use libimagerror::io::ToExitCode;
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
-use libimagstore::error::StoreError;
 use libimagstore::store::FileLockEntry;
 use libimagstore::storeid::StoreId;
 use libimagutil::warn_exit::warn_exit;
 use libimagutil::warn_result::*;
 
 use url::Url;
+use failure::Fallible as Result;
 
 mod ui;
 
@@ -80,7 +83,7 @@ fn main() {
     let version = make_imag_version!();
     let rt = generate_runtime_setup("imag-link",
                                     &version,
-                                    "Add/Remove links between entries",
+                                    "Link entries",
                                     build_ui);
     if rt.cli().is_present("check-consistency") {
         let exit_code = match rt.store().check_link_consistency() {
@@ -119,11 +122,11 @@ fn main() {
                 warn_exit("No commandline call", 1)
             }
         })
-        .ok_or(LE::from("No commandline call".to_owned()))
+        .ok_or_else(|| Error::from(err_msg("No commandline call".to_owned())))
         .map_err_trace_exit_unwrap(1);
 }
 
-fn get_entry_by_name<'a>(rt: &'a Runtime, name: &str) -> Result<Option<FileLockEntry<'a>>, StoreError> {
+fn get_entry_by_name<'a>(rt: &'a Runtime, name: &str) -> Result<Option<FileLockEntry<'a>>> {
     use libimagstore::storeid::StoreId;
 
     debug!("Getting: {:?}", name);
@@ -336,11 +339,12 @@ mod tests {
 
     use toml::value::Value;
     use toml_query::read::TomlValueReadExt;
-    use toml_query::error::Result as TomlQueryResult;
+    use failure::Fallible as Result;
+    use failure::Error;
 
     use libimagrt::runtime::Runtime;
     use libimagstore::storeid::StoreId;
-    use libimagstore::store::{Result as StoreResult, FileLockEntry, Entry};
+    use libimagstore::store::{FileLockEntry, Entry};
 
     fn setup_logging() {
         let _ = ::env_logger::try_init();
@@ -355,7 +359,7 @@ mod tests {
     use self::mock::generate_test_runtime;
     use self::mock::reset_test_runtime;
 
-    fn create_test_default_entry<'a, S: AsRef<OsStr>>(rt: &'a Runtime, name: S) -> StoreResult<StoreId> {
+    fn create_test_default_entry<'a, S: AsRef<OsStr>>(rt: &'a Runtime, name: S) -> Result<StoreId> {
         let mut path = PathBuf::new();
         path.set_file_name(name);
 
@@ -376,11 +380,10 @@ mod tests {
         Ok(id)
     }
 
-    fn get_entry_links<'a>(entry: &'a FileLockEntry<'a>) -> TomlQueryResult<&'a Value> {
-        match entry.get_header().read(&"links.internal".to_owned()) {
-            Err(e) => Err(e),
-            Ok(Some(v)) => Ok(v),
-            Ok(None) => panic!("Didn't find 'links' in {:?}", entry),
+    fn get_entry_links<'a>(entry: &'a FileLockEntry<'a>) -> Result<&'a Value> {
+        match entry.get_header().read(&"links.internal".to_owned()).map_err(Error::from)? {
+            Some(v) => Ok(v),
+            None    => panic!("Didn't find 'links' in {:?}", entry),
         }
     }
 
@@ -394,7 +397,7 @@ mod tests {
     #[test]
     fn test_link_modificates() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["test1", "test2"])
+        let rt = generate_test_runtime(vec!["internal", "test1", "test2"])
             .unwrap();
 
         debug!("Runtime created");
@@ -423,7 +426,7 @@ mod tests {
     #[test]
     fn test_linking_links() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["test1", "test2"])
+        let rt = generate_test_runtime(vec!["internal", "test1", "test2"])
             .unwrap();
 
         debug!("Runtime created");
@@ -452,7 +455,7 @@ mod tests {
     #[test]
     fn test_multilinking() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["test1", "test2"])
+        let rt = generate_test_runtime(vec!["internal", "test1", "test2"])
             .unwrap();
 
         debug!("Runtime created");
@@ -482,7 +485,7 @@ mod tests {
     #[test]
     fn test_linking_more_than_two() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["test1", "test2", "test3"])
+        let rt = generate_test_runtime(vec!["internal", "test1", "test2", "test3"])
             .unwrap();
 
         debug!("Runtime created");
@@ -519,7 +522,7 @@ mod tests {
     #[test]
     fn test_linking_links_unlinking_removes_links() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["test1", "test2"])
+        let rt = generate_test_runtime(vec!["internal", "test1", "test2"])
             .unwrap();
 
         debug!("Runtime created");
@@ -555,7 +558,7 @@ mod tests {
     #[test]
     fn test_linking_and_unlinking_more_than_two() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["test1", "test2", "test3"])
+        let rt = generate_test_runtime(vec!["internal", "test1", "test2", "test3"])
             .unwrap();
 
         debug!("Runtime created");
