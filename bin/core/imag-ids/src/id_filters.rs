@@ -51,6 +51,7 @@ pub mod header_filter_lang {
 
     use nom::digit;
     use nom::multispace;
+    use failure::Error;
 
     use libimagstore::store::Entry;
     use libimagerror::trace::MapErrTrace;
@@ -403,6 +404,7 @@ pub mod header_filter_lang {
             entry
                 .get_header()
                 .read(selector_str)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1)
                 .map(|value| {
                     let comp = Comparator(&self.compare_operator, &self.compare_value);
