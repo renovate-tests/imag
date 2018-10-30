@@ -37,7 +37,6 @@ extern crate clap;
 extern crate walkdir;
 extern crate toml;
 extern crate toml_query;
-#[macro_use] extern crate is_match;
 
 #[macro_use] extern crate libimagrt;
 extern crate libimagerror;
@@ -56,7 +55,6 @@ use clap::{Arg, ArgMatches, AppSettings, SubCommand};
 use toml::Value;
 use toml_query::read::TomlValueReadExt;
 
-use libimagrt::error::RuntimeErrorKind;
 use libimagrt::runtime::Runtime;
 use libimagrt::spec::CliSpec;
 use libimagerror::io::ToExitCode;
@@ -91,7 +89,7 @@ fn help_text(cmds: Vec<String>) -> String {
     Call a command with 'imag <command> <args>'
     Each command can be called with "--help" to get the respective helptext.
 
-    Please visit https://git.imag-pim.org/imag to view the source code,
+    Please visit https://github.com/matthiasbeyer/imag to view the source code,
     follow the development of imag or maybe even contribute to imag.
 
     imag is free software. It is released under the terms of LGPLv2.1
@@ -190,17 +188,11 @@ fn main() {
         .value_of(Runtime::arg_config_name())
         .map_or_else(|| rtp.clone(), PathBuf::from);
     debug!("Config path = {:?}", configpath);
-    let config = match ::libimagrt::configuration::fetch_config(&configpath) {
-            Ok(c) => Some(c),
-            Err(e) => if !is_match!(e.kind(), &RuntimeErrorKind::ConfigNoConfigFileFound) {
-                trace_error(&e);
-                ::std::process::exit(1)
-            } else {
-                println!("No config file found.");
-                println!("Continuing without configuration file");
-                None
-            },
-    };
+    let config = ::libimagrt::configuration::fetch_config(&configpath)
+        .unwrap_or_else(|e| {
+            trace_error(&e);
+            exit(1)
+        });
 
     debug!("matches: {:?}", matches);
 
