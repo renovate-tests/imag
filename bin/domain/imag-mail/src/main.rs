@@ -34,6 +34,7 @@
 
 extern crate clap;
 #[macro_use] extern crate log;
+extern crate failure;
 
 #[macro_use] extern crate libimagrt;
 extern crate libimagmail;
@@ -41,6 +42,9 @@ extern crate libimagerror;
 extern crate libimagutil;
 
 use std::io::Write;
+
+use failure::Error;
+use failure::err_msg;
 
 use libimagerror::trace::{MapErrTrace, trace_error};
 use libimagerror::iter::TraceIterator;
@@ -91,8 +95,7 @@ fn import_mail(rt: &Runtime) {
 }
 
 fn list(rt: &Runtime) {
-    use libimagmail::error::MailErrorKind as MEK;
-    use libimagmail::error::ResultExt;
+    use failure::ResultExt;
 
         // TODO: Implement lister type in libimagmail for this
     fn list_mail(rt: &Runtime, m: Mail) {
@@ -149,7 +152,8 @@ fn list(rt: &Runtime) {
         .filter_map(|id| {
             rt.store()
                 .get(id)
-                .chain_err(|| MEK::RefHandlingError)
+                .context(err_msg("Ref handling error"))
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1)
                 .map(|fle| Mail::from_fle(fle).map_err_trace().ok())
         })
