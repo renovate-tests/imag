@@ -37,7 +37,7 @@
 
 extern crate toml;
 extern crate toml_query;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 #[macro_use] extern crate libimagstore;
 extern crate libimagerror;
@@ -48,6 +48,5 @@ module_entry_path_mod!("annotations");
 
 pub mod annotateable;
 pub mod annotation_fetcher;
-pub mod error;
 pub mod iter;
 
