@@ -38,7 +38,7 @@
 #[macro_use] extern crate log;
 extern crate toml;
 extern crate toml_query;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 extern crate libimagrt;
 #[macro_use] extern crate libimagstore;
@@ -47,7 +47,6 @@ extern crate libimagentryedit;
 
 module_entry_path_mod!("notes");
 
-pub mod error;
 pub mod note;
 pub mod notestore;
 pub mod notestoreid;

@@ -20,13 +20,13 @@
 use toml::Value;
 
 use libimagstore::store::Entry;
+use libimagerror::errors::ErrorMsg as EM;
 
 use toml_query::read::TomlValueReadTypeExt;
 use toml_query::set::TomlValueSetExt;
 
-use error::Result;
-use error::NoteError as NE;
-use error::NoteErrorKind as NEK;
+use failure::Fallible as Result;
+use failure::Error;
 
 pub trait Note {
     fn set_name(&mut self, n: String) -> Result<()>;
@@ -40,14 +40,14 @@ impl Note for Entry {
     fn set_name(&mut self, n: String) -> Result<()> {
         self.get_header_mut()
             .set("note.name", Value::String(n))
-            .map_err(NE::from)
+            .map_err(Error::from)
             .map(|_| ())
     }
 
     fn get_name(&self) -> Result<String> {
         self.get_header()
             .read_string("note.name")?
-            .ok_or(NE::from_kind(NEK::HeaderTypeError))
+            .ok_or_else(|| Error::from(EM::EntryHeaderTypeError))
     }
 
     fn set_text(&mut self, n: String) {

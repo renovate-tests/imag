@@ -24,10 +24,9 @@ use libimagstore::store::FileLockEntry;
 use libimagstore::store::Store;
 
 use toml_query::insert::TomlValueInsertExt;
+use failure::Fallible as Result;
 
 use module_path::ModuleEntryPath;
-use error::Result;
-use error::NoteError as NE;
 use iter::*;
 
 pub trait NoteStore<'a> {
@@ -63,31 +62,19 @@ impl<'a> NoteStore<'a> for Store {
     }
 
     fn delete_note(&'a self, name: String) -> Result<()> {
-        ModuleEntryPath::new(name)
-            .into_storeid()
-            .and_then(|id| self.delete(id))
-            .map_err(NE::from)
+        ModuleEntryPath::new(name).into_storeid().and_then(|id| self.delete(id))
     }
 
     fn retrieve_note(&'a self, name: String) -> Result<FileLockEntry<'a>> {
-        ModuleEntryPath::new(name)
-            .into_storeid()
-            .and_then(|id| self.retrieve(id))
-            .map_err(NE::from)
+        ModuleEntryPath::new(name).into_storeid().and_then(|id| self.retrieve(id))
     }
 
     fn get_note(&'a self, name: String) -> Result<Option<FileLockEntry<'a>>> {
-        ModuleEntryPath::new(name)
-            .into_storeid()
-            .and_then(|id| self.get(id))
-            .map_err(NE::from)
+        ModuleEntryPath::new(name).into_storeid().and_then(|id| self.get(id))
     }
 
     fn all_notes(&'a self) -> Result<NoteIterator> {
-        self.entries()
-            .map(|it| it.without_store())
-            .map(NoteIterator::new)
-            .map_err(NE::from)
+        self.entries().map(|it| it.without_store()).map(NoteIterator::new)
     }
 
 }
