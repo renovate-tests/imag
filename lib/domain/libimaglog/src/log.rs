@@ -20,8 +20,8 @@
 use libimagdiary::entry::DiaryEntry;
 use libimagstore::store::Entry;
 
-use error::LogError as LE;
-use error::Result;
+use failure::Fallible as Result;
+use failure::Error;
 
 use toml::Value;
 use toml_query::read::TomlValueReadTypeExt;
@@ -34,13 +34,13 @@ pub trait Log : DiaryEntry {
 
 impl Log for Entry {
     fn is_log(&self) -> Result<bool> {
-        self.get_header().read_bool("log.is_log").map(|v| v.unwrap_or(false)).map_err(From::from)
+        self.get_header().read_bool("log.is_log").map(|v| v.unwrap_or(false)).map_err(Error::from)
     }
 
     fn make_log_entry(&mut self) -> Result<()> {
         self.get_header_mut()
             .insert("log.is_log", Value::Boolean(true))
-            .map_err(LE::from)
+            .map_err(Error::from)
             .map(|_| ())
     }
 
