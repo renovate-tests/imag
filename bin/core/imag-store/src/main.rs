@@ -36,7 +36,7 @@ extern crate clap;
 #[macro_use] extern crate log;
 extern crate toml;
 #[cfg(test)] extern crate toml_query;
-#[macro_use] extern crate error_chain;
+extern crate failure;
 
 #[macro_use] extern crate libimagrt;
 extern crate libimagstore;
@@ -54,7 +54,6 @@ use libimagerror::trace::MapErrTrace;
 
 mod create;
 mod delete;
-mod error;
 mod get;
 mod retrieve;
 mod ui;
