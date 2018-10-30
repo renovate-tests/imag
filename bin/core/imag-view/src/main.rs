@@ -38,6 +38,7 @@ extern crate handlebars;
 extern crate tempfile;
 extern crate toml;
 extern crate toml_query;
+extern crate failure;
 
 extern crate libimagentryview;
 extern crate libimagerror;
@@ -55,10 +56,11 @@ use std::process::exit;
 
 use handlebars::Handlebars;
 use toml_query::read::TomlValueReadTypeExt;
+use failure::Error;
+use failure::err_msg;
 
 use libimagrt::setup::generate_runtime_setup;
 use libimagrt::runtime::Runtime;
-use libimagerror::str::ErrFromStr;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
 use libimagerror::io::ToExitCode;
@@ -66,10 +68,8 @@ use libimagerror::exit::ExitUnwrap;
 use libimagentryview::builtin::stdout::StdoutViewer;
 use libimagentryview::builtin::md::MarkdownViewer;
 use libimagentryview::viewer::Viewer;
-use libimagentryview::error::ViewError as VE;
 use libimagstore::storeid::IntoStoreId;
 use libimagstore::storeid::StoreIdIterator;
-use libimagstore::error::StoreError;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
 use libimagstore::store::FileLockEntry;
 
@@ -92,8 +92,7 @@ fn main() {
             .into_get_iter(rt.store())
             .trace_unwrap_exit(1)
             .map(|e| {
-                 e.ok_or_else(|| String::from("Entry not found"))
-                     .map_err(StoreError::from)
+                 e.ok_or_else(|| err_msg("Entry not found"))
                      .map_err_trace_exit_unwrap(1)
             })
             .map(|entry| create_tempfile_for(&entry, view_header, hide_content))
@@ -103,18 +102,19 @@ fn main() {
             let viewer = rt
                 .cli()
                 .value_of("in")
-                .ok_or_else::<VE, _>(|| "No viewer given".to_owned().into())
+                .ok_or_else(|| Error::from(err_msg("No viewer given")))
                 .map_err_trace_exit_unwrap(1);
 
             let config = rt
                 .config()
-                .ok_or_else::<VE, _>(|| "No configuration, cannot continue".to_owned().into())
+                .ok_or_else(|| Error::from(err_msg("No configuration, cannot continue")))
                 .map_err_trace_exit_unwrap(1);
 
             let query = format!("view.viewers.{}", viewer);
 
             let viewer_template = config
                 .read_string(&query)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1)
                 .unwrap_or_else(|| {
                     error!("Cannot find '{}' in config", query);
@@ -126,8 +126,7 @@ fn main() {
 
             let _ = handlebars
                 .register_template_string("template", viewer_template)
-                .err_from_str()
-                .map_err(VE::from)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1);
 
             let mut data = BTreeMap::new();
@@ -142,13 +141,12 @@ fn main() {
 
             let call = handlebars
                 .render("template", &data)
-                .err_from_str()
-                .map_err(VE::from)
+                .map_err(Error::from)
                 .map_err_trace_exit_unwrap(1);
             let mut elems = call.split_whitespace();
             let command_string = elems
                 .next()
-                .ok_or::<VE>("No command".to_owned().into())
+                .ok_or_else(|| Error::from(err_msg("No command")))
                 .map_err_trace_exit_unwrap(1);
             let mut cmd = Command::new(command_string);
 
@@ -163,8 +161,7 @@ fn main() {
 
         if !command
             .status()
-            .err_from_str()
-            .map_err(VE::from)
+            .map_err(Error::from)
             .map_err_trace_exit_unwrap(1)
             .success()
         {
@@ -177,8 +174,7 @@ fn main() {
             .into_get_iter(rt.store())
             .map(|e| {
                  e.map_err_trace_exit_unwrap(1)
-                     .ok_or_else(|| String::from("Entry not found"))
-                     .map_err(StoreError::from)
+                     .ok_or_else(|| err_msg("Entry not found"))
                      .map_err_trace_exit_unwrap(1)
             });
 
@@ -282,25 +278,21 @@ fn create_tempfile_for<'a>(entry: &FileLockEntry<'a>, view_header: bool, hide_co
     -> (tempfile::NamedTempFile, String)
 {
     let mut tmpfile = tempfile::NamedTempFile::new()
-        .err_from_str()
-        .map_err(VE::from)
+        .map_err(Error::from)
         .map_err_trace_exit_unwrap(1);
 
     if view_header {
         let hdr = toml::ser::to_string_pretty(entry.get_header())
-            .err_from_str()
-            .map_err(VE::from)
+            .map_err(Error::from)
             .map_err_trace_exit_unwrap(1);
         let _ = tmpfile.write(format!("---\n{}---\n", hdr).as_bytes())
-            .err_from_str()
-            .map_err(VE::from)
+            .map_err(Error::from)
             .map_err_trace_exit_unwrap(1);
     }
 
     if !hide_content {
         let _ = tmpfile.write(entry.get_content().as_bytes())
-            .err_from_str()
-            .map_err(VE::from)
+            .map_err(Error::from)
             .map_err_trace_exit_unwrap(1);
     }
 
@@ -308,7 +300,7 @@ fn create_tempfile_for<'a>(entry: &FileLockEntry<'a>, view_header: bool, hide_co
         .path()
         .to_str()
         .map(String::from)
-        .ok_or::<VE>("Cannot build path".to_owned().into())
+        .ok_or_else(|| Error::from(err_msg("Cannot build path")))
         .map_err_trace_exit_unwrap(1);
 
     (tmpfile, file_path)
