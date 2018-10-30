@@ -22,7 +22,7 @@ use std::ops::Deref;
 
 use libimagstore::store::Entry;
 
-use error::Result;
+use failure::Fallible as Result;
 
 pub trait Viewer {
 
@@ -35,9 +35,7 @@ pub trait Viewer {
               W: Write
     {
         for entry in entries {
-            if let Err(e) = self.view_entry(entry.deref(), sink) {
-                return Err(e);
-            }
+            let _ = self.view_entry(entry.deref(), sink)?;
         }
         Ok(())
     }

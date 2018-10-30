@@ -36,14 +36,11 @@
 )]
 
 extern crate toml;
-#[macro_use] extern crate error_chain;
 extern crate textwrap;
+extern crate failure;
 
 #[cfg(feature = "markdownviewer")]
 extern crate mdcat;
-
-#[cfg(feature = "markdownviewer")]
-extern crate failure;
 
 #[cfg(feature = "markdownviewer")]
 extern crate pulldown_cmark;
@@ -56,7 +53,6 @@ extern crate libimagrt;
 extern crate libimagerror;
 extern crate libimagentryedit;
 
-pub mod error;
 pub mod builtin;
 pub mod viewer;
 

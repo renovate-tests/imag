@@ -22,7 +22,7 @@ use std::io::Write;
 use libimagstore::store::Entry;
 
 use viewer::Viewer;
-use error::Result;
+use failure::Fallible as Result;
 
 pub struct PlainViewer {
     show_header: bool
