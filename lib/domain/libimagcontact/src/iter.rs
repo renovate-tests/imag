@@ -20,11 +20,11 @@
 use libimagstore::storeid::StoreIdIterator;
 use libimagstore::store::Store;
 use libimagstore::store::FileLockEntry;
+use libimagerror::errors::ErrorMsg as EM;
 
 use contact::Contact;
-use error::ContactError as CE;
-use error::ContactErrorKind as CEK;
-use error::Result;
+use failure::Fallible as Result;
+use failure::Error;
 
 pub struct ContactIter<'a>(StoreIdIterator, &'a Store);
 
@@ -44,11 +44,12 @@ impl<'a> Iterator for ContactIter<'a> {
         loop {
             match self.0.next() {
                 None          => return None,
-                Some(Err(e))  => return Some(Err(e).map_err(CE::from)),
+                Some(Err(e))  => return Some(Err(e).map_err(Error::from)),
                 Some(Ok(sid)) => match self.1.get(sid.clone()).map_err(From::from) {
                     Err(e)          => return Some(Err(e)),
-                    Ok(None)        => return Some(Err(CE::from_kind(CEK::EntryNotFound(sid)))),
-                    Ok(Some(entry)) => match entry.is_contact().map_err(From::from) {
+                    Ok(None)        => return
+                        Some(Err(Error::from(EM::EntryNotFound(sid.local_display_string())))),
+                    Ok(Some(entry)) => match entry.is_contact().map_err(Error::from) {
                         Ok(true)    => return Some(Ok(entry)),
                         Ok(false)   => continue,
                         Err(e)      => return Some(Err(e)),

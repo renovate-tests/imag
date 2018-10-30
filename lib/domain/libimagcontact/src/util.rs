@@ -22,7 +22,7 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::Read;
 
-use error::Result;
+use failure::Fallible as Result;
 
 pub fn read_to_string<A: AsRef<Path> + Debug>(pb: A) -> Result<String> {
     let mut cont = String::new();
