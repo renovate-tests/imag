@@ -60,6 +60,7 @@ use libimagrt::spec::CliSpec;
 use libimagerror::io::ToExitCode;
 use libimagerror::exit::ExitUnwrap;
 use libimagerror::trace::trace_error;
+use libimagrt::configuration::InternalConfiguration;
 
 /// Returns the helptext, putting the Strings in cmds as possible
 /// subcommands into it
@@ -182,7 +183,9 @@ fn main() {
         }
     }
 
+    let enable_logging = app.enable_logging();
     let matches = app.matches();
+
     let rtp = ::libimagrt::runtime::get_rtp_match(&matches);
     let configpath = matches
         .value_of(Runtime::arg_config_name())
@@ -193,6 +196,10 @@ fn main() {
             trace_error(&e);
             exit(1)
         });
+
+    if enable_logging {
+        Runtime::init_logger(&matches, config.as_ref())
+    }
 
     debug!("matches: {:?}", matches);
 
