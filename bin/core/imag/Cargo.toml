@@ -33,11 +33,15 @@ log = "0.4.0"
 toml = "0.4"
 toml-query = "0.7"
 
-libimagrt    = { version = "0.9.0", path = "../../../lib/core/libimagrt" }
 libimagerror = { version = "0.9.0", path = "../../../lib/core/libimagerror" }
 
 [dependencies.clap]
 version = "^2.29"
 default-features = false
 features = ["suggestions", "color", "wrap_help"]
+
+[dependencies.libimagrt]
+version  = "0.9.0"
+path     = "../../../lib/core/libimagrt"
+features = ["pub_logging_initialization"]
 

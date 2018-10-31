@@ -53,6 +53,11 @@ features         = ["no_logging"]
 [features]
 default = []
 
+# Make logger initialization inside `runtime::Runtime` public.
+# This feature is _only_ used for the `imag` binary itself. You do not need this
+# feature and if you think you do you're doing it wrong.
+pub_logging_initialization = []
+
 # Enable testing functionality. Used for building the libimagrt for testing CLI
 # apps. Do not use in production!
 testing = []

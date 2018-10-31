@@ -127,6 +127,7 @@ impl<'a> Runtime<'a> {
 
         debug!("RTP path    = {:?}", rtp);
         debug!("Store path  = {:?}", storepath);
+        debug!("CLI         = {:?}", matches);
 
         let store_result = if cli_app.use_inmemory_fs() {
             Store::new_with_backend(storepath,
@@ -317,14 +318,22 @@ impl<'a> Runtime<'a> {
         "logging-destinations"
     }
 
+    #[cfg(feature = "pub_logging_initialization")]
+    pub fn init_logger(matches: &ArgMatches, config: Option<&Value>) {
+        Self::_init_logger(matches, config)
+    }
+    #[cfg(not(feature = "pub_logging_initialization"))]
+    fn init_logger(matches: &ArgMatches, config: Option<&Value>) {
+        Self::_init_logger(matches, config)
+    }
+
     /// Initialize the internal logger
     ///
     /// If the environment variable "IMAG_LOG_ENV" is set, this simply
     /// initializes a env-logger instance. Errors are ignored in this case.
     /// If the environment variable is not set, this initializes the internal imag logger. On
     /// error, this exits (as there is nothing we can do about that)
-    ///
-    fn init_logger(matches: &ArgMatches, config: Option<&Value>) {
+    fn _init_logger(matches: &ArgMatches, config: Option<&Value>) {
         use log::set_max_level;
         use log::set_boxed_logger;
         use std::env::var as env_var;

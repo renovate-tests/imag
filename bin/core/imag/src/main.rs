@@ -60,6 +60,7 @@ use libimagrt::spec::CliSpec;
 use libimagerror::io::ToExitCode;
 use libimagerror::exit::ExitUnwrap;
 use libimagerror::trace::trace_error;
+use libimagrt::configuration::InternalConfiguration;
 
 /// Returns the helptext, putting the Strings in cmds as possible
 /// subcommands into it
@@ -182,7 +183,9 @@ fn main() {
         }
     }
 
+    let enable_logging = app.enable_logging();
     let matches = app.matches();
+
     let rtp = ::libimagrt::runtime::get_rtp_match(&matches);
     let configpath = matches
         .value_of(Runtime::arg_config_name())
@@ -193,6 +196,10 @@ fn main() {
             trace_error(&e);
             exit(1)
         });
+
+    if enable_logging {
+        Runtime::init_logger(&matches, config.as_ref())
+    }
 
     debug!("matches: {:?}", matches);
 
@@ -261,6 +268,7 @@ fn main() {
                 None => Vec::new()
             };
 
+            debug!("Processing forwarding of commandline arguments");
             forward_commandline_arguments(&matches, &mut subcommand_args);
 
             let subcommand = String::from(subcommand);
@@ -366,6 +374,9 @@ fn fetch_aliases(config: Option<&Value>) -> Result<BTreeMap<String, String>, Str
 
 fn forward_commandline_arguments(m: &ArgMatches, scmd: &mut Vec<String>) {
     let push = |flag: Option<&str>, val_name: &str, m: &ArgMatches, v: &mut Vec<String>| {
+        debug!("Push({flag:?}, {val_name:?}, {matches:?}, {v:?}",
+               flag = flag, val_name = val_name, matches = m, v = v);
+
         let _ = m
             .value_of(val_name)
             .map(|val| {
