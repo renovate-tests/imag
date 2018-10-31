@@ -366,13 +366,20 @@ fn fetch_aliases(config: Option<&Value>) -> Result<BTreeMap<String, String>, Str
 
 fn forward_commandline_arguments(m: &ArgMatches, scmd: &mut Vec<String>) {
     let push = |flag: Option<&str>, val_name: &str, m: &ArgMatches, v: &mut Vec<String>| {
-        let _ = m
-            .value_of(val_name)
-            .map(|val| {
-                let flag = format!("--{}", flag.unwrap_or(val_name));
-                v.insert(0, String::from(val));
-                v.insert(0, flag);
-            });
+        if m.is_present(val_name) {
+            let _ = m
+                .value_of(val_name)
+                .map(|val| {
+                    debug!("Found '{:?}' = {:?}", val_name, val);
+                    let flag = format!("--{}", flag.unwrap_or(val_name));
+                    v.insert(0, String::from(val));
+                    v.insert(0, flag);
+                })
+                .unwrap_or_else(|| {
+                    let flag = format!("--{}", flag.unwrap_or(val_name));
+                    v.insert(0, flag);
+                });
+        }
     };
 
     push(Some("verbose"),
