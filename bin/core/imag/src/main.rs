@@ -377,13 +377,20 @@ fn forward_commandline_arguments(m: &ArgMatches, scmd: &mut Vec<String>) {
         debug!("Push({flag:?}, {val_name:?}, {matches:?}, {v:?}",
                flag = flag, val_name = val_name, matches = m, v = v);
 
-        let _ = m
-            .value_of(val_name)
-            .map(|val| {
-                let flag = format!("--{}", flag.unwrap_or(val_name));
-                v.insert(0, String::from(val));
-                v.insert(0, flag);
-            });
+        if m.is_present(val_name) {
+            let _ = m
+                .value_of(val_name)
+                .map(|val| {
+                    debug!("Found '{:?}' = {:?}", val_name, val);
+                    let flag = format!("--{}", flag.unwrap_or(val_name));
+                    v.insert(0, String::from(val));
+                    v.insert(0, flag);
+                })
+                .unwrap_or_else(|| {
+                    let flag = format!("--{}", flag.unwrap_or(val_name));
+                    v.insert(0, flag);
+                });
+        }
     };
 
     push(Some("verbose"),
