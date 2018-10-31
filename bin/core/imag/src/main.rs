@@ -268,6 +268,7 @@ fn main() {
                 None => Vec::new()
             };
 
+            debug!("Processing forwarding of commandline arguments");
             forward_commandline_arguments(&matches, &mut subcommand_args);
 
             let subcommand = String::from(subcommand);
@@ -373,6 +374,9 @@ fn fetch_aliases(config: Option<&Value>) -> Result<BTreeMap<String, String>, Str
 
 fn forward_commandline_arguments(m: &ArgMatches, scmd: &mut Vec<String>) {
     let push = |flag: Option<&str>, val_name: &str, m: &ArgMatches, v: &mut Vec<String>| {
+        debug!("Push({flag:?}, {val_name:?}, {matches:?}, {v:?}",
+               flag = flag, val_name = val_name, matches = m, v = v);
+
         let _ = m
             .value_of(val_name)
             .map(|val| {
