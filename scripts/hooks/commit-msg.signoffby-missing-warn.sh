@@ -9,7 +9,7 @@ RED='\e[0;31m' # Red
 NORMAL='\e[0m' # Text Reset
 
 if [ "1" != "$(grep -c '^Signed-off-by: ' "$1")" ]; then
-    printf >&2 "%sMissing Signed-off-by line.%s\n" "$RED" "$NORMAL"
+    echo -e >&2 "${RED}Missing Signed-off-by line.${NORMAL}\n"
 
     # To not only warn, but abort the commit, uncomment the next line
     # exit 1
