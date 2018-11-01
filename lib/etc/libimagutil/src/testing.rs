@@ -96,9 +96,9 @@ macro_rules! make_mock_app {
 
             #[allow(unused)]
             pub fn generate_test_runtime<'a>(mut args: Vec<&'static str>) -> Result<Runtime<'a>, Error> {
-                let mut cli_args = vec![$appname, "--rtp", "/tmp"];
-
+                let mut cli_args = vec![$appname];
                 cli_args.append(&mut args);
+                debug!("Generating test runtime with args = {:?}", cli_args);
 
                 let cli_app = MockLinkApp::new(cli_args);
                 Runtime::with_configuration(cli_app, generate_minimal_test_config())
@@ -108,9 +108,9 @@ macro_rules! make_mock_app {
             pub fn reset_test_runtime<'a>(mut args: Vec<&'static str>, old_runtime: Runtime)
                 -> Result<Runtime<'a>, Error>
             {
-                let mut cli_args = vec![$appname, "--rtp", "/tmp"];
-
+                let mut cli_args = vec![$appname];
                 cli_args.append(&mut args);
+                debug!("New arguments: {:?}", cli_args);
 
                 let cli_app = MockLinkApp::new(cli_args);
                 Runtime::with_configuration(cli_app, generate_minimal_test_config())
