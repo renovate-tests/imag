@@ -211,7 +211,13 @@ fn delete_category(rt: &Runtime) {
     let scmd   = rt.cli().subcommand_matches("delete-category").unwrap(); // safed by main()
     let name   = scmd.value_of("delete-category-name").map(String::from).unwrap(); // safed by clap
     let ques   = format!("Do you really want to delete category '{}' and remove links to all categorized enties?", name);
-    let answer = ask_bool(&ques, Some(false));
+
+    let mut input = rt.stdin().unwrap_or_else(|| {
+        error!("No input stream. Cannot ask for permission");
+        ::std::process::exit(1)
+    });
+    let mut output = rt.stdout();
+    let answer = ask_bool(&ques, Some(false), &mut input, &mut output).map_err_trace_exit_unwrap(1);
 
     if answer {
         info!("Deleting category '{}'", name);

@@ -166,6 +166,13 @@ fn delete(rt: &Runtime) {
     let yes  = scmd.is_present("delete-yes");
     let delete_instances = scmd.is_present("delete-instances");
 
+    let mut input = rt.stdin().unwrap_or_else(|| {
+        error!("No input stream. Cannot ask for permission");
+        exit(1);
+    });
+
+    let mut output = rt.stdout();
+
     let _ = rt
         .store()
         .all_habit_templates()
@@ -191,7 +198,9 @@ fn delete(rt: &Runtime) {
                     let do_delete = |id| rt.store().delete(id).map_err_trace_exit_unwrap(1);
                     if !yes {
                         let q = format!("Really delete {}", id);
-                        if ask_bool(&q, Some(false)) {
+                        if ask_bool(&q, Some(false), &mut input, &mut output)
+                            .map_err_trace_exit_unwrap(1)
+                        {
                             let _ = do_delete(id);
                         }
                     } else {
@@ -215,7 +224,9 @@ fn delete(rt: &Runtime) {
             let do_delete_template = |sid| rt.store().delete(sid).map_err_trace_exit_unwrap(1);
             if !yes {
                 let q = format!("Really delete template {}", sid);
-                if ask_bool(&q, Some(false)) {
+                if ask_bool(&q, Some(false), &mut input, &mut output)
+                        .map_err_trace_exit_unwrap(1)
+                {
                     let _ = do_delete_template(sid);
                 }
             } else {

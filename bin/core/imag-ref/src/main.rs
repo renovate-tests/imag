@@ -117,9 +117,19 @@ fn remove(rt: &Runtime) {
         .into_storeid()
         .map_err_trace_exit_unwrap(1);
 
+    let mut input = rt.stdin().unwrap_or_else(|| {
+        error!("No input stream. Cannot ask for permission");
+        exit(1);
+    });
+
+    let mut output = rt.stdout();
+
     match rt.store().get(id.clone()).map_err_trace_exit_unwrap(1) {
         Some(mut entry) => {
-            if yes || ask_bool(&format!("Delete ref from entry '{}'", id), None) {
+            if yes ||
+                ask_bool(&format!("Delete ref from entry '{}'", id), None, &mut input, &mut output)
+                    .map_err_trace_exit_unwrap(1)
+            {
                 let _ = entry.remove_ref().map_err_trace_exit_unwrap(1);
             } else {
                 info!("Aborted");

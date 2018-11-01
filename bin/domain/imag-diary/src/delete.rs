@@ -59,7 +59,16 @@ pub fn delete(rt: &Runtime) {
         .get_location()
         .clone();
 
-    if !ask_bool(&format!("Deleting {:?}", to_del_location), Some(true)) {
+    let mut input = rt.stdin().unwrap_or_else(|| {
+        error!("No input stream. Cannot ask for permission");
+        exit(1);
+    });
+
+    let mut output = rt.stdout();
+
+    if !ask_bool(&format!("Deleting {:?}", to_del_location), Some(true), &mut input, &mut output)
+        .map_err_trace_exit_unwrap(1)
+    {
         info!("Aborting delete action");
         return;
     }
