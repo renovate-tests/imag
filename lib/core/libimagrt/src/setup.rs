@@ -38,8 +38,8 @@ pub fn generate_runtime_setup<'a, B>(name: Name, version: Version<'a>, about: Ab
 
     Runtime::new(builder(Runtime::get_default_cli_builder(name, version, about)))
         .unwrap_or_else(|e| {
-            println!("Could not set up Runtime");
-            println!("{:?}", e);
+            eprintln!("Could not set up Runtime");
+            eprintln!("{:?}", e);
             trace_error_dbg(&e);
             exit(1);
         })
