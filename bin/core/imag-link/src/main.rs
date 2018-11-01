@@ -397,7 +397,7 @@ mod tests {
     #[test]
     fn test_link_modificates() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["internal", "test1", "test2"])
+        let rt = generate_test_runtime(vec!["test1", "test2"])
             .unwrap();
 
         debug!("Runtime created");
@@ -421,12 +421,14 @@ mod tests {
 
         assert_ne!(*test_links1, links_toml_value(vec![]));
         assert_ne!(*test_links2, links_toml_value(vec![]));
+
+        debug!("Test finished")
     }
 
     #[test]
     fn test_linking_links() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["internal", "test1", "test2"])
+        let rt = generate_test_runtime(vec!["test1", "test2"])
             .unwrap();
 
         debug!("Runtime created");
@@ -455,7 +457,7 @@ mod tests {
     #[test]
     fn test_multilinking() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["internal", "test1", "test2"])
+        let rt = generate_test_runtime(vec!["test1", "test2"])
             .unwrap();
 
         debug!("Runtime created");
@@ -485,7 +487,7 @@ mod tests {
     #[test]
     fn test_linking_more_than_two() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["internal", "test1", "test2", "test3"])
+        let rt = generate_test_runtime(vec!["test1", "test2", "test3"])
             .unwrap();
 
         debug!("Runtime created");
@@ -522,7 +524,7 @@ mod tests {
     #[test]
     fn test_linking_links_unlinking_removes_links() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["internal", "test1", "test2"])
+        let rt = generate_test_runtime(vec!["test1", "test2"])
             .unwrap();
 
         debug!("Runtime created");
@@ -558,7 +560,7 @@ mod tests {
     #[test]
     fn test_linking_and_unlinking_more_than_two() {
         setup_logging();
-        let rt = generate_test_runtime(vec!["internal", "test1", "test2", "test3"])
+        let rt = generate_test_runtime(vec!["test1", "test2", "test3"])
             .unwrap();
 
         debug!("Runtime created");
