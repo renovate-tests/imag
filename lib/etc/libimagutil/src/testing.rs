@@ -99,6 +99,7 @@ macro_rules! make_mock_app {
                 let mut cli_args = vec![$appname, "--rtp", "/tmp"];
 
                 cli_args.append(&mut args);
+                debug!("Generating test runtime with args = {:?}", cli_args);
 
                 let cli_app = MockLinkApp::new(cli_args);
                 Runtime::with_configuration(cli_app, generate_minimal_test_config())
@@ -111,6 +112,7 @@ macro_rules! make_mock_app {
                 let mut cli_args = vec![$appname, "--rtp", "/tmp"];
 
                 cli_args.append(&mut args);
+                debug!("New arguments: {:?}", cli_args);
 
                 let cli_app = MockLinkApp::new(cli_args);
                 Runtime::with_configuration(cli_app, generate_minimal_test_config())
