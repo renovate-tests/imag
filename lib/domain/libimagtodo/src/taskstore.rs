@@ -140,7 +140,6 @@ impl<'a> TaskStore<'a> for Store {
                 // the change. The (maybe modified) second one is
                 // expected by taskwarrior.
                 let val = serde_to_string(&ttask).context(err_msg("Import error"))?;
-                println!("{}", val);
 
                 // Taskwarrior does not have the concept of deleted tasks, but only modified
                 // ones.
