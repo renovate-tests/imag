@@ -581,23 +581,24 @@ pub mod header_filter_lang {
 
         #[test]
         fn test_list_of_val() {
+            setup_logging();
             {
                 let list = list_of_val(b"[]");
-                println!("list: {:?}", list);
+                debug!("list: {:?}", list);
                 let vals = list.unwrap().1;
                 assert_eq!(vals, vec![]);
             }
 
             {
                 let list = list_of_val(b"[1]");
-                println!("list: {:?}", list);
+                debug!("list: {:?}", list);
                 let vals = list.unwrap().1;
                 assert_eq!(vals, vec![Value::Integer(1)]);
             }
 
             {
                 let list = list_of_val(b"[12,13]");
-                println!("list: {:?}", list);
+                debug!("list: {:?}", list);
                 let vals = list.unwrap().1;
                 assert_eq!(vals, vec![Value::Integer(12), Value::Integer(13)]);
             }

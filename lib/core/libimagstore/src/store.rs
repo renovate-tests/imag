@@ -921,6 +921,10 @@ mod test {
 
     use toml::Value;
 
+    fn setup_logging() {
+        let _ = env_logger::try_init();
+    }
+
     #[test]
     fn test_imag_section() {
         let mut map = BTreeMap::new();
@@ -1017,8 +1021,14 @@ Hai
 
 #[cfg(test)]
 mod store_tests {
+    extern crate env_logger;
+
     use std::path::PathBuf;
     use std::sync::Arc;
+
+    fn setup_logging() {
+        let _ = env_logger::try_init();
+    }
 
     use super::Store;
     use file_abstraction::InMemoryFileAbstraction;
