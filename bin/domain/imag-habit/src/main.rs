@@ -152,7 +152,8 @@ fn create(rt: &Runtime) {
 
     debug!("Builder = {:?}", hb);
 
-    hb.build(rt.store()).map_err_trace_exit_unwrap(1);
+    let fle = hb.build(rt.store()).map_err_trace_exit_unwrap(1);
+    let _   = rt.report_touched(fle.get_location()).map_err_trace_exit_unwrap(1);
 }
 
 fn delete(rt: &Runtime) {
@@ -370,6 +371,13 @@ fn today(rt: &Runtime, future: bool) {
         {
             let mut v = vec![format!("{}", i)];
             let mut list = lister_fn(&e);
+
+            {
+                let _ = rt
+                    .report_touched(e.get_location())
+                    .map_err_trace_exit_unwrap(1);
+            }
+
             v.append(&mut list);
             table.add_row(v.iter().map(|s| Cell::new(s)).collect());
             empty = false;
@@ -426,6 +434,13 @@ fn list(rt: &Runtime) {
         .for_each(|(i, e)| {
             let mut v = vec![format!("{}", i)];
             let mut list = lister_fn(&e);
+
+            {
+                let _ = rt
+                    .report_touched(e.get_location())
+                    .map_err_trace_exit_unwrap(1);
+            }
+
             v.append(&mut list);
             table.add_row(v.iter().map(|s| Cell::new(s)).collect());
             empty = false;
@@ -442,7 +457,6 @@ fn show(rt: &Runtime) {
         .value_of("show-name")
         .map(String::from)
         .unwrap(); // safe by clap
-
 
     fn instance_lister_fn(i: &FileLockEntry) -> Vec<String> {
         use libimagutil::date::date_to_string;
@@ -499,6 +513,13 @@ fn show(rt: &Runtime) {
                 .for_each(|(i, e)| {
                     let mut v = vec![format!("{}", i)];
                     let mut instances = instance_lister_fn(&e);
+
+                    {
+                        let _ = rt
+                            .report_touched(e.get_location())
+                            .map_err_trace_exit_unwrap(1);
+                    }
+
                     v.append(&mut instances);
                     table.add_row(v.iter().map(|s| Cell::new(s)).collect());
                     empty = false;
@@ -553,6 +574,12 @@ fn done(rt: &Runtime) {
         } else {
             info!("Ignoring: {}, because there is no due date (the habit is finised)",
                 next_instance_name);
+        }
+
+        {
+            let _ = rt
+                .report_touched(r.get_location())
+                .map_err_trace_exit_unwrap(1);
         }
 
     }
