@@ -136,7 +136,10 @@ fn main() {
         Ok(exit_status) => {
             if !exit_status.success() {
                 debug!("git exited with non-zero exit code: {:?}", exit_status);
-                eprintln!("git exited with non-zero exit code");
+                let mut err = rt.stderr();
+                writeln!(err, "git exited with non-zero exit code")
+                    .to_exit_code()
+                    .unwrap_or_exit();
                 ::std::process::exit(exit_status.code().unwrap_or(1));
             }
             debug!("Successful exit!");
