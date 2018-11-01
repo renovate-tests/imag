@@ -191,7 +191,7 @@ mod tests {
         }
 
         let id = PathBuf::from(format!("category/{}", category_name));
-        println!("Trying: {:?}", id);
+        debug!("Trying: {:?}", id);
         let category = store.get(id);
 
         assert!(category.is_ok(), format!("Expected Ok(_), got: {:?}", category));

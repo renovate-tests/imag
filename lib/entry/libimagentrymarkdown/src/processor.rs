@@ -443,7 +443,7 @@ mod tests {
         let entries : Vec<_> = entries.unwrap().without_store().collect();
 
         assert_eq!(2, entries.len(), "Expected 2 links, got: {:?}", entries);
-        println!("{:?}", entries);
+        debug!("{:?}", entries);
     }
 
     #[test]
@@ -476,7 +476,7 @@ mod tests {
         let entries : Vec<_> = entries.unwrap().without_store().collect();
 
         assert_eq!(3, entries.len(), "Expected 3 links, got: {:?}", entries);
-        println!("{:?}", entries);
+        debug!("{:?}", entries);
     }
 
     #[test]
@@ -509,7 +509,7 @@ mod tests {
         let entries : Vec<_> = entries.unwrap().without_store().collect();
 
         assert_eq!(1, entries.len(), "Expected 1 entries, got: {:?}", entries);
-        println!("{:?}", entries);
+        debug!("{:?}", entries);
     }
 
     #[test]

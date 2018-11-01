@@ -840,11 +840,11 @@ mod test {
         {
             assert!(e1.remove_internal_link(&mut e2).is_ok());
 
-            println!("{:?}", e2.to_str());
+            debug!("{:?}", e2.to_str());
             let e2_links = e2.get_internal_links().unwrap().collect::<Vec<_>>();
             assert_eq!(e2_links.len(), 0, "Expected [], got: {:?}", e2_links);
 
-            println!("{:?}", e1.to_str());
+            debug!("{:?}", e1.to_str());
             let e1_links = e1.get_internal_links().unwrap().collect::<Vec<_>>();
             assert_eq!(e1_links.len(), 0, "Expected [], got: {:?}", e1_links);
 

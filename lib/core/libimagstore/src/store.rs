@@ -921,6 +921,10 @@ mod test {
 
     use toml::Value;
 
+    fn setup_logging() {
+        let _ = env_logger::try_init();
+    }
+
     #[test]
     fn test_imag_section() {
         let mut map = BTreeMap::new();
@@ -983,7 +987,10 @@ Hai
     fn test_entry_from_str() {
         use super::Entry;
         use std::path::PathBuf;
-        println!("{}", TEST_ENTRY);
+
+        setup_logging();
+
+        debug!("{}", TEST_ENTRY);
         let entry = Entry::from_str(StoreId::new_baseless(PathBuf::from("test/foo~1.3")).unwrap(),
                                     TEST_ENTRY).unwrap();
 
@@ -994,7 +1001,10 @@ Hai
     fn test_entry_to_str() {
         use super::Entry;
         use std::path::PathBuf;
-        println!("{}", TEST_ENTRY);
+
+        setup_logging();
+
+        debug!("{}", TEST_ENTRY);
         let entry = Entry::from_str(StoreId::new_baseless(PathBuf::from("test/foo~1.3")).unwrap(),
                                     TEST_ENTRY).unwrap();
         let string = entry.to_str().unwrap();
@@ -1006,7 +1016,10 @@ Hai
     fn test_entry_to_str_trailing_newline() {
         use super::Entry;
         use std::path::PathBuf;
-        println!("{}", TEST_ENTRY_TNL);
+
+        setup_logging();
+
+        debug!("{}", TEST_ENTRY_TNL);
         let entry = Entry::from_str(StoreId::new_baseless(PathBuf::from("test/foo~1.3")).unwrap(),
                                     TEST_ENTRY_TNL).unwrap();
         let string = entry.to_str().unwrap();
@@ -1017,8 +1030,14 @@ Hai
 
 #[cfg(test)]
 mod store_tests {
+    extern crate env_logger;
+
     use std::path::PathBuf;
     use std::sync::Arc;
+
+    fn setup_logging() {
+        let _ = env_logger::try_init();
+    }
 
     use super::Store;
     use file_abstraction::InMemoryFileAbstraction;
@@ -1165,6 +1184,7 @@ mod store_tests {
     #[test]
     fn test_store_move_moves_in_hm() {
         use storeid::StoreId;
+        setup_logging();
 
         let store = get_store();
 
@@ -1187,7 +1207,7 @@ mod store_tests {
                 }
 
                 let r = store.move_by_id(id.clone(), id_mv.clone());
-                assert!(r.map_err(|e| println!("ERROR: {:?}", e)).is_ok());
+                assert!(r.map_err(|e| debug!("ERROR: {:?}", e)).is_ok());
 
                 {
                     let id_mv_with_base = id_mv.clone().with_base(store.path().clone());
