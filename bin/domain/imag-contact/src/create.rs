@@ -34,6 +34,7 @@
 
 use std::collections::BTreeMap;
 use std::process::exit;
+use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 use std::fs::OpenOptions;
@@ -72,14 +73,9 @@ mod test {
     }
 }
 
-macro_rules! ask_continue {
-    { yes => $yes:expr; no => $no:expr } => {
-        if ::libimaginteraction::ask::ask_bool("Edit tempfile", Some(true)) {
-            $yes
-        } else {
-            $no
-        }
-    };
+fn ask_continue(inputstream: &mut Read, outputstream: &mut Write) -> bool {
+    ::libimaginteraction::ask::ask_bool("Edit tempfile", Some(true), inputstream, outputstream)
+        .map_err_trace_exit_unwrap(1)
 }
 
 pub fn create(rt: &Runtime) {
@@ -90,7 +86,7 @@ pub fn create(rt: &Runtime) {
         if let Some(mut fl) = scmd.value_of("file-location").map(PathBuf::from) {
             let uuid = if fl.is_file() {
                 error!("File does exist, cannot create/override");
-                exit(1);
+                exit(1)
             } else if fl.is_dir() {
                 let uuid = Uuid::new_v4().to_hyphenated().to_string();
                 fl.push(uuid.clone());
@@ -147,6 +143,13 @@ pub fn create(rt: &Runtime) {
         }
     };
 
+    let mut input = rt.stdin().unwrap_or_else(|| {
+        error!("No input stream. Cannot ask for permission");
+        exit(1)
+    });
+
+    let mut output = rt.stdout();
+
     loop {
         ::libimagentryedit::edit::edit_in_tmpfile(&rt, &mut template)
             .map_warn_err_str("Editing failed.")
@@ -158,20 +161,27 @@ pub fn create(rt: &Runtime) {
         }
 
         match ::toml::de::from_str(&template)
-            .map(|toml| parse_toml_into_vcard(toml, uuid.clone()))
+            .map(|toml| parse_toml_into_vcard(&mut output, &mut input, toml, uuid.clone()))
             .map_err(Error::from)
         {
             Err(e) => {
                 error!("Error parsing template");
                 trace_error(&e);
-                ask_continue! { yes => continue; no => exit(1) };
+
+                if ask_continue(&mut input, &mut output) {
+                    continue;
+                } else {
+                    exit(1)
+                }
             },
 
             Ok(None)        => continue,
             Ok(Some(vcard)) => {
                 if template == TEMPLATE || template.is_empty() {
-                    if ::libimaginteraction::ask::ask_bool("Abort contact creating", Some(false)) {
-                        exit(1);
+                    if ::libimaginteraction::ask::ask_bool("Abort contact creating", Some(false), &mut input, &mut output)
+                        .map_err_trace_exit_unwrap(1)
+                    {
+                        exit(1)
                     } else {
                         continue;
                     }
@@ -205,7 +215,7 @@ pub fn create(rt: &Runtime) {
     info!("Ready");
 }
 
-fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
+fn parse_toml_into_vcard(output: &mut Write, input: &mut Read, toml: Value, uuid: String) -> Option<Vcard> {
     let mut vcard = VcardBuilder::new().with_uid(uuid);
 
     { // parse name
@@ -257,7 +267,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
                         Some(p) => p,
                         None    => {
                             error!("Key 'nickname.[{}].name' missing", i);
-                            ask_continue! { yes => return None; no => exit(1) };
+                            if ask_continue(input, output) {
+                                return None
+                            } else {
+                                exit(1)
+                            }
                         },
                     };
 
@@ -274,7 +288,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
             Some(_) => {
                 error!("Type Error: Expected Array or String at 'nickname'");
-                ask_continue! { yes => return None; no => exit(1) };
+                if ask_continue(input, output) {
+                    return None
+                } else {
+                    exit(1)
+                }
             },
             None => {
                 // nothing
@@ -310,7 +328,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
                         Some(p) => p,
                         None => {
                             error!("Key 'phones.[{}].type' missing", i);
-                            ask_continue! { yes => return None; no => exit(1) };
+                            if ask_continue(input, output) {
+                                return None
+                            } else {
+                                exit(1)
+                            }
                         }
                     };
 
@@ -318,7 +340,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
                         Some(p) => p,
                         None => {
                             error!("Key 'phones.[{}].number' missing", i);
-                            ask_continue! { yes => return None; no => exit(1) };
+                            if ask_continue(input, output) {
+                                return None
+                            } else {
+                                exit(1)
+                            }
                         }
                     };
 
@@ -331,7 +357,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
             Some(_) => {
                 error!("Expected Array at 'phones'.");
-                ask_continue! { yes => return None; no => exit(1) };
+                if ask_continue(input, output) {
+                    return None
+                } else {
+                    exit(1)
+                }
             },
             None => {
                 // nothing
@@ -347,7 +377,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
                     let adrtype  = match read_str_from_toml(element, "type", false) {
                         None => {
                             error!("Key 'adresses.[{}].type' missing", i);
-                            ask_continue! { yes => return None; no => exit(1) };
+                            if ask_continue(input, output) {
+                                return None
+                            } else {
+                                exit(1)
+                            }
                         },
                         Some(p) => p,
                     };
@@ -378,7 +412,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
             Some(_) => {
                 error!("Type Error: Expected Array at 'addresses'");
-                ask_continue! { yes => return None; no => exit(1) };
+                if ask_continue(input, output) {
+                    return None
+                } else {
+                    exit(1)
+                }
             },
             None => {
                 // nothing
@@ -394,7 +432,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
                     let mailtype  = match read_str_from_toml(element, "type", false) {
                         None => {
                             error!("Error: 'email.[{}].type' missing", i);
-                            ask_continue! { yes => return None; no => exit(1) };
+                            if ask_continue(input, output) {
+                                return None
+                            } else {
+                                exit(1)
+                            }
                         },
                         Some(p) => p,
                     }; // TODO: Unused, because unsupported by vobject
@@ -402,7 +444,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
                     let mail = match read_str_from_toml(element, "addr", false) {
                         None => {
                             error!("Error: 'email.[{}].addr' missing", i);
-                            ask_continue! { yes => return None; no => exit(1) };
+                            if ask_continue(input, output) {
+                                return None
+                            } else {
+                                exit(1)
+                            }
                         },
                         Some(p) => p,
                     };
@@ -416,7 +462,11 @@ fn parse_toml_into_vcard(toml: Value, uuid: String) -> Option<Vcard> {
 
             Some(_) => {
                 error!("Type Error: Expected Array at 'email'");
-                ask_continue! { yes => return None; no => exit(1) };
+                if ask_continue(input, output) {
+                    return None
+                } else {
+                    exit(1)
+                }
             },
             None => {
                 // nothing
@@ -508,6 +558,7 @@ fn read_str_from_toml(toml: &Value, path: &'static str, must_be_there: bool) -> 
 #[cfg(test)]
 mod test_parsing {
     use super::parse_toml_into_vcard;
+    use std::io::empty;
 
     // TODO
     const TEMPLATE : &'static str = include_str!("../static/new-contact-template-test.toml");
@@ -515,7 +566,8 @@ mod test_parsing {
     #[test]
     fn test_template_names() {
         let uid = String::from("uid");
-        let vcard = parse_toml_into_vcard(::toml::de::from_str(TEMPLATE).unwrap(), uid);
+        let mut output = Vec::new();
+        let vcard = parse_toml_into_vcard(&mut output, &mut empty(), ::toml::de::from_str(TEMPLATE).unwrap(), uid);
         assert!(vcard.is_some(), "Failed to parse test template.");
         let vcard = vcard.unwrap();
 
@@ -532,7 +584,8 @@ mod test_parsing {
     #[test]
     fn test_template_person() {
         let uid = String::from("uid");
-        let vcard = parse_toml_into_vcard(::toml::de::from_str(TEMPLATE).unwrap(), uid);
+        let mut output = Vec::new();
+        let vcard = parse_toml_into_vcard(&mut output, &mut empty(), ::toml::de::from_str(TEMPLATE).unwrap(), uid);
         assert!(vcard.is_some(), "Failed to parse test template.");
         let vcard = vcard.unwrap();
 
@@ -550,7 +603,8 @@ mod test_parsing {
     #[test]
     fn test_template_organization() {
         let uid = String::from("uid");
-        let vcard = parse_toml_into_vcard(::toml::de::from_str(TEMPLATE).unwrap(), uid);
+        let mut output = Vec::new();
+        let vcard = parse_toml_into_vcard(&mut output, &mut empty(), ::toml::de::from_str(TEMPLATE).unwrap(), uid);
         assert!(vcard.is_some(), "Failed to parse test template.");
         let vcard = vcard.unwrap();
 
@@ -567,7 +621,8 @@ mod test_parsing {
     #[test]
     fn test_template_phone() {
         let uid = String::from("uid");
-        let vcard = parse_toml_into_vcard(::toml::de::from_str(TEMPLATE).unwrap(), uid);
+        let mut output = Vec::new();
+        let vcard = parse_toml_into_vcard(&mut output, &mut empty(), ::toml::de::from_str(TEMPLATE).unwrap(), uid);
         assert!(vcard.is_some(), "Failed to parse test template.");
         let vcard = vcard.unwrap();
 
@@ -582,7 +637,8 @@ mod test_parsing {
     #[test]
     fn test_template_email() {
         let uid = String::from("uid");
-        let vcard = parse_toml_into_vcard(::toml::de::from_str(TEMPLATE).unwrap(), uid);
+        let mut output = Vec::new();
+        let vcard = parse_toml_into_vcard(&mut output, &mut empty(), ::toml::de::from_str(TEMPLATE).unwrap(), uid);
         assert!(vcard.is_some(), "Failed to parse test template.");
         let vcard = vcard.unwrap();
 
@@ -597,7 +653,8 @@ mod test_parsing {
     #[test]
     fn test_template_addresses() {
         let uid = String::from("uid");
-        let vcard = parse_toml_into_vcard(::toml::de::from_str(TEMPLATE).unwrap(), uid);
+        let mut output = Vec::new();
+        let vcard = parse_toml_into_vcard(&mut output, &mut empty(), ::toml::de::from_str(TEMPLATE).unwrap(), uid);
         assert!(vcard.is_some(), "Failed to parse test template.");
         let vcard = vcard.unwrap();
 
@@ -614,7 +671,8 @@ mod test_parsing {
     #[test]
     fn test_template_other() {
         let uid = String::from("uid");
-        let vcard = parse_toml_into_vcard(::toml::de::from_str(TEMPLATE).unwrap(), uid);
+        let mut output = Vec::new();
+        let vcard = parse_toml_into_vcard(&mut output, &mut empty(), ::toml::de::from_str(TEMPLATE).unwrap(), uid);
         assert!(vcard.is_some(), "Failed to parse test template.");
         let vcard = vcard.unwrap();
 

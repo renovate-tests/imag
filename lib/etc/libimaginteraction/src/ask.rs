@@ -19,10 +19,11 @@
 
 // functions to ask the user for data, with crate:spinner
 
-use std::io::stdin;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::result::Result as RResult;
+use std::io::Read;
+use std::io::Write;
 
 use regex::Regex;
 use ansi_term::Colour::*;
@@ -34,33 +35,33 @@ use failure::err_msg;
 
 /// Ask the user for a Yes/No answer. Optionally provide a default value. If none is provided, this
 /// keeps loop{}ing
-pub fn ask_bool(s: &str, default: Option<bool>) -> bool {
-    ask_bool_(s, default, &mut BufReader::new(stdin()))
+pub fn ask_bool(s: &str, default: Option<bool>, input: &mut Read, output: &mut Write) -> Result<bool> {
+    ask_bool_(s, default, &mut BufReader::new(input), output)
 }
 
-fn ask_bool_<R: BufRead>(s: &str, default: Option<bool>, input: &mut R) -> bool {
+fn ask_bool_<R: BufRead>(s: &str, default: Option<bool>, input: &mut R, output: &mut Write) -> Result<bool> {
     lazy_static! {
         static ref R_YES: Regex = Regex::new(r"^[Yy](\n?)$").unwrap();
         static ref R_NO: Regex  = Regex::new(r"^[Nn](\n?)$").unwrap();
     }
 
     loop {
-        ask_question(s, false);
+        ask_question(s, false, output)?;
         if match default { Some(s) => s, _ => true } {
-            println!(" [Yn]: ");
+            writeln!(output, " [Yn]: ")?;
         } else {
-            println!(" [yN]: ");
+            writeln!(output, " [yN]: ")?;
         }
 
         let mut s = String::new();
         let _     = input.read_line(&mut s);
 
         if R_YES.is_match(&s[..]) {
-            return true
+            return Ok(true)
         } else if R_NO.is_match(&s[..]) {
-            return false
+            return Ok(false)
         } else if default.is_some() {
-            return default.unwrap();
+            return Ok(default.unwrap())
         }
         // else again...
     }
@@ -68,25 +69,25 @@ fn ask_bool_<R: BufRead>(s: &str, default: Option<bool>, input: &mut R) -> bool 
 
 /// Ask the user for an unsigned number. Optionally provide a default value. If none is provided,
 /// this keeps loop{}ing
-pub fn ask_uint(s: &str, default: Option<u64>) -> u64 {
-    ask_uint_(s, default, &mut BufReader::new(stdin()))
+pub fn ask_uint(s: &str, default: Option<u64>, input: &mut Read, output: &mut Write) -> Result<u64> {
+    ask_uint_(s, default, &mut BufReader::new(input), output)
 }
 
-fn ask_uint_<R: BufRead>(s: &str, default: Option<u64>, input: &mut R) -> u64 {
+fn ask_uint_<R: BufRead>(s: &str, default: Option<u64>, input: &mut R, output: &mut Write) -> Result<u64> {
     use std::str::FromStr;
 
     loop {
-        ask_question(s, false);
+        ask_question(s, false, output)?;
 
         let mut s = String::new();
         let _     = input.read_line(&mut s);
 
         let u : RResult<u64, _> = FromStr::from_str(&s[..]);
         match u {
-            Ok(u)  => { return u; },
+            Ok(u)  => { return Ok(u); },
             Err(_) => {
                 if default.is_some() {
-                    return default.unwrap();
+                    return Ok(default.unwrap());
                 } // else keep looping
             }
         }
@@ -109,8 +110,10 @@ pub fn ask_string(s: &str,
                   permit_empty: bool,
                   permit_multiline: bool,
                   eof: Option<&str>,
-                  prompt: &str)
-    -> String
+                  prompt: &str,
+                  input: &mut Read,
+                  output: &mut Write)
+    -> Result<String>
 {
     ask_string_(s,
                 default,
@@ -118,7 +121,8 @@ pub fn ask_string(s: &str,
                 permit_multiline,
                 eof,
                 prompt,
-                &mut BufReader::new(stdin()))
+                &mut BufReader::new(input),
+                output)
 }
 
 fn ask_string_<R: BufRead>(s: &str,
@@ -127,36 +131,37 @@ fn ask_string_<R: BufRead>(s: &str,
                            permit_multiline: bool,
                            eof: Option<&str>,
                            prompt: &str,
-                           input: &mut R)
-    -> String
+                           input: &mut R,
+                           output: &mut Write)
+    -> Result<String>
 {
     let mut v = vec![];
     loop {
-        ask_question(s, true);
-        print!("{}", prompt);
+        ask_question(s, true, output)?;
+        write!(output, "{}", prompt)?;
 
         let mut s = String::new();
         let _     = input.read_line(&mut s);
 
         if permit_multiline {
             if permit_multiline && eof.map_or(false, |e| e == s) {
-                return v.join("\n");
+                return Ok(v.join("\n"));
             }
 
             if permit_empty || !v.is_empty() {
                 v.push(s);
             }
-            print!("{}", prompt);
+            write!(output, "{}", prompt)?;
         } else if s.is_empty() && permit_empty {
-            return s;
+            return Ok(s);
         } else if s.is_empty() && !permit_empty {
             if default.is_some() {
-                return default.unwrap();
+                return Ok(default.unwrap());
             } else {
                 continue;
             }
         } else {
-            return s;
+            return Ok(s);
         }
     }
 }
@@ -171,11 +176,11 @@ pub fn ask_select_from_list(list: &[&str]) -> Result<String> {
 /// trailing questionmark.
 ///
 /// The `nl` parameter can be used to configure whether a newline character should be printed
-pub fn ask_question(question: &str, nl: bool) {
+pub fn ask_question(question: &str, nl: bool, output: &mut Write) -> Result<()> {
     if nl {
-        println!("[imag]: {}?", Yellow.paint(question));
+        writeln!(output, "[imag]: {}?", Yellow.paint(question)).map_err(Error::from)
     } else {
-        print!("[imag]: {}?", Yellow.paint(question));
+        writeln!(output, "[imag]: {}?", Yellow.paint(question)).map_err(Error::from)
     }
 }
 
@@ -191,8 +196,9 @@ mod test {
         let question = "Is this true";
         let default  = None;
         let answers  = "\n\n\n\n\ny";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -200,8 +206,9 @@ mod test {
         let question = "Is this true";
         let default  = None;
         let answers  = "\n\n\n\n\ny\n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -209,8 +216,9 @@ mod test {
         let question = "Is this true";
         let default  = None;
         let answers  = "n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -218,8 +226,9 @@ mod test {
         let question = "Is this true";
         let default  = None;
         let answers  = "n\n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -227,8 +236,9 @@ mod test {
         let question = "Is this true";
         let default  = Some(false);
         let answers  = "n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -236,8 +246,9 @@ mod test {
         let question = "Is this true";
         let default  = Some(false);
         let answers  = "n\n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -245,8 +256,9 @@ mod test {
         let question = "Is this true";
         let default  = Some(true);
         let answers  = "y";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(true == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(true == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -254,8 +266,9 @@ mod test {
         let question = "Is this true";
         let default  = Some(true);
         let answers  = "y\n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(true == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(true == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -263,8 +276,9 @@ mod test {
         let question = "Is this true";
         let default  = Some(true);
         let answers  = "n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -272,8 +286,9 @@ mod test {
         let question = "Is this true";
         let default  = Some(false);
         let answers  = "y";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(true == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(true == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -281,8 +296,9 @@ mod test {
         let question = "Is this true";
         let default  = Some(false);
         let answers  = "\n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(false == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -290,8 +306,9 @@ mod test {
         let question = "Is this true";
         let default  = Some(true);
         let answers  = "\n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(true == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(true == ask_bool_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -299,8 +316,9 @@ mod test {
         let question = "Is this 1";
         let default  = None;
         let answers  = "1";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(1 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(1 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -308,8 +326,9 @@ mod test {
         let question = "Is this 1";
         let default  = Some(1);
         let answers  = "1";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(1 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(1 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -317,8 +336,9 @@ mod test {
         let question = "Is this 1";
         let default  = Some(2);
         let answers  = "1";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(1 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(1 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -326,8 +346,9 @@ mod test {
         let question = "Is this 1";
         let default  = Some(2);
         let answers  = "\n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(2 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(2 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -335,8 +356,9 @@ mod test {
         let question = "Is this 1";
         let default  = Some(2);
         let answers  = "\n\n\n\n";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(2 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(2 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
     #[test]
@@ -344,8 +366,9 @@ mod test {
         let question = "Is this 1";
         let default  = Some(2);
         let answers  = "\n\n\nasfb\nsakjf\naskjf\n-2";
+        let mut sink: Vec<u8> = vec![];
 
-        assert!(2 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes())));
+        assert!(2 == ask_uint_(question, default, &mut BufReader::new(answers.as_bytes()), &mut sink).unwrap());
     }
 
 }
