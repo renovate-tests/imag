@@ -34,7 +34,6 @@ use libimagtimetrack::timetrackingstore::*;
 use libimagtimetrack::iter::filter::has_end_time;
 use libimagtimetrack::iter::filter::has_one_of_tags;
 use libimagutil::warn_result::*;
-use libimagutil::debug_result::*;
 
 pub fn stop(rt: &Runtime) -> i32 {
     let (_, cmd) = rt.cli().subcommand();
@@ -92,10 +91,18 @@ pub fn stop(rt: &Runtime) -> i32 {
         // for each of these timetrackings, end them
         // for each result, print the backtrace (if any)
         .fold(0, |acc, mut elem| {
-            elem.set_end_datetime(stop_time.clone())
-                .map_dbg(|e| format!("Setting end time worked: {:?}", e))
-                .map(|_| acc)
-                .map_err_trace_exit_unwrap(1)
+            match elem.set_end_datetime(stop_time.clone()) {
+                Err(e) => {
+                    trace_error(&e);
+                    1
+                }
+                Ok(_) => {
+                    format!("Setting end time worked: {:?}", elem);
+                    let _ = rt.report_touched(elem.get_location())
+                        .map_err_trace_exit_unwrap(1);
+                    acc
+                }
+            }
         })
 }
 

@@ -81,12 +81,16 @@ pub fn track(rt: &Runtime) -> i32 {
         .unwrap() // enforced by clap
         .map(String::from)
         .map(TimeTrackingTag::from)
-        .fold(0, |acc, ttt| {
-            rt.store()
-              .create_timetracking(&start, &stop, &ttt)
-              .map_err_trace()
-              .map(|_| acc)
-              .unwrap_or(1)
+        .fold(0, |acc, ttt| match rt.store().create_timetracking(&start, &stop, &ttt) {
+            Err(e) => {
+                trace_error(&e);
+                1
+            },
+            Ok(entry) => {
+                let _ = rt.report_touched(entry.get_location())
+                    .map_err_trace_exit_unwrap(1);
+                acc
+            }
         })
 }
 

@@ -116,6 +116,9 @@ pub fn week(rt: &Runtime) -> i32 {
             let end   = e.get_end_datetime()?;
             debug!(" -> end = {:?}", end);
 
+            let _ = rt.report_touched(e.get_location())
+                .map_err_trace_exit_unwrap(1);
+
             Ok((tag, start, end))
         })
         .trace_unwrap_exit(1)

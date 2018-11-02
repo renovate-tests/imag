@@ -24,9 +24,9 @@ use failure::Error;
 
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::trace_error;
+use libimagerror::trace::MapErrTrace;
 use libimagtimetrack::tag::TimeTrackingTag;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
-use libimagerror::trace::MapErrTrace;
 
 pub fn start(rt: &Runtime) -> i32 {
     let (_, cmd) = rt.cli().subcommand();
@@ -49,11 +49,18 @@ pub fn start(rt: &Runtime) -> i32 {
         .map(String::from)
         .map(TimeTrackingTag::from)
         .fold(0, |acc, ttt| {
-            rt.store()
-              .create_timetracking_at(&start, &ttt)
-              .map_err_trace()
-              .map(|_| acc)
-              .unwrap_or(1)
+            match rt.store().create_timetracking_at(&start, &ttt) {
+                Err(e) => {
+                    trace_error(&e);
+                    1
+                },
+                Ok(entry) => {
+                    let _ = rt.report_touched(entry.get_location())
+                        .map_err_trace_exit_unwrap(1);
+
+                    acc
+                }
+            }
         })
 }
 
