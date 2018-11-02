@@ -89,9 +89,11 @@ fn import_mail(rt: &Runtime) {
     let scmd = rt.cli().subcommand_matches("import-mail").unwrap();
     let path = scmd.value_of("path").unwrap(); // enforced by clap
 
-    let _ = Mail::import_from_path(rt.store(), path)
-        .map_err_trace()
-        .map_info_str("Ok");
+    let mail = Mail::import_from_path(rt.store(), path)
+        .map_info_str("Ok")
+        .map_err_trace_exit_unwrap(1);
+
+    let _ = rt.report_touched(mail.fle().get_location()).map_err_trace_exit_unwrap(1);
 }
 
 fn list(rt: &Runtime) {
@@ -141,7 +143,9 @@ fn list(rt: &Runtime) {
                  id   = id,
                  subj = subject,
                  to   = to
-        ).to_exit_code().unwrap_or_exit()
+        ).to_exit_code().unwrap_or_exit();
+
+        let _ = rt.report_touched(m.fle().get_location()).map_err_trace_exit_unwrap(1);
     }
 
     let _ = rt.store()
