@@ -42,11 +42,13 @@ pub fn retrieve(rt: &Runtime) {
             debug!("path = {:?}", path);
 
             rt.store()
-                .retrieve(path)
+                .retrieve(path.clone())
                 .map(|e| print_entry(rt, scmd, e))
                 .map_dbg_str("No entry")
                 .map_dbg(|e| format!("{:?}", e))
-                .map_err_trace()
+                .map_err_trace_exit_unwrap(1);
+
+            let _ = rt.report_touched(&path).map_err_trace_exit_unwrap(1);
         });
 }
 

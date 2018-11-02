@@ -36,16 +36,20 @@ pub fn update(rt: &Runtime) {
     let _ = rt.store()
         .retrieve(path)
         .map(|mut locked_e| {
-            let e = locked_e.deref_mut();
+            {
+                let e = locked_e.deref_mut();
 
-            scmd.value_of("content")
-                .map(|new_content| {
-                    *e.get_content_mut() = String::from(new_content);
-                    debug!("New content set");
-                });
+                scmd.value_of("content")
+                    .map(|new_content| {
+                        *e.get_content_mut() = String::from(new_content);
+                        debug!("New content set");
+                    });
 
-            *e.get_header_mut() = build_toml_header(scmd, e.get_header().clone());
-            debug!("New header set");
+                *e.get_header_mut() = build_toml_header(scmd, e.get_header().clone());
+                debug!("New header set");
+            }
+
+            let _ = rt.report_touched(locked_e.get_location()).map_err_trace_exit_unwrap(1);
         });
 }
 

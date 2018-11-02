@@ -62,6 +62,8 @@ pub fn create(rt: &Runtime) {
             Entry::default_header())
     }
     .map_err_trace_exit_unwrap(1);
+
+    let _ = rt.report_touched(&path).map_err_trace_exit_unwrap(1);
 }
 
 fn create_from_cli_spec(rt: &Runtime, matches: &ArgMatches, path: &StoreId) -> Result<()> {
