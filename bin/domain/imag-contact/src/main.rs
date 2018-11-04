@@ -119,14 +119,11 @@ fn list(rt: &Runtime) {
         .all_contacts()
         .map_err_trace_exit_unwrap(1)
         .into_get_iter(rt.store())
-        .map(|fle| {
-             let fle = fle
-                .map_err_trace_exit_unwrap(1)
-                .ok_or_else(|| Error::from(err_msg("StoreId not found".to_owned())))
-                .map_err_trace_exit_unwrap(1);
-
-            fle.deser().map_err_trace_exit_unwrap(1)
-        })
+        .trace_unwrap_exit(1)
+        .map(|fle| fle.ok_or_else(|| Error::from(err_msg("StoreId not found".to_owned()))))
+        .trace_unwrap_exit(1)
+        .map(|e| e.deser())
+        .trace_unwrap_exit(1)
         .enumerate();
 
     if scmd.is_present("json") {
@@ -140,21 +137,19 @@ fn list(rt: &Runtime) {
             }
         }
     } else {
-        iterator
-            .map(|(i, deservcard)| {
-                let data = build_data_object_for_handlebars(i, &deservcard);
+        let rendered = iterator
+            .map(|(i, dvcard)| build_data_object_for_handlebars(i, &dvcard))
+            .map(|data| list_format.render("format", &data).map_err(Error::from))
+            .trace_unwrap_exit(1)
+            .collect::<Vec<String>>();
+        // collect, so that we can have rendered all the things and printing is faster.
 
-                list_format.render("format", &data)
-                    .map_err(Error::from)
-                    .map_err_trace_exit_unwrap(1)
-            })
+        let output     = rt.stdout();
+        let mut output = output.lock();
 
-            // collect, so that we can have rendered all the things and printing is faster.
-            .collect::<Vec<String>>()
-            .into_iter()
-            .for_each(|s| {
-                writeln!(rt.stdout(), "{}", s).to_exit_code().unwrap_or_exit()
-            });
+        rendered.into_iter().for_each(|s| {
+            writeln!(output, "{}", s).to_exit_code().unwrap_or_exit()
+        });
     }
 }
 
