@@ -148,10 +148,9 @@ impl FileAbstraction for FSFileAbstraction {
     /// FileAbstraction::fill implementation that consumes the Drain and writes everything to the
     /// filesystem
     fn fill(&mut self, mut d: Drain) -> Result<()> {
-        d.iter()
-            .fold(Ok(()), |acc, (path, element)| {
-                acc.and_then(|_| self.new_instance(path).write_file_content(&element))
-            })
+        d.iter().fold(Ok(()), |acc, (path, element)| {
+            acc.and_then(|_| self.new_instance(path).write_file_content(&element))
+        })
     }
 
     fn pathes_recursively(&self,
