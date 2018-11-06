@@ -88,34 +88,12 @@ impl ImagLogger {
         ::libimaginteraction::format::register_all_format_helpers(&mut handlebars);
 
         {
-            let fmt = aggregate_global_format_trace(config)?;
-            handlebars.register_template_string("TRACE", fmt)
-                .map_err(Error::from)
-                .context(err_msg("Handlebars template error"))?; // name must be uppercase
-        }
-        {
-            let fmt = aggregate_global_format_debug(config)?;
-            handlebars.register_template_string("DEBUG", fmt)
-                .map_err(Error::from)
-                .context(err_msg("Handlebars template error"))?; // name must be uppercase
-        }
-        {
-            let fmt = aggregate_global_format_info(config)?;
-            handlebars.register_template_string("INFO", fmt)
-                .map_err(Error::from)
-                .context(err_msg("Handlebars template error"))?; // name must be uppercase
-        }
-        {
-            let fmt = aggregate_global_format_warn(config)?;
-            handlebars.register_template_string("WARN", fmt)
-                .map_err(Error::from)
-                .context(err_msg("Handlebars template error"))?; // name must be uppercase
-        }
-        {
-            let fmt = aggregate_global_format_error(config)?;
-            handlebars.register_template_string("ERROR", fmt)
-                .map_err(Error::from)
-                .context(err_msg("Handlebars template error"))?; // name must be uppercase
+            use self::log_lvl_aggregate::*;
+            let _ = aggregate::<Trace>(&mut handlebars, config, "TRACE")?;
+            let _ = aggregate::<Debug>(&mut handlebars, config, "DEBUG")?;
+            let _ = aggregate::<Info>(&mut handlebars, config, "INFO")?;
+            let _ = aggregate::<Warn>(&mut handlebars, config, "WARN")?;
+            let _ = aggregate::<Error>(&mut handlebars, config, "ERROR")?;
         }
 
         Ok(ImagLogger {
@@ -335,54 +313,55 @@ fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
     }
 }
 
-macro_rules! aggregate_global_format {
-    ($read_str:expr, $error_msg_if_missing:expr, $config:expr) => {
-        try!($config.ok_or_else(|| Error::from(err_msg($error_msg_if_missing))))
-            .read_string($read_str)
-            .map_err(Error::from)
-            .context(EM::TomlQueryError)?
-            .ok_or_else(|| Error::from(err_msg($error_msg_if_missing)))
-    };
-}
+mod log_lvl_aggregate {
+    use failure::Fallible as Result;
+    use failure::Error as E;
+    use failure::ResultExt;
+    use failure::err_msg;
+    use toml::Value;
+    use toml_query::read::TomlValueReadTypeExt;
+    use handlebars::Handlebars;
 
-fn aggregate_global_format_trace(config: Option<&Value>)
-    -> Result<String>
-{
-    aggregate_global_format!("imag.logging.format.trace",
-                             "Config missing: Logging format: Trace",
-                             config)
-}
+    use libimagerror::errors::ErrorMsg as EM;
 
-fn aggregate_global_format_debug(config: Option<&Value>)
-    -> Result<String>
-{
-    aggregate_global_format!("imag.logging.format.debug",
-                             "Config missing: Logging format: Debug",
-                             config)
-}
+    macro_rules! aggregate_global_format_with {
+        ($t:ident, $read_str:expr) => {
+            pub struct $t;
+            impl LogLevelAggregator for $t {
+                fn aggregate(config: Option<&Value>) -> Result<String> {
+                    config.ok_or_else(|| {
+                        E::from(err_msg(concat!("Config missing: Logging format: ", stringify!($t))))
+                    })?
+                    .read_string($read_str)
+                    .map_err(E::from)
+                    .context(EM::TomlQueryError)?
+                    .ok_or_else(|| {
+                        E::from(err_msg(concat!("Config missing: Logging format: ", stringify!($t))))
+                    })
+                }
+            }
+        };
+    }
 
-fn aggregate_global_format_info(config: Option<&Value>)
-    -> Result<String>
-{
-    aggregate_global_format!("imag.logging.format.info",
-                             "Config missing: Logging format: Info",
-                             config)
-}
+    pub trait LogLevelAggregator {
+        fn aggregate(config: Option<&Value>) -> Result<String>;
+    }
 
-fn aggregate_global_format_warn(config: Option<&Value>)
-    -> Result<String>
-{
-    aggregate_global_format!("imag.logging.format.warn",
-                             "Config missing: Logging format: Warn",
-                             config)
-}
+    pub fn aggregate<T: LogLevelAggregator>(hb: &mut Handlebars, config: Option<&Value>, lvlstr: &str)
+        -> Result<()>
+    {
+        hb.register_template_string(lvlstr, T::aggregate(config)?)
+            .map_err(E::from)
+            .context(err_msg("Handlebars template error"))
+            .map_err(E::from)
+    }
 
-fn aggregate_global_format_error(config: Option<&Value>)
-    -> Result<String>
-{
-    aggregate_global_format!("imag.logging.format.error",
-                             "Config missing: Logging format: Error",
-                             config)
+    aggregate_global_format_with!(Trace, "imag.logging.format.trace");
+    aggregate_global_format_with!(Debug, "imag.logging.format.debug");
+    aggregate_global_format_with!(Info, "imag.logging.format.info");
+    aggregate_global_format_with!(Warn, "imag.logging.format.warn");
+    aggregate_global_format_with!(Error, "imag.logging.format.error");
+
 }
 
 fn aggregate_module_settings(_matches: &ArgMatches, config: Option<&Value>)
