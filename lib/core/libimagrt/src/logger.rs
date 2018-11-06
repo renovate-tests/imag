@@ -267,9 +267,8 @@ fn translate_destinations(raw: &Vec<Value>) -> Result<Vec<LogDestination>> {
             acc.and_then(|mut v| {
                 let dest = val.as_str()
                     .ok_or_else(|| {
-                        let path = "imag.logging.modules.<mod>.destinations";
-                        let ty   = "Array<String>";
-                        Error::from(format_err!("Type error at {}, expected {}", path, ty))
+                        let msg = "Type error at 'imag.logging.modules.<mod>.destinations', expected Array<String>";
+                        Error::from(err_msg(msg))
                     })
                     .and_then(translate_destination)?;
                 v.push(dest);
@@ -290,9 +289,8 @@ fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
             .ok_or_else(|| err_msg("Global log destination config missing"))?
             .as_array()
             .ok_or_else(|| {
-                let path = "imag.logging.destinations";
-                let ty   = "Array";
-                Error::from(format_err!("Type error at {}, expected {}", path, ty))
+                let msg = "Type error at 'imag.logging.destinations', expected 'Array'";
+                Error::from(err_msg(msg))
             })
             .and_then(translate_destinations),
         None => {
@@ -393,9 +391,8 @@ fn aggregate_module_settings(_matches: &ArgMatches, config: Option<&Value>)
                             .map(|val| {
                                 val.as_array()
                                     .ok_or_else(|| {
-                                        let path = "imag.logging.modules.<mod>.destinations";
-                                        let ty = "Array";
-                                        Error::from(format_err!("Type error at {}, expected {}", path, ty))
+                                        let msg = "Type error at 'imag.logging.modules.<mod>.destinations', expected 'Array'";
+                                        Error::from(err_msg(msg))
                                     })
                                     .and_then(translate_destinations)
                             })
@@ -413,9 +410,8 @@ fn aggregate_module_settings(_matches: &ArgMatches, config: Option<&Value>)
                         .context(EM::TomlQueryError)?
                         .map(|v| v.as_bool().unwrap_or(false))
                         .ok_or_else(|| {
-                            let path = "imag.logging.modules.<mod>.enabled";
-                            let ty = "Boolean";
-                            Error::from(format_err!("Type error at {}, expected {}", path, ty))
+                            let msg = "Type error at 'imag.logging.modules.<mod>.enabled', expected 'Boolean'";
+                            Error::from(err_msg(msg))
                         })?;
 
                     let module_settings = ModuleSettings {
@@ -431,9 +427,8 @@ fn aggregate_module_settings(_matches: &ArgMatches, config: Option<&Value>)
                 Ok(settings)
             },
             Ok(Some(_)) => {
-                let path = "imag.logging.modules";
-                let ty = "Table";
-                Err(Error::from(format_err!("Type error at {}, expected {}", path, ty)))
+                let msg = "Type error at 'imag.logging.modules', expected 'Table'";
+                Err(Error::from(err_msg(msg)))
             },
             Ok(None)    => {
                 // No modules configured. This is okay!
