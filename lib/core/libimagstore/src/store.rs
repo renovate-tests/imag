@@ -680,8 +680,10 @@ impl<'a> FileLockEntry<'a, > {
 
 impl<'a> Debug for FileLockEntry<'a> {
     fn fmt(&self, fmt: &mut Formatter) -> RResult<(), FMTError> {
-        write!(fmt, "FileLockEntry(Store = {})", self.store.location.to_str()
-               .unwrap_or("Unknown Path"))
+        write!(fmt,
+               "FileLockEntry(Store = {store}, location = {location:?})",
+               store    = self.store.location.to_str().unwrap_or("Unknown Path"),
+               location = self.entry.get_location())
     }
 }
 
