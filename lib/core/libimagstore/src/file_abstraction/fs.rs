@@ -105,15 +105,14 @@ impl FileAbstraction for FSFileAbstraction {
     }
 
     fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
-        match to.parent() {
-            Some(p) => if !p.exists() {
+        if let Some(p) = to.parent() {
+            if !p.exists() {
                 debug!("Creating: {:?}", p);
-                let _ = create_dir_all(&PathBuf::from(p)).context(EM::DirNotCreated)?;
-            },
-            None => {
-                debug!("Failed to find parent. This looks like it will fail now");
-                //nothing
-            },
+                let _ = create_dir_all(&p).context(EM::DirNotCreated)?;
+            }
+        } else {
+            debug!("Failed to find parent. This looks like it will fail now");
+            //nothing
         }
 
         debug!("Renaming {:?} to {:?}", from, to);
