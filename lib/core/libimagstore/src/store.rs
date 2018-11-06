@@ -1220,10 +1220,13 @@ mod store_tests {
                     assert!(store.entries.read().unwrap().get(&id_mv_with_base).is_some());
                 }
 
-                assert!(match store.get(id.clone()) { Ok(None) => true, _ => false },
-                        "Moved id ({:?}) is still there", id);
-                assert!(match store.get(id_mv.clone()) { Ok(Some(_)) => true, _ => false },
-                        "New id ({:?}) is not in store...", id_mv);
+                let res = store.get(id.clone());
+                assert!(match res { Ok(None) => true, _ => false },
+                        "Moved id ({:?}) is still there: {:?}", id, res);
+
+                let res = store.get(id_mv.clone());
+                assert!(match res { Ok(Some(_)) => true, _ => false },
+                        "New id ({:?}) is not in store: {:?}", id_mv, res);
             }
         }
     }
