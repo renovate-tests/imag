@@ -137,13 +137,11 @@ impl<'a> Runtime<'a> {
             Store::new(storepath, &config)
         };
 
-        store_result.map(|store| {
-            Runtime {
-                cli_matches: matches,
-                configuration: config,
-                rtp: rtp,
-                store: store,
-            }
+        store_result.map(|store| Runtime {
+            cli_matches: matches,
+            configuration: config,
+            rtp: rtp,
+            store: store,
         })
         .context(err_msg("Cannot instantiate runtime"))
         .map_err(Error::from)
