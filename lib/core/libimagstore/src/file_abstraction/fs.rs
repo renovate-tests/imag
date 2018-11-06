@@ -188,11 +188,9 @@ impl PathIterBuilder for WalkDirPathIterBuilder {
 
 fn open_file<A: AsRef<Path>>(p: A) -> ::std::io::Result<Option<File>> {
     match OpenOptions::new().write(true).read(true).open(p) {
-        Err(e) => {
-            match e.kind() {
-                ::std::io::ErrorKind::NotFound => return Ok(None),
-                _ => return Err(e),
-            }
+        Err(e) => match e.kind() {
+            ::std::io::ErrorKind::NotFound => return Ok(None),
+            _ => return Err(e),
         },
         Ok(file) => Ok(Some(file))
     }
