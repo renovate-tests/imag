@@ -201,9 +201,7 @@ fn create_file<A: AsRef<Path>>(p: A) -> ::std::io::Result<File> {
         trace!("'{}' is directory = {}", parent.display(), parent.is_dir());
         if !parent.is_dir() {
             trace!("Implicitely creating directory: {:?}", parent);
-            if let Err(e) = create_dir_all(parent) {
-                return Err(e);
-            }
+            let _ = create_dir_all(parent)?;
         }
     }
     OpenOptions::new().write(true).read(true).create(true).open(p)
