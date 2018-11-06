@@ -17,7 +17,14 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use clap::{Arg, ArgGroup, App, SubCommand};
+use std::path::PathBuf;
+
+use clap::{Arg, ArgMatches, App, SubCommand};
+
+use libimagstore::storeid::StoreId;
+use libimagstore::storeid::IntoStoreId;
+use libimagrt::runtime::IdPathProvider;
+use libimagerror::trace::MapErrTrace;
 
 pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
     app
@@ -79,17 +86,6 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                          .multiple(true)
                          .help("The entries to set the category for")
                          .value_name("ID"))
-                    .arg(Arg::with_name("entries-from-stdin")
-                         .long("ids-from-stdin")
-                         .short("I")
-                         .takes_value(false)
-                         .required(false)
-                         .multiple(false)
-                         .help("Read the ids for the entries from stdin"))
-
-                    .group(ArgGroup::with_name("input-method")
-                           .args(&["set-ids", "entries-from-stdin"])
-                           .required(true))
                    )
 
         .subcommand(SubCommand::with_name("get")
@@ -102,17 +98,65 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                          .multiple(true)
                          .help("The id of the Entry to get the category for")
                          .value_name("ID"))
-                    .arg(Arg::with_name("entries-from-stdin")
-                         .long("ids-from-stdin")
-                         .short("I")
-                         .takes_value(false)
-                         .required(false)
-                         .multiple(false)
-                         .help("Read the ids for the entries from stdin"))
-
-                    .group(ArgGroup::with_name("input-method")
-                           .args(&["get-ids", "entries-from-stdin"])
-                           .required(true))
                    )
 }
 
+pub struct PathProvider;
+impl IdPathProvider for PathProvider {
+    fn get_ids(matches: &ArgMatches) -> Vec<StoreId> {
+        match matches.subcommand() {
+            ("create-category", _) => {
+                error!("Command does not get IDs as input");
+                ::std::process::exit(1)
+            },
+
+            ("delete-category", _) => {
+                error!("Command does not get IDs as input");
+                ::std::process::exit(1)
+            },
+
+            ("list-categories", _) => {
+                error!("Command does not get IDs as input");
+                ::std::process::exit(1)
+            },
+
+            ("list-category", _) => {
+                error!("Command does not get IDs as input");
+                ::std::process::exit(1)
+            },
+
+            ("set", Some(subm)) => {
+                subm.values_of("set-ids")
+                    .ok_or_else(|| {
+                        error!("No StoreId found");
+                        ::std::process::exit(1)
+                    })
+                    .unwrap()
+                    .into_iter()
+                    .map(PathBuf::from)
+                    .map(|pb| pb.into_storeid())
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err_trace_exit_unwrap(1)
+            },
+
+            ("get", Some(subm)) => {
+                subm.values_of("get-ids")
+                    .ok_or_else(|| {
+                        error!("No StoreId found");
+                        ::std::process::exit(1)
+                    })
+                    .unwrap()
+                    .into_iter()
+                    .map(PathBuf::from)
+                    .map(|pb| pb.into_storeid())
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err_trace_exit_unwrap(1)
+            },
+
+            (other, _) => {
+                    error!("Not a known command: {}", other);
+                    ::std::process::exit(1)
+            }
+        }
+    }
+}

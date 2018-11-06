@@ -17,6 +17,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
+use libimagstore::store::FileLockEntry;
 use libimagstore::store::Store;
 use libimagstore::storeid::StoreId;
 use libimagstore::storeid::IntoStoreId;
@@ -30,10 +31,10 @@ pub trait WikiStore {
     fn get_wiki<'a, 'b>(&'a self, name: &'b str) -> Result<Option<Wiki<'a, 'b>>>;
 
     fn create_wiki<'a, 'b>(&'a self, name: &'b str)
-        -> Result<Wiki<'a, 'b>>;
+        -> Result<(Wiki<'a, 'b>, FileLockEntry<'a>)>;
 
     fn retrieve_wiki<'a, 'b>(&'a self, name: &'b str)
-        -> Result<Wiki<'a, 'b>>;
+        -> Result<(Wiki<'a, 'b>, FileLockEntry<'a>)>;
 
 }
 
@@ -59,20 +60,23 @@ impl WikiStore for Store {
     /// Ob success, an empty Wiki entry with the name `index` is created inside the wiki. Later, new
     /// entries are automatically linked to this entry.
     ///
-    fn create_wiki<'a, 'b>(&'a self, name: &'b str) -> Result<Wiki<'a, 'b>> {
+    fn create_wiki<'a, 'b>(&'a self, name: &'b str) -> Result<(Wiki<'a, 'b>, FileLockEntry<'a>)> {
         debug!("Trying to get wiki '{}'", name);
 
         let wiki = Wiki::new(self, name);
-        let _    = wiki.create_index_page()?;
-        Ok(wiki)
+        let index = wiki.create_index_page()?;
+        Ok((wiki, index))
     }
 
     fn retrieve_wiki<'a, 'b>(&'a self, name: &'b str)
-        -> Result<Wiki<'a, 'b>>
+        -> Result<(Wiki<'a, 'b>, FileLockEntry<'a>)>
     {
         match self.get_wiki(name)? {
             None       => self.create_wiki(name),
-            Some(wiki) => Ok(wiki),
+            Some(wiki) => {
+                let index = wiki.get_index_page()?;
+                Ok((wiki, index))
+            },
         }
     }
 

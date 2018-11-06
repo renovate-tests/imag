@@ -88,16 +88,20 @@ fn deref(rt: &Runtime) {
         .map_err_trace_exit_unwrap(1);
 
     match rt.store().get(id.clone()).map_err_trace_exit_unwrap(1) {
-        Some(entry) => entry
-            .get_path()
-            .map_err_trace_exit_unwrap(1)
-            .to_str()
-            .ok_or_else(|| {
-                error!("Could not transform path into string!");
-                exit(1)
-            })
-            .map(|s| info!("{}", s))
-            .ok(), // safe here because we exited already in the error case
+        Some(entry) => {
+            entry
+                .get_path()
+                .map_err_trace_exit_unwrap(1)
+                .to_str()
+                .ok_or_else(|| {
+                    error!("Could not transform path into string!");
+                    exit(1)
+                })
+                .map(|s| info!("{}", s))
+                .ok(); // safe here because we exited already in the error case
+
+            let _ = rt.report_touched(&id).map_err_trace_exit_unwrap(1);
+        },
         None => {
             error!("No entry for id '{}' found", id);
             exit(1)

@@ -53,6 +53,7 @@ use std::process::exit;
 
 use filters::filter::Filter;
 
+use libimagstore::storeid::StoreId;
 use libimagrt::setup::generate_runtime_setup;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
@@ -88,35 +89,50 @@ fn main() {
             id_filters::header_filter_lang::parse(&query)
         });
 
-    rt.store()
-        .entries()
-        .map_err_trace_exit_unwrap(1)
-        .trace_unwrap_exit(1)
-        .filter(|id| collection_filter.filter(id))
-        .filter(|id| match query_filter.as_ref() {
-            None     => true,
-            Some(qf) => {
-                let entry = rt
-                    .store()
-                    .get(id.clone())
-                    .map_err_trace_exit_unwrap(1)
-                    .unwrap_or_else(|| {
-                        error!("Tried to get '{}', but it does not exist!", id);
-                        exit(1)
-                    });
+    let iterator = if rt.ids_from_stdin() {
+        debug!("Fetching IDs from stdin...");
+        let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
+        Box::new(ids.into_iter().map(Ok))
+            as Box<Iterator<Item = Result<StoreId, _>>>
+    } else {
+        Box::new(rt.store().entries().map_err_trace_exit_unwrap(1))
+            as Box<Iterator<Item = Result<StoreId, _>>>
+    }
+    .trace_unwrap_exit(1)
+    .filter(|id| collection_filter.filter(id))
+    .filter(|id| match query_filter.as_ref() {
+        None     => true,
+        Some(qf) => {
+            let entry = rt
+                .store()
+                .get(id.clone())
+                .map_err_trace_exit_unwrap(1)
+                .unwrap_or_else(|| {
+                    error!("Tried to get '{}', but it does not exist!", id);
+                    exit(1)
+                });
 
-                qf.filter(&entry)
-            }
-        })
-        .map(|id| if print_storepath {
-            id
-        } else {
-            id.without_base()
-        })
-        .for_each(|id| {
-            let _ = writeln!(rt.stdout(), "{}", id.to_str().map_err_trace_exit_unwrap(1))
+            qf.filter(&entry)
+        }
+    })
+    .map(|id| if print_storepath {
+        id
+    } else {
+        id.without_base()
+    });
+
+    let mut stdout = rt.stdout();
+    trace!("Got output: {:?}", stdout);
+
+    iterator.for_each(|id| {
+        rt.report_touched(&id).map_err_trace_exit_unwrap(1);
+        if !rt.output_is_pipe() {
+            let id = id.to_str().map_err_trace_exit_unwrap(1);
+            trace!("Writing to {:?}", stdout);
+            let _ = writeln!(stdout, "{}", id)
                 .to_exit_code()
                 .unwrap_or_exit();
-        })
+        }
+    })
 }
 

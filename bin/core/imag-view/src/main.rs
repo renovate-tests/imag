@@ -49,8 +49,6 @@ extern crate libimagutil;
 use std::str::FromStr;
 use std::collections::BTreeMap;
 use std::io::Write;
-use std::io::Read;
-use std::path::PathBuf;
 use std::process::Command;
 use std::process::exit;
 
@@ -60,7 +58,6 @@ use failure::Error;
 use failure::err_msg;
 
 use libimagrt::setup::generate_runtime_setup;
-use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
 use libimagerror::io::ToExitCode;
@@ -68,8 +65,6 @@ use libimagerror::exit::ExitUnwrap;
 use libimagentryview::builtin::stdout::StdoutViewer;
 use libimagentryview::builtin::md::MarkdownViewer;
 use libimagentryview::viewer::Viewer;
-use libimagstore::storeid::IntoStoreId;
-use libimagstore::storeid::StoreIdIterator;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
 use libimagstore::store::FileLockEntry;
 
@@ -83,19 +78,28 @@ fn main() {
                                      "View entries (readonly)",
                                      build_ui);
 
-    let entry_ids    = entry_ids(&rt);
     let view_header  = rt.cli().is_present("view-header");
     let hide_content = rt.cli().is_present("not-view-content");
+    let entries      = rt.ids::<::ui::PathProvider>()
+        .map_err_trace_exit_unwrap(1)
+        .into_iter()
+        .map(Ok)
+        .into_get_iter(rt.store())
+        .trace_unwrap_exit(1)
+        .map(|e| {
+             e.ok_or_else(|| err_msg("Entry not found"))
+                 .map_err(Error::from)
+                 .map_err_trace_exit_unwrap(1)
+        });
 
     if rt.cli().is_present("in") {
-        let files = entry_ids
-            .into_get_iter(rt.store())
-            .trace_unwrap_exit(1)
-            .map(|e| {
-                 e.ok_or_else(|| err_msg("Entry not found"))
-                     .map_err_trace_exit_unwrap(1)
+        let files = entries
+            .map(|entry| {
+                let tmpfile = create_tempfile_for(&entry, view_header, hide_content);
+                rt.report_touched(entry.get_location())
+                    .map_err_trace_exit_unwrap(1);
+                tmpfile
             })
-            .map(|entry| create_tempfile_for(&entry, view_header, hide_content))
             .collect::<Vec<_>>();
 
         let mut command = {
@@ -170,14 +174,6 @@ fn main() {
 
         drop(files);
     } else {
-        let iter = entry_ids
-            .into_get_iter(rt.store())
-            .map(|e| {
-                 e.map_err_trace_exit_unwrap(1)
-                     .ok_or_else(|| err_msg("Entry not found"))
-                     .map_err_trace_exit_unwrap(1)
-            });
-
         let out         = rt.stdout();
         let mut outlock = out.lock();
 
@@ -198,17 +194,22 @@ fn main() {
             let viewer    = MarkdownViewer::new(&rt);
             let seperator = basesep.map(|s| build_seperator(s, sep_width));
 
-            for (n, entry) in iter.enumerate() {
-                if n != 0 {
-                    seperator
-                        .as_ref()
-                        .map(|s| writeln!(outlock, "{}", s).to_exit_code().unwrap_or_exit());
-                }
+            entries
+                .enumerate()
+                .for_each(|(n, entry)| {
+                    if n != 0 {
+                        seperator
+                            .as_ref()
+                            .map(|s| writeln!(outlock, "{}", s).to_exit_code().unwrap_or_exit());
+                    }
 
-                viewer
-                    .view_entry(&entry, &mut outlock)
-                    .map_err_trace_exit_unwrap(1);
-            }
+                    viewer
+                        .view_entry(&entry, &mut outlock)
+                        .map_err_trace_exit_unwrap(1);
+
+                    rt.report_touched(entry.get_location())
+                        .map_err_trace_exit_unwrap(1);
+                });
         } else {
             let mut viewer = StdoutViewer::new(view_header, !hide_content);
 
@@ -228,48 +229,22 @@ fn main() {
             }
 
             let seperator = basesep.map(|s| build_seperator(s, sep_width));
-            for (n, entry) in iter.enumerate() {
-                if n != 0 {
-                    seperator
-                        .as_ref()
-                        .map(|s| writeln!(outlock, "{}", s).to_exit_code().unwrap_or_exit());
-                }
+            entries
+                .enumerate()
+                .for_each(|(n, entry)| {
+                    if n != 0 {
+                        seperator
+                            .as_ref()
+                            .map(|s| writeln!(outlock, "{}", s).to_exit_code().unwrap_or_exit());
+                    }
 
-                viewer
-                    .view_entry(&entry, &mut outlock)
-                    .map_err_trace_exit_unwrap(1);
-            }
-        }
-    }
-}
+                    viewer
+                        .view_entry(&entry, &mut outlock)
+                        .map_err_trace_exit_unwrap(1);
 
-fn entry_ids(rt: &Runtime) -> StoreIdIterator {
-    match rt.cli().values_of("id") {
-        Some(p) => {
-            let pathes : Vec<String> = p.map(String::from).collect();
-            let iter  = pathes.into_iter().map(PathBuf::from).map(PathBuf::into_storeid);
-            StoreIdIterator::new(Box::new(iter))
-        },
-
-        None => if rt.cli().is_present("entries-from-stdin") {
-            let stdin = rt.stdin().unwrap_or_else(|| {
-                error!("Cannot get handle to stdin");
-                ::std::process::exit(1)
-            });
-
-            let mut buf = String::new();
-            let _ = stdin.lock().read_to_string(&mut buf).unwrap_or_else(|_| {
-                error!("Failed to read from stdin");
-                ::std::process::exit(1)
-            });
-
-            let lines : Vec<String> = buf.lines().map(String::from).collect();
-            let iter  = lines.into_iter().map(PathBuf::from).map(PathBuf::into_storeid);
-
-            StoreIdIterator::new(Box::new(iter))
-        } else {
-            error!("Something weird happened. I was not able to find the path of the entries to edit");
-            ::std::process::exit(1)
+                    rt.report_touched(entry.get_location())
+                        .map_err_trace_exit_unwrap(1);
+                });
         }
     }
 }

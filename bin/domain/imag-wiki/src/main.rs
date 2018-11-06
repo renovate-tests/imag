@@ -170,19 +170,28 @@ fn create(rt: &Runtime, wiki_name: &str) {
         .map_warn_err_str("Safed entry")
         .map_err_trace_exit_unwrap(1);
 
+    let id = entry.get_location();
+
     if scmd.is_present("create-printid") {
         let out      = rt.stdout();
         let mut lock = out.lock();
-        let id       = entry.get_location();
 
         writeln!(lock, "{}", id).to_exit_code().unwrap_or_exit()
     }
+
+    let _ = rt
+        .report_touched(&id)
+        .map_err_trace_exit_unwrap(1);
 }
 
 fn create_wiki(rt: &Runtime) {
-    let scmd      = rt.cli().subcommand_matches("create-wiki").unwrap(); // safed by clap
-    let wiki_name = String::from(scmd.value_of("create-wiki-name").unwrap()); // safe by clap
-    let _         = rt.store().create_wiki(&wiki_name).map_err_trace_exit_unwrap(1);
+    let scmd       = rt.cli().subcommand_matches("create-wiki").unwrap(); // safed by clap
+    let wiki_name  = String::from(scmd.value_of("create-wiki-name").unwrap()); // safe by clap
+    let (_, index) = rt.store().create_wiki(&wiki_name).map_err_trace_exit_unwrap(1);
+
+    let _ = rt
+        .report_touched(index.get_location())
+        .map_err_trace_exit_unwrap(1);
 }
 
 fn show(rt: &Runtime, wiki_name: &str) {
@@ -239,6 +248,10 @@ fn show(rt: &Runtime, wiki_name: &str) {
         writeln!(outlock, "{}", entry.get_content())
                 .to_exit_code()
                 .unwrap_or_exit();
+
+        let _ = rt
+            .report_touched(entry.get_location())
+            .map_err_trace_exit_unwrap(1);
     }
 }
 

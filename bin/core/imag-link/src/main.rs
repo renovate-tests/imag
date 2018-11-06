@@ -157,9 +157,12 @@ fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
                 ::std::process::exit(1);
             });
 
-            let _ = from_entry
+            let iter = from_entry
                 .add_external_link(rt.store(), url)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap(1)
+                .into_iter();
+
+            let _ = rt.report_all_touched(iter).map_err_trace_exit_unwrap(1);
         } else {
             debug!("Linking internally: {:?} -> {:?}", from, entry);
 
@@ -181,88 +184,91 @@ fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
             let _ = from_entry
                 .add_internal_link(&mut to_entry)
                 .map_err_trace_exit_unwrap(1);
+
+            let _ = rt
+                .report_touched(to_entry.get_location())
+                .map_err_trace_exit_unwrap(1);
         }
+
 
         info!("Ok: {} -> {}", from, entry);
     }
+
+    let _ = rt
+        .report_touched(from_entry.get_location())
+        .map_err_trace_exit_unwrap(1);
 }
 
 fn remove_linking(rt: &Runtime) {
-
-    fn get_from_entry<'a>(rt: &'a Runtime) -> Option<FileLockEntry<'a>> {
-        rt.cli()
-            .subcommand_matches("remove")
-            .unwrap() // safe, we know there is an "remove" subcommand
-            .value_of("from")
-            .and_then(|from_name| {
-                match get_entry_by_name(rt, from_name) {
-                    Err(e) => {
-                        debug!("We couldn't get the entry from name: '{:?}'", from_name);
-                        trace_error(&e); None
-                    },
-                    Ok(Some(e)) => Some(e),
-                    Ok(None)    => None,
-                }
-
-            })
-    }
-
-    let mut from = match get_from_entry(&rt) {
-        None => warn_exit("No 'from' entry", 1),
-        Some(s) => s,
-    };
-
-    rt.cli()
+    let mut from = rt.cli()
         .subcommand_matches("remove")
-        .unwrap()
-        .values_of("to")
-        .map(|values| {
-            for (entry, value) in values.map(|v| (get_entry_by_name(rt, v), v)) {
-                match entry {
-                    Err(e) => trace_error(&e),
-                    Ok(Some(mut to_entry)) => {
-                        let _ = to_entry
-                            .remove_internal_link(&mut from)
-                            .map_err_trace_exit_unwrap(1);
-                    },
-                    Ok(None) => {
-                        // looks like this is not an entry, but a filesystem URI and therefor an
-                        // external link...?
-                        if PathBuf::from(value).is_file() {
-                            let url = Url::parse(value).unwrap_or_else(|e| {
-                                error!("Error parsing URL: {:?}", e);
-                                ::std::process::exit(1);
-                            });
-                            from.remove_external_link(rt.store(), url).map_err_trace_exit_unwrap(1);
-                            info!("Ok: {}", value);
-                        } else {
-                            warn!("Entry not found: {:?}", value);
-                        }
-                    }
+        .unwrap() // safe, we know there is an "remove" subcommand
+        .value_of("from")
+        .map(PathBuf::from)
+        .map(|id| {
+            rt.store()
+                .get(id)
+                .map_err_trace_exit_unwrap(1)
+                .ok_or_else(|| warn_exit("No 'from' entry", 1))
+                .unwrap() // safe by line above
+        })
+        .unwrap();
+
+    rt.ids::<::ui::PathProvider>()
+        .map_err_trace_exit_unwrap(1)
+        .into_iter()
+        .for_each(|id| match rt.store().get(id.clone()) {
+            Err(e) => trace_error(&e),
+            Ok(Some(mut to_entry)) => {
+                let _ = to_entry
+                    .remove_internal_link(&mut from)
+                    .map_err_trace_exit_unwrap(1);
+
+                let _ = rt
+                    .report_touched(to_entry.get_location())
+                    .map_err_trace_exit_unwrap(1);
+            },
+            Ok(None) => {
+                // looks like this is not an entry, but a filesystem URI and therefor an
+                // external link...?
+                if id.local().is_file() {
+                    let pb = id.local().to_str().unwrap_or_else(|| {
+                        warn!("Not StoreId and not a Path: {}", id);
+                        ::std::process::exit(1);
+                    });
+                    let url = Url::parse(pb).unwrap_or_else(|e| {
+                        error!("Error parsing URL: {:?}", e);
+                        ::std::process::exit(1);
+                    });
+                    from.remove_external_link(rt.store(), url).map_err_trace_exit_unwrap(1);
+                    info!("Ok: {}", id);
+                } else {
+                    warn!("Entry not found: {:?}", id);
                 }
             }
         });
+
+    let _ = rt
+        .report_touched(from.get_location())
+        .map_err_trace_exit_unwrap(1);
 }
 
 fn unlink(rt: &Runtime) {
-    use libimagerror::iter::TraceIterator;
-    use libimagstore::iter::get::StoreIdGetIteratorExtension;
+    rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1).into_iter().for_each(|id| {
+        rt.store()
+            .get(id.clone())
+            .map_err_trace_exit_unwrap(1)
+            .unwrap_or_else(|| {
+                warn!("No entry for {}", id);
+                ::std::process::exit(1)
+            })
+            .unlink(rt.store())
+            .map_err_trace_exit_unwrap(1);
 
-    let _ = rt
-        .cli()
-        .subcommand_matches("unlink")
-        .unwrap() // checked in main()
-        .values_of("from")
-        .unwrap() // checked by clap
-        .map(PathBuf::from)
-        .collect::<Vec<PathBuf>>().into_iter() // for lifetime inference
-        .map(StoreId::new_baseless)
-        .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
-        .filter_map(|x| x)
-        .map(|mut entry| entry.unlink(rt.store()))
-        .trace_unwrap_exit(1)
-        .collect::<Vec<_>>();
+        let _ = rt
+            .report_touched(&id)
+            .map_err_trace_exit_unwrap(1);
+    });
 }
 
 fn list_linkings(rt: &Runtime) {
@@ -276,8 +282,8 @@ fn list_linkings(rt: &Runtime) {
     let mut tab = ::prettytable::Table::new();
     tab.set_titles(row!["#", "Link"]);
 
-    for entry in cmd.values_of("entries").unwrap() { // safed by clap
-        match rt.store().get(PathBuf::from(entry)) {
+    rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1).into_iter().for_each(|id| {
+        match rt.store().get(id.clone()) {
             Ok(Some(entry)) => {
                 for (i, link) in entry.get_internal_links().map_err_trace_exit_unwrap(1).enumerate() {
                     let link = link
@@ -314,11 +320,20 @@ fn list_linkings(rt: &Runtime) {
                             }
                         })
                 }
+
+                let _ = rt
+                    .report_touched(entry.get_location())
+                    .map_err_trace_exit_unwrap(1);
+
             },
-            Ok(None)        => warn!("Not found: {}", entry),
+            Ok(None)        => warn!("Not found: {}", id),
             Err(e)          => trace_error(&e),
         }
-    }
+
+        let _ = rt
+            .report_touched(&id)
+            .map_err_trace_exit_unwrap(1);
+    });
 
     if !list_plain {
         let out      = rt.stdout();

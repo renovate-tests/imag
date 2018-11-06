@@ -17,17 +17,17 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use clap::{Arg, ArgGroup, App};
+use std::path::PathBuf;
+
+use clap::{Arg, ArgMatches, App};
+
+use libimagstore::storeid::StoreId;
+use libimagstore::storeid::IntoStoreId;
+use libimagrt::runtime::IdPathProvider;
+use libimagerror::trace::MapErrTrace;
 
 pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
     app
-        .arg(Arg::with_name("entries-from-stdin")
-             .long("ids-from-stdin")
-             .short("I")
-             .required(false)
-             .multiple(true)
-             .help("The entry/entries are piped in via stdin"))
-
         .arg(Arg::with_name("id")
              .index(1)
              .takes_value(true)
@@ -35,10 +35,6 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
              .multiple(true)
              .help("View these entries at this store path")
              .value_name("IDs"))
-
-        .group(ArgGroup::with_name("input-method")
-               .args(&["id", "entries-from-stdin"])
-               .required(true))
 
         .arg(Arg::with_name("autowrap")
             .long("autowrap")
@@ -90,4 +86,14 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
             .multiple(false)
             .help("View content. If no value is given, this fails. Possible viewers are configured via the config file."))
 
+}
+
+pub struct PathProvider;
+impl IdPathProvider for PathProvider {
+    fn get_ids(matches: &ArgMatches) -> Vec<StoreId> {
+        matches.values_of("id")
+            .unwrap()
+            .map(|s| PathBuf::from(s).into_storeid().map_err_trace_exit_unwrap(1))
+            .collect()
+    }
 }

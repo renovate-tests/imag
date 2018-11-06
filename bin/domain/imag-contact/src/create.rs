@@ -200,8 +200,11 @@ pub fn create(rt: &Runtime) {
 
     if let Some(location) = location {
         if !scmd.is_present("dont-track") {
-            rt.store()
+            let entry = rt.store()
                 .create_from_path(&location)
+                .map_err_trace_exit_unwrap(1);
+
+            let _ = rt.report_touched(entry.get_location())
                 .map_err_trace_exit_unwrap(1);
 
             info!("Created entry in store");

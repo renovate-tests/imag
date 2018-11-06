@@ -43,6 +43,8 @@ pub fn create(rt: &Runtime) {
 
     let mut entry = create_entry(rt.store(), &diaryname, rt);
 
+    let _ = rt.report_touched(entry.get_location()).map_err_trace_exit_unwrap(1);
+
     let res = if rt.cli().subcommand_matches("create").unwrap().is_present("no-edit") {
         debug!("Not editing new diary entry");
         Ok(())

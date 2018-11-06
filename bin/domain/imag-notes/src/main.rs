@@ -109,6 +109,10 @@ fn create(rt: &Runtime) {
             .map_warn_err_str("Editing failed")
             .map_err_trace_exit_unwrap(1);
     }
+
+    let _ = rt
+        .report_touched(note.get_location())
+        .map_err_trace_exit_unwrap(1);
 }
 
 fn delete(rt: &Runtime) {
@@ -128,6 +132,10 @@ fn edit(rt: &Runtime) {
             let _ = note
                 .edit_content(rt)
                 .map_warn_err_str("Editing failed")
+                .map_err_trace_exit_unwrap(1);
+
+            let _ = rt
+                .report_touched(note.get_location())
                 .map_err_trace_exit_unwrap(1);
         })
         .unwrap_or_else(|| {
@@ -156,9 +164,13 @@ fn list(rt: &Runtime) {
         .iter()
         .for_each(|note| {
             let name = note.get_name().map_err_trace_exit_unwrap(1);
-            writeln!(rt.stdout(), "{}", name)
+            let _ = writeln!(rt.stdout(), "{}", name)
                 .to_exit_code()
-                .unwrap_or_exit()
+                .unwrap_or_exit();
+
+            let _ = rt
+                .report_touched(note.get_location())
+                .map_err_trace_exit_unwrap(1);
         });
 }
 

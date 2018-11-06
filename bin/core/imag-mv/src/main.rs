@@ -129,6 +129,9 @@ fn main() {
         })
         .map_err_trace_exit_unwrap(1);
 
+    let _ = rt.report_touched(&destname)
+        .map_err_trace_exit_unwrap(1);
+
     // re-add links to moved entry
     relink(rt.store(), destname, &mut linked_entries);
 

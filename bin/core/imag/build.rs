@@ -19,7 +19,11 @@
 
 extern crate clap;
 #[macro_use]
+extern crate log;
+#[macro_use]
 extern crate libimagrt;
+extern crate libimagerror;
+extern crate libimagstore;
 extern crate libimagentrytag;
 extern crate libimagutil;
 
@@ -45,6 +49,7 @@ mod toplevelbuildscript {
 macro_rules! gen_mods_buildui {
     ($(($path:expr, $modulename:ident)$(,)*)*) => (
         $(
+            #[allow(unused)]
             mod $modulename {
                 include!($path);
             }

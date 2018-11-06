@@ -17,7 +17,10 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use clap::{Arg, App, SubCommand};
+use clap::{Arg, ArgMatches, App, SubCommand};
+
+use libimagstore::storeid::StoreId;
+use libimagrt::runtime::IdPathProvider;
 
 pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
     app
@@ -49,3 +52,10 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
         .after_help(include_str!("../static/language-doc.md"))
 }
 
+pub struct PathProvider;
+impl IdPathProvider for PathProvider {
+    fn get_ids(_matches: &ArgMatches) -> Vec<StoreId> {
+        error!("imag-ids does not get IDs via CLI, only via stdin if applying a filter!");
+        ::std::process::exit(1)
+    }
+}

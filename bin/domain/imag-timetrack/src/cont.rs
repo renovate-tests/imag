@@ -81,11 +81,16 @@ pub fn cont(rt: &Runtime) -> i32 {
 
                      acc.and_then(|_| {
                         // create a new tracking with the same tag
-                         tracking
+                         let val = tracking
                              .get_timetrack_tag()
                              .and_then(|tag| rt.store().create_timetracking_now(&tag))
                              .map(|_| 0)
-                             .map_err_trace()
+                             .map_err_trace();
+
+                         let _ = rt.report_touched(tracking.get_location())
+                             .map_err_trace_exit_unwrap(1);
+
+                         val
                      })
                  })
         },
