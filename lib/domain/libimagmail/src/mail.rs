@@ -194,4 +194,8 @@ impl<'a> Mail<'a> {
         self.get_field("In-Reply-To")
     }
 
+    pub fn fle(&self) -> &FileLockEntry<'a> {
+        &self.0
+    }
+
 }

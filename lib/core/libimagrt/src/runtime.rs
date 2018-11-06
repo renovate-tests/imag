@@ -137,13 +137,11 @@ impl<'a> Runtime<'a> {
             Store::new(storepath, &config)
         };
 
-        store_result.map(|store| {
-            Runtime {
-                cli_matches: matches,
-                configuration: config,
-                rtp: rtp,
-                store: store,
-            }
+        store_result.map(|store| Runtime {
+            cli_matches: matches,
+            configuration: config,
+            rtp: rtp,
+            store: store,
         })
         .context(err_msg("Cannot instantiate runtime"))
         .map_err(Error::from)
@@ -390,15 +388,17 @@ impl<'a> Runtime<'a> {
         self.cli()
             .value_of("editor")
             .map(String::from)
-            .or_else(|| {
+            .ok_or_else(|| {
                 self.config()
-                    .and_then(|v| match v.read("rt.editor") {
-                        Ok(Some(&Value::String(ref s))) => Some(s.clone()),
-                        _ => None, // FIXME silently ignore errors in config is bad
+                    .ok_or_else(|| Error::from(err_msg("No Configuration!")))
+                    .and_then(|v| match v.read("rt.editor")? {
+                        Some(&Value::String(ref s)) => Ok(Some(s.clone())),
+                        Some(_) => Err(Error::from(err_msg("Type error at 'rt.editor', expected 'String'"))),
+                        None    => Ok(None),
                     })
             })
-            .or(env::var("EDITOR").ok())
-            .ok_or_else(|| Error::from(EM::IO))
+            .or(env::var("EDITOR"))
+            .map_err(|_| Error::from(EM::IO))
             .map_dbg(|s| format!("Editing with '{}'", s))
             .and_then(|s| {
                 let mut split = s.split_whitespace();

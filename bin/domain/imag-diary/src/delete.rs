@@ -19,7 +19,7 @@
 
 use std::process::exit;
 
-use chrono::naive::NaiveDateTime;
+use chrono::naive::NaiveDateTime as NDT;
 
 use libimagdiary::diaryid::DiaryId;
 use libimagrt::runtime::Runtime;
@@ -44,17 +44,10 @@ pub fn delete(rt: &Runtime) {
         .value_of("datetime")
         .map(|dt| { debug!("DateTime = {:?}", dt); dt })
         .and_then(DateTime::parse)
-        .map(|dt| dt.into())
-        .ok_or_else(|| {
-            warn!("Not deleting entries, because missing date/time specification");
-            exit(1);
-        })
-        .and_then(|dt: NaiveDateTime| {
-            DiaryId::from_datetime(diaryname.clone(), dt)
-                .into_storeid()
-                .map(|id| rt.store().retrieve(id))
-                .map_err_trace_exit_unwrap(1)
-        })
+        .map(Into::into)
+        .ok_or_else(|| warn_exit("Not deleting entries: missing date/time specification", 1))
+        .and_then(|dt: NDT| DiaryId::from_datetime(diaryname.clone(), dt).into_storeid())
+        .and_then(|id| rt.store().retrieve(id))
         .map_err_trace_exit_unwrap(1)
         .get_location()
         .clone();

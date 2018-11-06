@@ -222,11 +222,13 @@ impl Store {
 
         debug!("Creating id: '{}'", id);
 
-        let exists = id.exists()? || self.entries
-            .read()
-            .map(|map| map.contains_key(&id))
-            .map_err(|_| Error::from(EM::LockError))
-            .context(format_err!("CreateCallError: {}", id))?;
+        let exists =
+            self.entries
+                .read()
+                .map(|map| map.contains_key(&id))
+                .map_err(|_| Error::from(EM::LockError))
+                .context(format_err!("CreateCallError: {}", id))? ||
+            self.backend.exists(&id.clone().into_pathbuf()?)?;
 
         if exists {
             debug!("Entry exists: {:?}", id);
@@ -304,11 +306,14 @@ impl Store {
 
         debug!("Getting id: '{}'", id);
 
-        let exists = id.exists()? || self.entries
-            .read()
-            .map(|map| map.contains_key(&id))
-            .map_err(|_| Error::from(EM::LockError))
-            .context(format_err!("GetCallError: {}", id))?;
+        let exists =
+            self.entries
+                .read()
+                .map(|map| map.contains_key(&id))
+                .map_err(|_| Error::from(EM::LockError))
+                .context(format_err!("CreateCallError: {}", id))? ||
+            self.backend.exists(&id.clone().into_pathbuf()?)?;
+
 
         if !exists {
             debug!("Does not exist in internal cache or filesystem: {:?}", id);
@@ -676,8 +681,10 @@ impl<'a> FileLockEntry<'a, > {
 
 impl<'a> Debug for FileLockEntry<'a> {
     fn fmt(&self, fmt: &mut Formatter) -> RResult<(), FMTError> {
-        write!(fmt, "FileLockEntry(Store = {})", self.store.location.to_str()
-               .unwrap_or("Unknown Path"))
+        write!(fmt,
+               "FileLockEntry(Store = {store}, location = {location:?})",
+               store    = self.store.location.to_str().unwrap_or("Unknown Path"),
+               location = self.entry.get_location())
     }
 }
 
@@ -1214,10 +1221,13 @@ mod store_tests {
                     assert!(store.entries.read().unwrap().get(&id_mv_with_base).is_some());
                 }
 
-                assert!(match store.get(id.clone()) { Ok(None) => true, _ => false },
-                        "Moved id ({:?}) is still there", id);
-                assert!(match store.get(id_mv.clone()) { Ok(Some(_)) => true, _ => false },
-                        "New id ({:?}) is not in store...", id_mv);
+                let res = store.get(id.clone());
+                assert!(match res { Ok(None) => true, _ => false },
+                        "Moved id ({:?}) is still there: {:?}", id, res);
+
+                let res = store.get(id_mv.clone());
+                assert!(match res { Ok(Some(_)) => true, _ => false },
+                        "New id ({:?}) is not in store: {:?}", id_mv, res);
             }
         }
     }

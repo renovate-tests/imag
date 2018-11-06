@@ -68,13 +68,9 @@ impl Debug for OutputProxy {
 impl OutputProxy {
     pub fn lock(&self) -> LockedOutputProxy {
         match *self {
-            OutputProxy::Out(ref r) => {
-                LockedOutputProxy::Out(r.lock())
-            },
-            OutputProxy::Err(ref r) => {
-                LockedOutputProxy::Err(r.lock())
-            },
-            OutputProxy::Sink => LockedOutputProxy::Sink,
+            OutputProxy::Out(ref r) => LockedOutputProxy::Out(r.lock()),
+            OutputProxy::Err(ref r) => LockedOutputProxy::Err(r.lock()),
+            OutputProxy::Sink       => LockedOutputProxy::Sink,
         }
     }
 }

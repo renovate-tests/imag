@@ -69,7 +69,13 @@ pub fn entry_buffer_to_header_content(buf: &str) -> Result<(Value, String)> {
 
 #[cfg(test)]
 mod test {
+    extern crate env_logger;
+
     use super::entry_buffer_to_header_content;
+
+    fn setup_logging() {
+        let _ = env_logger::try_init();
+    }
 
     fn mkfile(content: &str) -> String {
         format!(r#"---
@@ -97,16 +103,17 @@ version = '{version}'
 
     #[test]
     fn test_entry_buffer_to_header_content_2() {
+        setup_logging();
         let content = r#"Hai
 "#;
 
         let file = mkfile(&content);
-        eprintln!("FILE: <<<{}>>>", file);
+        debug!("FILE: <<<{}>>>", file);
         let res  = entry_buffer_to_header_content(&file);
 
         assert!(res.is_ok());
         let (_, res_content) = res.unwrap();
-        eprintln!("CONTENT: <<<{}>>>", res_content);
+        debug!("CONTENT: <<<{}>>>", res_content);
         assert_eq!(res_content, content)
     }
 

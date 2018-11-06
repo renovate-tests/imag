@@ -105,15 +105,14 @@ impl FileAbstraction for FSFileAbstraction {
     }
 
     fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<()> {
-        match to.parent() {
-            Some(p) => if !p.exists() {
+        if let Some(p) = to.parent() {
+            if !p.exists() {
                 debug!("Creating: {:?}", p);
-                let _ = create_dir_all(&PathBuf::from(p)).context(EM::DirNotCreated)?;
-            },
-            None => {
-                debug!("Failed to find parent. This looks like it will fail now");
-                //nothing
-            },
+                let _ = create_dir_all(&p).context(EM::DirNotCreated)?;
+            }
+        } else {
+            debug!("Failed to find parent. This looks like it will fail now");
+            //nothing
         }
 
         debug!("Renaming {:?} to {:?}", from, to);
@@ -149,10 +148,9 @@ impl FileAbstraction for FSFileAbstraction {
     /// FileAbstraction::fill implementation that consumes the Drain and writes everything to the
     /// filesystem
     fn fill(&mut self, mut d: Drain) -> Result<()> {
-        d.iter()
-            .fold(Ok(()), |acc, (path, element)| {
-                acc.and_then(|_| self.new_instance(path).write_file_content(&element))
-            })
+        d.iter().fold(Ok(()), |acc, (path, element)| {
+            acc.and_then(|_| self.new_instance(path).write_file_content(&element))
+        })
     }
 
     fn pathes_recursively(&self,
@@ -190,11 +188,9 @@ impl PathIterBuilder for WalkDirPathIterBuilder {
 
 fn open_file<A: AsRef<Path>>(p: A) -> ::std::io::Result<Option<File>> {
     match OpenOptions::new().write(true).read(true).open(p) {
-        Err(e) => {
-            match e.kind() {
-                ::std::io::ErrorKind::NotFound => return Ok(None),
-                _ => return Err(e),
-            }
+        Err(e) => match e.kind() {
+            ::std::io::ErrorKind::NotFound => return Ok(None),
+            _ => return Err(e),
         },
         Ok(file) => Ok(Some(file))
     }
@@ -205,9 +201,7 @@ fn create_file<A: AsRef<Path>>(p: A) -> ::std::io::Result<File> {
         trace!("'{}' is directory = {}", parent.display(), parent.is_dir());
         if !parent.is_dir() {
             trace!("Implicitely creating directory: {:?}", parent);
-            if let Err(e) = create_dir_all(parent) {
-                return Err(e);
-            }
+            let _ = create_dir_all(parent)?;
         }
     }
     OpenOptions::new().write(true).read(true).create(true).open(p)

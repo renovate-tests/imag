@@ -69,6 +69,7 @@ use libimagstore::store::FileLockEntry;
 use libimagstore::store::Store;
 use libimagstore::storeid::StoreId;
 use libimaginteraction::ask::ask_bool;
+use libimagutil::debug_result::DebugResult;
 
 mod ui;
 
@@ -115,20 +116,16 @@ fn create(rt: &Runtime) {
     let date  = scmd.value_of("create-date").unwrap();                               // safe by clap
 
     let parsedate = |d, pname| match kairos_parse(d).map_err_trace_exit_unwrap(1) {
-        Parsed::TimeType(tt) => match tt.calculate() {
-            Ok(tt) => match tt.get_moment() {
-                Some(mom) => mom.date(),
-                None => {
-                    debug!("TimeType yielded: '{:?}'", tt);
-                    error!("Error: '{}' parameter does not yield a point in time", pname);
-                    exit(1);
-                },
-            },
-            Err(e) => {
-                error!("Error: '{:?}'", e);
-                exit(1);
-            }
-        },
+        Parsed::TimeType(tt) => tt.calculate()
+            .map_dbg(|y| format!("TimeType yielded: '{:?}'", y))
+            .map_err_trace_exit_unwrap(1)
+            .get_moment()
+            .ok_or_else(|| {
+                error!("Error: '{}' parameter does not yield a point in time", pname);
+                exit(1)
+            })
+            .unwrap() // safe by above
+            .date(),
         _ => {
             error!("Error: '{}' parameter does not yield a point in time", pname);
             exit(1);

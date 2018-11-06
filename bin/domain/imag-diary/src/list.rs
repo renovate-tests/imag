@@ -51,10 +51,9 @@ pub fn list(rt: &Runtime) {
         [id.year() as u32, id.month(), id.day(), id.hour(), id.minute(), id.second()]
     });
 
-    for id in ids.into_iter().map(|id| id.into_storeid().map_err_trace_exit_unwrap(1)) {
-        writeln!(rt.stdout(), "{}", id)
-            .to_exit_code()
-            .unwrap_or_exit();
-    }
+    ids.into_iter()
+        .map(IntoStoreId::into_storeid)
+        .trace_unwrap_exit(1)
+        .for_each(|id| writeln!(rt.stdout(), "{}", id).to_exit_code().unwrap_or_exit());
 }
 
