@@ -57,16 +57,14 @@ impl Iterator for TagStoreIdIter {
 
         self.inner
             .next()
-            .map(|res| {
-                res.and_then(|tag| {
-                    let dt = self.datetime.format(DATE_TIME_FORMAT).to_string();
-                    let id_str = format!("{}-{}", dt, tag.as_str());
-                    ModuleEntryPath::new(id_str)
-                        .into_storeid()
-                        .map_err(Error::from)
-                        .map(|id| (id, self.datetime.clone()))
-                })
-            })
+            .map(|res| res.and_then(|tag| {
+                let dt     = self.datetime.format(DATE_TIME_FORMAT).to_string();
+                let id_str = format!("{}-{}", dt, tag.as_str());
+                ModuleEntryPath::new(id_str)
+                    .into_storeid()
+                    .map_err(Error::from)
+                    .map(|id| (id, self.datetime.clone()))
+            }))
     }
 }
 
