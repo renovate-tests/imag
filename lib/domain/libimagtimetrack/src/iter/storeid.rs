@@ -36,10 +36,7 @@ pub struct TagStoreIdIter {
 impl TagStoreIdIter {
 
     pub fn new(inner: TagIter, datetime: NDT) -> TagStoreIdIter {
-        TagStoreIdIter {
-            inner: inner,
-            datetime: datetime,
-        }
+        TagStoreIdIter { inner, datetime }
     }
 
     pub fn create_entries<'a>(self, store: &'a Store) -> CreateTimeTrackIter<'a> {
