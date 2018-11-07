@@ -140,42 +140,40 @@ fn show(rt: &Runtime) {
         }
     };
 
-    for iter in iters {
-        let _ = iter
-            .into_get_iter(rt.store())
-            .trace_unwrap_exit(1)
-            .filter_map(|opt| {
-                if opt.is_none() {
-                    warn!("Failed to retrieve an entry from an existing store id");
-                }
+    Itertools::flatten(iters.into_iter())
+        .into_get_iter(rt.store())
+        .trace_unwrap_exit(1)
+        .filter_map(|opt| {
+            if opt.is_none() {
+                warn!("Failed to retrieve an entry from an existing store id");
+            }
 
-                opt
-            })
-            .filter(|e| e.is_log().map_err_trace_exit_unwrap(1))
-            .map(|entry| (entry.diary_id().map_err_trace_exit_unwrap(1), entry))
-            .sorted_by_key(|&(ref id, _)| id.clone())
-            .into_iter()
-            .map(|(id, entry)| {
-                debug!("Found entry: {:?}", entry);
-                let _ = writeln!(rt.stdout(),
-                        "{dname: >10} - {y: >4}-{m:0>2}-{d:0>2}T{H:0>2}:{M:0>2} - {text}",
-                         dname = id.diary_name(),
-                         y = id.year(),
-                         m = id.month(),
-                         d = id.day(),
-                         H = id.hour(),
-                         M = id.minute(),
-                         text = entry.get_content())
-                    .to_exit_code()?;
+            opt
+        })
+        .filter(|e| e.is_log().map_err_trace_exit_unwrap(1))
+        .map(|entry| (entry.diary_id().map_err_trace_exit_unwrap(1), entry))
+        .sorted_by_key(|tpl| tpl.0.clone())
+        .into_iter()
+        .map(|tpl| { debug!("Found entry: {:?}", tpl.1); tpl })
+        .map(|(id, entry)| {
+            let _ = writeln!(rt.stdout(),
+                    "{dname: >10} - {y: >4}-{m:0>2}-{d:0>2}T{H:0>2}:{M:0>2} - {text}",
+                     dname = id.diary_name(),
+                     y = id.year(),
+                     m = id.month(),
+                     d = id.day(),
+                     H = id.hour(),
+                     M = id.minute(),
+                     text = entry.get_content())
+                .to_exit_code()?;
 
-                let _ = rt
-                    .report_touched(entry.get_location())
-                    .map_err_trace_exit_unwrap(1);
-                Ok(())
-            })
-            .collect::<Result<Vec<()>, ExitCode>>()
-            .unwrap_or_exit();
-    }
+            let _ = rt
+                .report_touched(entry.get_location())
+                .map_err_trace_exit_unwrap(1);
+            Ok(())
+        })
+        .collect::<Result<Vec<()>, ExitCode>>()
+        .unwrap_or_exit();
 }
 
 fn get_diary_name(rt: &Runtime) -> String {
