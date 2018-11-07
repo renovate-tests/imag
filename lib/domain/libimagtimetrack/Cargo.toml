@@ -23,7 +23,7 @@ maintenance                       = { status     = "actively-developed" }
 filters = "0.3"
 chrono = "0.4"
 toml = "0.4"
-toml-query = { git = "https://github.com/matthiasbeyer/toml-query", branch = "failure" }
+toml-query = "0.8"
 lazy_static = "1"
 is-match = "0.1"
 failure  = "0.1"

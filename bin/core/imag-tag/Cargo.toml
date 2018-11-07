@@ -37,7 +37,7 @@ default-features = false
 features = ["color", "suggestions", "wrap_help"]
 
 [dev-dependencies]
-toml-query = { git = "https://github.com/matthiasbeyer/toml-query", branch = "failure" }
+toml-query = "0.8"
 env_logger = "0.5"
 failure = "0.1"
 

@@ -27,7 +27,7 @@ chrono = "0.4"
 filters = "0.3"
 itertools = "0.7"
 prettytable-rs = "0.8"
-kairos = { git = "https://github.com/matthiasbeyer/kairos", branch = "failure" }
+kairos  = "0.3"
 failure = "0.1"
 
 libimagstore     = { version = "0.9.0", path = "../../../lib/core/libimagstore" }

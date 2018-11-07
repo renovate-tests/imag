@@ -18,7 +18,7 @@ build = "../../../build.rs"
 [dependencies]
 log  = "0.4"
 toml = "0.4"
-toml-query = { git = "https://github.com/matthiasbeyer/toml-query", branch = "failure" }
+toml-query = "0.8"
 indicatif  = "0.9"
 failure    = "0.1"
 

@@ -27,7 +27,7 @@ url = "1.5"
 sha-1 = "0.7"
 hex = "0.3"
 is-match = "0.1"
-toml-query = { git = "https://github.com/matthiasbeyer/toml-query", branch = "failure" }
+toml-query = "0.8"
 failure        = "0.1"
 failure_derive = "0.1"
 
