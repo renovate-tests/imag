@@ -142,19 +142,15 @@ fn list(rt: &Runtime) {
             }
         }
     } else {
-        let rendered = iterator
+        let output     = rt.stdout();
+        let mut output = output.lock();
+        iterator
             .map(|(i, dvcard)| build_data_object_for_handlebars(i, &dvcard))
             .map(|data| list_format.render("format", &data).map_err(Error::from))
             .trace_unwrap_exit(1)
-            .collect::<Vec<String>>();
-        // collect, so that we can have rendered all the things and printing is faster.
-
-        let output     = rt.stdout();
-        let mut output = output.lock();
-
-        rendered.into_iter().for_each(|s| {
-            writeln!(output, "{}", s).to_exit_code().unwrap_or_exit()
-        });
+            .for_each(|s| {
+                writeln!(output, "{}", s).to_exit_code().unwrap_or_exit()
+            });
     }
 }
 
