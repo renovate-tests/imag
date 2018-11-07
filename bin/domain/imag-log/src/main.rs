@@ -185,28 +185,6 @@ fn get_diary_name(rt: &Runtime) -> String {
         .ok_or_else(|| Error::from(err_msg("Configuration not present, cannot continue")))
         .map_err_trace_exit_unwrap(1);
 
-    let logs = cfg
-        .read("log.logs")
-        .map_err(Error::from)
-        .map_err_trace_exit_unwrap(1)
-        .ok_or_else(|| Error::from(err_msg("Configuration missing: 'log.logs'")))
-        .map_err_trace_exit_unwrap(1)
-        .as_array()
-        .ok_or_else(|| Error::from(err_msg("Configuration 'log.logs' is not an Array")))
-        .map_err_trace_exit_unwrap(1);
-
-    if !logs.iter().all(|e| is_match!(e, &Value::String(_))) {
-        error!("Configuration 'log.logs' is not an Array<String>!");
-        ::std::process::exit(1);
-    }
-
-    let logs = logs
-        .into_iter()
-        .map(Value::as_str)
-        .map(Option::unwrap)
-        .map(String::from)
-        .collect::<Vec<String>>();
-
     let current_log = cfg
         .read_string("log.default")
         .map_err(Error::from)
@@ -214,13 +192,34 @@ fn get_diary_name(rt: &Runtime) -> String {
         .ok_or_else(|| Error::from(err_msg("Configuration missing: 'log.default'")))
         .map_err_trace_exit_unwrap(1);
 
-    if !logs.contains(&current_log) {
+    if cfg
+        .read("log.logs")
+        .map_err(Error::from)
+        .map_err_trace_exit_unwrap(1)
+        .ok_or_else(|| Error::from(err_msg("Configuration missing: 'log.logs'")))
+        .map_err_trace_exit_unwrap(1)
+        .as_array()
+        .ok_or_else(|| Error::from(err_msg("Configuration 'log.logs' is not an Array")))
+        .map_err_trace_exit_unwrap(1)
+        .iter()
+        .map(|e| if is_match!(e, &Value::String(_)) {
+            error!("Configuration 'log.logs' is not an Array<String>!");
+            ::std::process::exit(1)
+        } else {
+            e
+        })
+        .map(Value::as_str)
+        .map(Option::unwrap) // safe by map from above
+        .map(String::from)
+        .filter(|log| log == &current_log)
+        .next()
+        .is_none()
+    {
         error!("'log.logs' does not contain 'log.default'");
         ::std::process::exit(1)
     } else {
         current_log.into()
     }
-
 }
 
 fn get_log_text(rt: &Runtime) -> String {
