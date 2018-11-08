@@ -76,7 +76,7 @@ fn create_entry<'a>(diary: &'a Store, diaryname: &str, rt: &Runtime) -> FileLock
             }
         })
         .map(|timed| {
-            let time = create_id_from_clispec(&create, &diaryname, timed);
+            let time = create_id_from_clispec(&create, timed);
             diary.new_entry_at(&diaryname, &time)
                 .context(err_msg("Store write error"))
                 .map_err(Error::from)
@@ -93,7 +93,7 @@ fn create_entry<'a>(diary: &'a Store, diaryname: &str, rt: &Runtime) -> FileLock
 }
 
 
-fn create_id_from_clispec(create: &ArgMatches, diaryname: &str, timed_type: Timed) -> NaiveDateTime {
+fn create_id_from_clispec(create: &ArgMatches, timed_type: Timed) -> NaiveDateTime {
     use std::str::FromStr;
 
     let dt  = Local::now();
