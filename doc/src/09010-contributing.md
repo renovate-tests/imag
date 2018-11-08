@@ -21,9 +21,6 @@ reject your patch.
 Make sure to test-compile your patchset and, if available, run tests.
 
 
-## Finding an issue
-
-
 ## Prerequisites
 
 The prerequisites are simple: `cargo` and `rustc` in current version (stable)
