@@ -13,7 +13,7 @@ early 2019. I hope I can continue develop imag during that time, but I cannot
 guarantee that. I hope I can continue development of imag after that and I
 certainly plan to do so.
 
-But from May 2018 until early 2019, expect long response times.
+But from May 2018 until February 2019, expect long response times.
 
 
 ## Goal / What is imag?
