@@ -84,7 +84,7 @@ imag diary -p private create
 
 # Uh, I forgot something in a diary entry, select one (or multiple) and edit it
 # use the `fzf` tool here (not a part of imag) to select from the IDs
-imag diary -p private list | fzf -m | imag edit -I
+imag diary -p private list | fzf -m | imag edit
 
 # Link a contact to the diary entry
 imag link diary/private/2018/01/01/00:00:00 contact/bc222298-casf-40a4-bda1-50aa980a68c9
@@ -97,8 +97,9 @@ imag notes create "pineapple"
 
 # Where was that contact again?
 imag grep Eva # also possible with `imag contact find Eva`
+
 # Okay, we need to add some imag-internal notes to that contact
-imag grep Eva -l | imag edit -I
+imag grep Eva -l | imag edit
 
 # Now save our work
 imag git add . # "imag-git" simply calls git in the imag store
