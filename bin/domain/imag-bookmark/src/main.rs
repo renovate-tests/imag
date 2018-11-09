@@ -57,6 +57,7 @@ use libimagbookmark::link::Link as BookmarkLink;
 use libimagerror::trace::{MapErrTrace, trace_error};
 use libimagerror::io::ToExitCode;
 use libimagerror::exit::ExitUnwrap;
+use libimagutil::debug_result::DebugResult;
 
 mod ui;
 
@@ -152,14 +153,16 @@ fn list(rt: &Runtime) {
         .report_touched(collection.get_location())
         .map_err_trace_exit_unwrap(1);
 
-    let links   = collection.links(rt.store()).map_err_trace_exit_unwrap(1);
-    debug!("Listing...");
-    for (i, link) in links.enumerate() {
-        match link {
+    collection
+        .links(rt.store())
+        .map_dbg_str("Listing...")
+        .map_err_trace_exit_unwrap(1)
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, link)| match link {
             Ok(link) => writeln!(rt.stdout(), "{: >3}: {}", i, link).to_exit_code().unwrap_or_exit(),
             Err(e)   => trace_error(&e)
-        }
-    };
+        });
     debug!("... ready with listing");
 }
 

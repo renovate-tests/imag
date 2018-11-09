@@ -36,10 +36,7 @@ pub struct TagStoreIdIter {
 impl TagStoreIdIter {
 
     pub fn new(inner: TagIter, datetime: NDT) -> TagStoreIdIter {
-        TagStoreIdIter {
-            inner: inner,
-            datetime: datetime,
-        }
+        TagStoreIdIter { inner, datetime }
     }
 
     pub fn create_entries<'a>(self, store: &'a Store) -> CreateTimeTrackIter<'a> {
@@ -57,16 +54,14 @@ impl Iterator for TagStoreIdIter {
 
         self.inner
             .next()
-            .map(|res| {
-                res.and_then(|tag| {
-                    let dt = self.datetime.format(DATE_TIME_FORMAT).to_string();
-                    let id_str = format!("{}-{}", dt, tag.as_str());
-                    ModuleEntryPath::new(id_str)
-                        .into_storeid()
-                        .map_err(Error::from)
-                        .map(|id| (id, self.datetime.clone()))
-                })
-            })
+            .map(|res| res.and_then(|tag| {
+                let dt     = self.datetime.format(DATE_TIME_FORMAT).to_string();
+                let id_str = format!("{}-{}", dt, tag.as_str());
+                ModuleEntryPath::new(id_str)
+                    .into_storeid()
+                    .map_err(Error::from)
+                    .map(|id| (id, self.datetime.clone()))
+            }))
     }
 }
 

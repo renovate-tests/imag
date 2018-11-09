@@ -32,13 +32,9 @@ pub struct SetEndTimeIter<'a> {
     datetime: NDT,
 }
 
-impl<'a> SetEndTimeIter<'a>
-{
+impl<'a> SetEndTimeIter<'a> {
     pub fn new(inner: CreateTimeTrackIter<'a>, datetime: NDT) -> SetEndTimeIter<'a> {
-        SetEndTimeIter {
-            inner: inner,
-            datetime: datetime,
-        }
+        SetEndTimeIter { inner, datetime }
     }
 }
 
@@ -48,13 +44,11 @@ impl<'a> Iterator for SetEndTimeIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.inner
             .next()
-            .map(|res| {
-                res.and_then(|mut fle| {
-                    let v = Value::String(self.datetime.format(DATE_TIME_FORMAT).to_string());
-                    let _ = fle.get_header_mut().insert(DATE_TIME_END_HEADER_PATH, v)?;
-                    Ok(fle)
-                })
-            })
+            .map(|res| res.and_then(|mut fle| {
+                let v = Value::String(self.datetime.format(DATE_TIME_FORMAT).to_string());
+                let _ = fle.get_header_mut().insert(DATE_TIME_END_HEADER_PATH, v)?;
+                Ok(fle)
+            }))
     }
 
 }

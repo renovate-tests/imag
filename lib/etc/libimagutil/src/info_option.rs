@@ -17,44 +17,12 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-#![deny(
-    dead_code,
-    non_camel_case_types,
-    non_snake_case,
-    path_statements,
-    trivial_numeric_casts,
-    unstable_features,
-    unused_allocation,
-    unused_import_braces,
-    unused_imports,
-    unused_must_use,
-    unused_mut,
-    unused_qualifications,
-    while_true,
-)]
-
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate log;
-extern crate regex;
-extern crate url;
-extern crate boolinator;
-extern crate tempfile;
-extern crate chrono;
-
-#[macro_use] mod log_result;
-#[macro_use] mod log_option;
-pub mod cli_validators;
-pub mod date;
-pub mod debug_result;
-pub mod debug_option;
-pub mod edit;
-pub mod info_result;
-pub mod info_option;
-pub mod key_value_split;
-pub mod variants;
-pub mod warn_exit;
-pub mod warn_result;
-
-#[cfg(feature = "testing")]
-pub mod testing;
+// Generates a extension for the `Option<T>`, named `DebugOption` which has functionality to
+// print `T` via `info!()`.
+generate_option_logging_extension!(
+    InfoResult,
+    map_info,
+    map_info_str,
+    |s| { info!("{}", s); }
+);
 

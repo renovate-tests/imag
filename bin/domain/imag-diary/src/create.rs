@@ -30,6 +30,8 @@ use libimagentryedit::edit::Edit;
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
 use libimagutil::warn_exit::warn_exit;
+use libimagutil::debug_result::DebugResult;
+use libimagutil::debug_option::DebugOption;
 use libimagstore::store::FileLockEntry;
 use libimagstore::store::Store;
 
@@ -76,7 +78,7 @@ fn create_entry<'a>(diary: &'a Store, diaryname: &str, rt: &Runtime) -> FileLock
             }
         })
         .map(|timed| {
-            let time = create_id_from_clispec(&create, &diaryname, timed);
+            let time = create_id_from_clispec(&create, timed);
             diary.new_entry_at(&diaryname, &time)
                 .context(err_msg("Store write error"))
                 .map_err(Error::from)
@@ -85,15 +87,12 @@ fn create_entry<'a>(diary: &'a Store, diaryname: &str, rt: &Runtime) -> FileLock
             debug!("Creating non-timed entry");
             diary.new_entry_today(diaryname)
         })
-        .map(|e| {
-            debug!("Created: {}", e.get_location());
-            e
-        })
+        .map_dbg(|e| format!("Created: {}", e.get_location()))
         .map_err_trace_exit_unwrap(1)
 }
 
 
-fn create_id_from_clispec(create: &ArgMatches, diaryname: &str, timed_type: Timed) -> NaiveDateTime {
+fn create_id_from_clispec(create: &ArgMatches, timed_type: Timed) -> NaiveDateTime {
     use std::str::FromStr;
 
     let dt  = Local::now();
@@ -120,7 +119,7 @@ fn create_id_from_clispec(create: &ArgMatches, diaryname: &str, timed_type: Time
         Timed::Minutely => {
             let min = create
                 .value_of("minute")
-                .map(|m| { debug!("minute = {:?}", m); m })
+                .map_dbg(|m| format!("minute = {:?}", m))
                 .and_then(|s| {
                     FromStr::from_str(s)
                         .map_err(|_| warn!("Could not parse minute: '{}'", s))
@@ -140,7 +139,7 @@ fn create_id_from_clispec(create: &ArgMatches, diaryname: &str, timed_type: Time
         Timed::Secondly => {
             let min = create
                 .value_of("minute")
-                .map(|m| { debug!("minute = {:?}", m); m })
+                .map_dbg(|m| format!("minute = {:?}", m))
                 .and_then(|s| {
                     FromStr::from_str(s)
                         .map_err(|_| warn!("Could not parse minute: '{}'", s))
@@ -150,7 +149,7 @@ fn create_id_from_clispec(create: &ArgMatches, diaryname: &str, timed_type: Time
 
             let sec = create
                 .value_of("second")
-                .map(|s| { debug!("second = {:?}", s); s })
+                .map_dbg(|s| format!("second = {:?}", s))
                 .and_then(|s| {
                     FromStr::from_str(s)
                         .map_err(|_| warn!("Could not parse second: '{}'", s))

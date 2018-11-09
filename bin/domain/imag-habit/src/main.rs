@@ -315,7 +315,7 @@ fn today(rt: &Runtime, future: bool) {
         info!("No Habits due today.");
         info!("Upcoming:");
         // list `n` which are relevant in the future.
-        for element in relevant.iter().take(n) {
+        relevant.iter().take(n).for_each(|element| {
             let date = element.next_instance_date().map_err_trace_exit_unwrap(1);
             let name = element.habit_name().map_err_trace_exit_unwrap(1);
 
@@ -328,7 +328,7 @@ fn today(rt: &Runtime, future: bool) {
                     info!(" * {date}: {name}", date = date, name = name);
                 }
             }
-        }
+        });
     } else {
         fn lister_fn(h: &FileLockEntry) -> Vec<String> {
             debug!("Listing: {:?}", h);
@@ -354,34 +354,33 @@ fn today(rt: &Runtime, future: bool) {
         table.set_titles(Row::new(header));
 
         let mut empty = true;
-        for (i, e) in relevant.into_iter()
-            .filter(|habit| {
-                show_done || {
-                    habit
-                        .next_instance_date()
-                        .map_err_trace_exit_unwrap(1)
-                        .map(|date|  {
-                            habit.instance_exists_for_date(&date)
-                                .map_err_trace_exit_unwrap(1)
-                        })
-                        .unwrap_or(false)
-                }
+        relevant
+            .into_iter()
+            .filter(|habit| show_done || {
+                habit
+                    .next_instance_date()
+                    .map_err_trace_exit_unwrap(1)
+                    .map(|date|  {
+                        habit.instance_exists_for_date(&date)
+                            .map_err_trace_exit_unwrap(1)
+                    })
+                    .unwrap_or(false)
             })
             .enumerate()
-        {
-            let mut v = vec![format!("{}", i)];
-            let mut list = lister_fn(&e);
+            .for_each(|(i, e)| {
+                let mut v = vec![format!("{}", i)];
+                let mut list = lister_fn(&e);
 
-            {
-                let _ = rt
-                    .report_touched(e.get_location())
-                    .map_err_trace_exit_unwrap(1);
-            }
+                {
+                    let _ = rt
+                        .report_touched(e.get_location())
+                        .map_err_trace_exit_unwrap(1);
+                }
 
-            v.append(&mut list);
-            table.add_row(v.iter().map(|s| Cell::new(s)).collect());
-            empty = false;
-        }
+                v.append(&mut list);
+                table.add_row(v.iter().map(|s| Cell::new(s)).collect());
+                empty = false;
+            });
 
         if !empty {
             let _ = table.print(&mut rt.stdout()).to_exit_code().unwrap_or_exit();
