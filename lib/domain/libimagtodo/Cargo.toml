@@ -20,10 +20,10 @@ is-it-maintained-open-issues      = { repository = "matthiasbeyer/imag" }
 maintenance                       = { status     = "actively-developed" }
 
 [dependencies]
-task-hookrs = { git = "https://github.com/matthiasbeyer/task-hookrs", branch = "failure" }
+task-hookrs = "0.6.0"
 uuid = "0.7"
 toml = "0.4"
-toml-query = { git = "https://github.com/matthiasbeyer/toml-query", branch = "failure" }
+toml-query = "0.8"
 log = "0.4.0"
 serde_json = "1"
 failure = "0.1"

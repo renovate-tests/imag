@@ -14,13 +14,94 @@ the changelog (though updating of dependencies is).
 Please note that we do not have a "Breaking changes" section as we are in
 Version 0.y.z and thus we can break the API like we want and need to.
 
+## 0.9.0
+
+* [f912d3e7f3](https://git.imag-pim.org/imag/commit/?id=f912d3e7f362e524347cd061f316d3569dfb18a0)
+  Fix: Duplicated printing of output in `imag log show --all`
+  The problem was that the used `Diary::diary_names()` iterator does not
+  call `unique()` on its output.
+  That decision was made because the return type would get more
+  complicated with that feature.
+  The fix was to call `Itertools::unique()` on the iterator.
+
+* [851db4abe4](https://git.imag-pim.org/imag/commit/?id=851db4abe4d8d0aebafe35ef41c5594213b1be6b)
+  Do not use rust-crypto anymore, but other crates
+  A contribution from newpavlov. Thank you very much!
+
+* [5b82d53fd2](https://git.imag-pim.org/imag/commit/?id=5b82d53fd29294ac598d3e80fcee0e7b27f59c0c)
+  Optimize libimagstore filesystem backend
+  This optimization changes the backend so that the files are not held open. The
+  files are now read whenever they are requested, then they are cached and are
+  written back on "Store::update()" (which is also called when the store is
+  dropped).
+  This change allows us now to read more files into memory than there are FDs for
+  the process (which was a problem with really large stores and, for example,
+  imag-diagnostics.
+
+* [6a81c0afd1](https://git.imag-pim.org/imag/commit/?id=6a81c0afd1d98520d4820f6a1dcb161ee4029761)
+  Update rust compiler for travis
+
+* [ccbc2b2672](https://git.imag-pim.org/imag/commit/?id=ccbc2b2672defc61f4e67040fc193b8271bd9f60)
+  Add progress bar for imag-diagnostic tool, so that a user can see
+  that something is happening.
+
+* [a101e777f3](https://git.imag-pim.org/imag/commit/?id=a101e777f365bc1e1fcd9f4ca3f9a9b6198e70af)
+  Update dependencies
+  Dependencies of these imag crates where updated:
+  Binaries:
+  * imag
+  * imag-contact
+  * imag-edit
+  * imag-git
+  * imag-grep
+  * imag-habit
+  * imag-link
+  * imag-timetrack
+  * imag-view
+  * imag-wiki
+
+  Libraries:
+  * libimagbookmark
+  * libimagcontact
+  * libimagentryfilter
+  * libimagentrytag
+  * libimagentryview
+  * libimagerror
+  * libimaginteraction
+  * libimagmail
+  * libimagrt
+  * libimagstore
+  * libimagtimeui
+  * libimagtodo
+  * libimagutil
+  * libimagwiki
+
+* [9bce68b1bf](https://git.imag-pim.org/imag/commit/?id=9bce68b1bff5e2f77f7c86424de5c16a7e38a2cc)
+  Optimized the libimagstore `Store::entries()` interface to have
+  the possibility to limit the filesystem access to subdirectories in the store
+  path, so that IO operations are minimized.
+
+* [a749d97a16](https://git.imag-pim.org/imag/commit/?id=a749d97a16af553e4a6f949538433067a757d9e8)
+  Switched the whole ecosystem to use `failure` for error handling.
+
+* [ecf4cead93](https://git.imag-pim.org/imag/commit/?id=ecf4cead93da0b04cb74370082dbfc998d7a2752)
+  Introduced the runtime IO system, which can now be used to chain
+  imag calls like so: `imag ids | imag tag add "foobar"`.
+
+In the process of these major changes, small bugfixes and improvements were
+applied to the codebase. Too much to list all of them here, though.
+
+The merge messages of the respective feature branches contain more details on
+the changes.
+
+
 ## 0.8.0
 
 After the last release (0.7.0), we changed how we keep our changelog from manual
 adding things to the list, to using `git-notes`. Hence, there's no
 categorization anymore.
 
-* Add imag-diary functionality to list existing diaries
+* Add imag(https://git.imag-pim.org/imag/commit/?id=imag)diary functionality to list existing diaries
 
 * `libimagentryview`s `StdoutViewer` is now able to wrap lines
 
