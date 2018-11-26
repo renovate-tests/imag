@@ -120,15 +120,10 @@ impl StoreId {
     }
 
     pub fn to_str(&self) -> Result<String> {
-        self.base
-            .as_ref()
-            .cloned()
-            .map(|mut base| { base.push(self.id.clone()); base })
-            .unwrap_or_else(|| self.id.clone())
-            .to_str()
-            .map(String::from)
-            .ok_or_else(|| err_msg("Store ID Handling error"))
-            .map_err(Error::from)
+        match self.base.as_ref() {
+            None           => Ok(self.id.display().to_string()),
+            Some(ref base) => Ok(format!("{}/{}", base.display(), self.id.display())),
+        }
     }
 
     /// Helper function for creating a displayable String from StoreId
