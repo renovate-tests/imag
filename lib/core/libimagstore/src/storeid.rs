@@ -187,10 +187,7 @@ impl StoreId {
 impl Display for StoreId {
 
     fn fmt(&self, fmt: &mut Formatter) -> RResult<(), FmtError> {
-        match self.id.to_str() {
-            Some(s) => write!(fmt, "{}", s),
-            None    => write!(fmt, "{}", self.id.to_string_lossy()),
-        }
+        write!(fmt, "{}", self.id.display())
     }
 
 }
