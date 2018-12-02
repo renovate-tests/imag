@@ -18,8 +18,6 @@
 //
 
 use std::collections::BTreeMap;
-#[cfg(test)]
-use std::path::PathBuf;
 
 use libimagstore::storeid::StoreId;
 use libimagstore::storeid::IntoStoreId;
@@ -85,16 +83,6 @@ impl Link {
             Link::Id { link: s } => Link::Id { link: s.without_base() },
             Link::Annotated { link: s, annotation: ann } =>
                 Link::Annotated { link: s.without_base(), annotation: ann },
-        }
-    }
-
-    /// Helper wrapper around Link for StoreId
-    #[cfg(test)]
-    fn with_base(self, pb: PathBuf) -> Link {
-        match self {
-            Link::Id { link: s } => Link::Id { link: s.with_base(pb) },
-            Link::Annotated { link: s, annotation: ann } =>
-                Link::Annotated { link: s.with_base(pb), annotation: ann },
         }
     }
 
@@ -783,7 +771,6 @@ pub mod store_check {
 #[cfg(test)]
 mod test {
     use std::path::PathBuf;
-    use std::sync::Arc;
 
     use libimagstore::store::Store;
 
@@ -795,9 +782,7 @@ mod test {
     }
 
     pub fn get_store() -> Store {
-        use libimagstore::file_abstraction::InMemoryFileAbstraction;
-        let backend = Arc::new(InMemoryFileAbstraction::default());
-        Store::new_with_backend(PathBuf::from("/"), &None, backend).unwrap()
+        Store::new_inmemory(PathBuf::from("/"), &None).unwrap()
     }
 
     #[test]
@@ -833,8 +818,8 @@ mod test {
             assert_eq!(e1_links.len(), 1);
             assert_eq!(e2_links.len(), 1);
 
-            assert!(e1_links.first().map(|l| l.clone().with_base(store.path().clone()).eq_store_id(e2.get_location())).unwrap_or(false));
-            assert!(e2_links.first().map(|l| l.clone().with_base(store.path().clone()).eq_store_id(e1.get_location())).unwrap_or(false));
+            assert!(e1_links.first().map(|l| l.clone().eq_store_id(e2.get_location())).unwrap_or(false));
+            assert!(e2_links.first().map(|l| l.clone().eq_store_id(e1.get_location())).unwrap_or(false));
         }
 
         {
