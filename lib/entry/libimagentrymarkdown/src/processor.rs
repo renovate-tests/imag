@@ -17,7 +17,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use std::path::Path;
+use std::collections::BTreeMap;
 
 use failure::Fallible as Result;
 use failure::ResultExt;
@@ -26,33 +26,17 @@ use link::extract_links;
 
 use libimagentrylink::external::ExternalLinker;
 use libimagentrylink::internal::InternalLinker;
-use libimagentryref::refstore::RefStore;
-use libimagentryref::refstore::UniqueRefPathGenerator;
-use libimagentryref::generators::sha512::Sha512;
+use libimagentryref::reference::MutRef;
+use libimagentryref::reference::RefFassade;
+use libimagentryref::hasher::sha1::Sha1Hasher;
 use libimagstore::store::Entry;
 use libimagstore::store::Store;
 use libimagstore::storeid::StoreId;
+use libimagerror::errors::ErrorMsg;
 
 use std::path::PathBuf;
 
 use url::Url;
-
-
-pub struct UniqueMarkdownRefGenerator;
-
-impl UniqueRefPathGenerator for UniqueMarkdownRefGenerator {
-    fn collection() -> &'static str {
-        "ref" // we can only use this collection, as we don't know about context
-    }
-
-    fn unique_hash<A: AsRef<Path>>(path: A) -> Result<String> {
-        Sha512::unique_hash(path).map_err(Error::from)
-    }
-
-    fn postprocess_storeid(sid: StoreId) -> Result<StoreId> {
-        Ok(sid) // don't do anything
-    }
-}
 
 /// A link Processor which collects the links from a Markdown and passes them on to
 /// `libimagentrylink` functionality
@@ -117,10 +101,36 @@ impl LinkProcessor {
 
     /// Process an Entry for its links
     ///
+    ///
+    /// # Notice
+    ///
+    /// Whenever a "ref" is created, that means when a URL points to a filesystem path (normally
+    /// when using `file:///home/user/foobar.file` for example), the _current_ implementation uses
+    /// libimagentryref to create make the entry into a ref.
+    ///
+    /// The configuration of the `libimagentryref::reference::Reference::make_ref()` call is as
+    /// follows:
+    ///
+    /// * Name of the collection: "root"
+    /// * Configuration: `{"root": "/"}`
+    ///
+    /// This implementation might change in the future, so that the configuration and the name of
+    /// the collection can be passed to the function, or in a way that the user is asked what to do
+    /// during the runtime of this function.
+    ///
+    ///
     /// # Warning
     ///
     /// When `LinkProcessor::create_internal_targets()` was called to set the setting to true, this
     /// function returns all errors returned by the Store.
+    ///
+    /// That means:
+    ///
+    /// * For an internal link, the linked target is created if create_internal_targets() is true,
+    ///   else error
+    /// * For an external link, if create_internal_targets() is true, libimagentrylink creates the
+    ///   external link entry, else the link is ignored
+    /// * all other cases do not create elements in the store
     ///
     pub fn process<'a>(&self, entry: &mut Entry, store: &'a Store) -> Result<()> {
         let text = entry.to_str()?;
@@ -151,18 +161,58 @@ impl LinkProcessor {
                     entry.add_external_link(store, url)?;
                 },
                 LinkQualification::RefLink(url) => {
+                    use sha1::{Sha1, Digest};
+
                     if !self.process_refs {
+                        trace!("Not processing refs... continue...");
                         continue
                     }
+
+                    // because we can make one entry only into _one_ ref, but a markdown document
+                    // might contain several "ref" links, we create a new entry for the ref we're
+                    // about to create
+                    //
+                    // We generate the StoreId with the SHA1 hash of the path, which is the best
+                    // option we have
+                    // right now
+                    //
+                    // TODO: Does this make sense? Can we improve this?
+                    let path         = url.host_str().unwrap_or_else(|| url.path());
+                    let path         = PathBuf::from(path);
+                    let ref_entry_id = {
+                        let digest = Sha1::digest(path.to_str().ok_or(ErrorMsg::UTF8Error)?.as_bytes());
+                        StoreId::new(PathBuf::from(format!("ref/{:x}", digest)))? // TODO: Ugh...
+                    };
+                    let mut ref_entry = store.retrieve(ref_entry_id)?;
+
+                    let ref_collection_name = "root";
+
+                    // TODO: Maybe this can be a const?
+                    // TODO: Maybe we need this ot be overrideable? Not sure.
+                    let ref_collection_config = {
+                        let mut map = BTreeMap::new();
+                        map.insert(String::from("root"), PathBuf::from("/"));
+                        ::libimagentryref::reference::Config::new(map)
+                    };
 
                     trace!("URL            = {:?}", url);
                     trace!("URL.path()     = {:?}", url.path());
                     trace!("URL.host_str() = {:?}", url.host_str());
-                    let path = url.host_str().unwrap_or_else(|| url.path());
-                    let path = PathBuf::from(path);
-                    let mut target = store.create_ref::<UniqueMarkdownRefGenerator, PathBuf>(path)?;
 
-                    entry.add_internal_link(&mut target)?;
+                    trace!("Processing ref: {:?} -> {path}, collection: {ref_collection_name}, cfg: {cfg:?}",
+                           path                = path.display(),
+                           ref_collection_name = ref_collection_name,
+                           cfg                 = ref_collection_config);
+
+                    ref_entry.as_ref_with_hasher_mut::<Sha1Hasher>()
+                        .make_ref(path,
+                                  ref_collection_name,
+                                  &ref_collection_config,
+                                  false)?;
+
+                    trace!("Ready processing, linking new ref entry...");
+
+                    let _ = entry.add_internal_link(&mut ref_entry)?;
                 },
                 LinkQualification::Undecidable(e) => {
                     // error
@@ -188,9 +238,11 @@ enum LinkQualification {
 
 impl LinkQualification {
     fn qualify(text: &str) -> LinkQualification {
+        trace!("Qualifying: {}", text);
         match Url::parse(text) {
             Ok(url) => {
                 if url.scheme() == "file" {
+                    trace!("Qualifying = RefLink");
                     return LinkQualification::RefLink(url)
                 }
 
@@ -205,6 +257,7 @@ impl LinkQualification {
             Err(e) => {
                 match e {
                     ::url::ParseError::RelativeUrlWithoutBase => {
+                        trace!("Qualifying = InternalLink");
                         LinkQualification::InternalLink
                     },
 
@@ -438,7 +491,7 @@ mod tests {
         assert!(entries.is_ok());
         let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
-        assert_eq!(2, entries.len(), "Expected 2 links, got: {:?}", entries);
+        assert_eq!(2, entries.len(), "Expected 1 entries, got: {:?}", entries);
         debug!("{:?}", entries);
     }
 
