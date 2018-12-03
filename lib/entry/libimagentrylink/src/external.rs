@@ -301,7 +301,7 @@ pub mod iter {
 /// Check whether the StoreId starts with `/link/external/`
 pub fn is_external_link_storeid<A: AsRef<StoreId> + Debug>(id: A) -> bool {
     debug!("Checking whether this is a 'links/external/': '{:?}'", id);
-    id.as_ref().local().starts_with("links/external")
+    id.as_ref().is_in_collection(&["links", "external"])
 }
 
 /// Implement `ExternalLinker` for `Entry`, hiding the fact that there is no such thing as an external
