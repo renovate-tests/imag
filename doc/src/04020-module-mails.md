@@ -1,5 +1,17 @@
 ## Mails {#sec:modules:mails}
 
+---
+
+**NOTE:** This is mostly a todo-list for the `imag-mail` command. Nothing shown
+here is implemented. This "documentation-to-be" should be moved to
+`imag-mail --help` eventually.
+This list might be incomplete, details might be not possible to implement in the
+way described or other dragons.
+
+**Target audience:** People who want to implement `imag-mail`.
+
+---
+
 The Mails module implements a commandline email client. Emails can be written
 (via `$EDITOR`) and viewed, also in threads. Emails can be crawled for creating
 new contacts.
@@ -22,50 +34,81 @@ Outgoing mails are pushed to a special directory and can later on be send via
 `imag-mail` which calls a MTA (for example msmtp) and also creates store entries
 for the outgoing mails.
 
+
+### Configuration
+
+The following configuration variables are available for the imag-mail command:
+
+* `mail.defaultaccount`: The name of the default account to use if the
+  commandline parameters do not specify which account to use. The name must be
+  in the `mail.accounts` array.
+* `mail.accounts`:
+  An array of account configuration. Each element in the array is a table of the
+  following key-value pairs:
+  * `name`: the name of the account. Names must be unique. Required.
+  * `outgoingbox`: Path to mailbox to use for outgoing email. Required.
+  * `draftbox`: Path to mailbox to use for outgoing email. Required.
+  * `sentbox`: Path to mailbox to use for sent email. Required.
+  ` `maildirroot`: Path to folder where all mailboxes for this account are
+  located. Required.
+  * `fetchcommand`: What commandline to invoke for fetching mails for this
+    account. Optional - if not used, the global `mail.fetchcommand` will be
+    used.
+  * `postfetchcommand`: What commandline to invoke after fetching mails for this
+    account. Optional - if not used, the global `mail.postfetchcommand` will be
+    used.
+  * `sendcommand`: What commandline to invoke for sending mails for this
+    account. Optional - if not used, the global `mail.sendcommand` will be used.
+  * `postsendcommand`: What commandline to invoke after sending mails for this
+    account. Optional - if not used, the global `mail.postsendcommand` will be
+    used.
+* `mail.fetchcommand`: Command to use for fetching mail if no account-specific
+  command was specified
+  Available variables:
+    * `{{accountname}}` - name of the account to fetch mail for.
+    * `{{boxes}}` - a list of maildir paths to the boxes to fetch email for.
+      imag provides primitives to transform this array.
+      An example configuration for fetching with `offlineimap` might look like
+      this: `offlineimap -a {{accountname}} -f {{concatsep "," (replace "/home/user/mails/" "" boxes)}}`
+      to concatenate all boxes with a comma after removing a prefix.
+      For a complete list of transformation functions, the `--help` flag shall
+      be consulted.
+      For more complicated transformations a bash/ruby/python script might be
+      appropriate.
+* `mail.postfetchcommand`: Command to use after fetching mail if no
+  account-specific command was specified
+  Available variables: Same as `mail.fetchcommand`.
+* `mail.postsendcommand`: Command to use after sending mail if no
+  account-specific command was specified
+  Available variables: Same as `mail.sendcommand`.
+* `mail.sendcommand`: Command to use for sending mail if no account-specific
+  command was specified
+    * `{{accountname}}` - name of the account to fetch mail for.
+    * `{{mailfile}}` - The path of the mail to send
+
+
 ### CLI
 
 The CLI of the imag-mail module is planned as follows:
 
 * imag mail
 
-  Requires configuration:
-    * mail.outgoingbox
-    * mail.accounts.<account>.maildirroot
-
-    -A, --account   - Specify the "account" to use for the opperation.
-                      A account is nothing more than a mapping of a name to a
-                      path where the Maildirs are located.  It is specified in
-                      the imag configuration file.
-                      For example:
-
-                        private -> ~/.mails/personal
-
+    -A, --account   - Specify the "account" to use for the opperation by name.
                       If none is specified, the configuration is searched for a
-                      "maildir" setting (where all Maildirs are found in). If
-                      there is no such setting, imag-mail fails.
-                      (or: read in documentation for --box).
-
-    -B, --box       - Specify a temporary location for a Maildir to work with.
+                      default command.
 
 * imag mail track <path> [opts...]
   Track a new mail, mail file passed as path
-
-    --refind        - re-find messages. Loads all messages which are known to imag
-                      and compares identifiers, to update the imag-internal cache if
-                      a mail got moved
-
-    -O, --output-id - print the store id for the new (or in case of --refind
-                      updated) imag entry
 
 * imag mail scan <path> [opts...]
   Scan a maildir and track all untracked mails
 
     --refind        - re-find messages. Loads all messages which are known to imag
                       and compares identifiers, to update the imag-internal cache if
-                      a mail got moved
-
-    -O, --output-id - print the store id for the new (or in case of --refind
-                      updated) imag entry
+                      a mail got moved.
+                      Without this flag, a modified email file might be added to
+                      the imag store again, even if there's another entry in the
+                      imag store refering to the same file.
 
 * imag mail list <args...>
   List mails in a given mailbox for a given account or the default account
@@ -160,8 +203,8 @@ The CLI of the imag-mail module is planned as follows:
   Craft a new mail and safe it in the <outgoing> folder
 
   Requires configuration:
-    * mail.accounts.<account>.draftbox
-    * mail.accounts.<account>.outgoingbox
+    * mail.accounts.[.draftbox]
+    * mail.accounts.[.outgoingbox]
 
         --outbox    - Specify the outbox for where the new mail should be stored
                       in, if it is not given in the config (or to override it)
@@ -207,8 +250,8 @@ The CLI of the imag-mail module is planned as follows:
   Fetch emails
 
   Requires configuration:
-    * mail.fetchcommand or mail.accounts.<account>.fetchcommand
-    * mail.postfetchcommand or mail.accounts.<account>.postfetchcommand (optional)
+    * mail.fetchcommand or mail.accounts[.fetchcommand]
+    * mail.postfetchcommand or mail.accounts[.postfetchcommand] (optional)
 
     --all           - Fetch for all accounts
     --boxes         - Fetch only some boxes (does not work with --all)
@@ -217,10 +260,10 @@ The CLI of the imag-mail module is planned as follows:
   Send emails from the outgoing folder, also move them to 'sent' boxes
 
   Requires configuration:
-    * mail.accounts.<account>.outgoingbox
-    * mail.accounts.<account>.sentbox
-    * mail.sendcommand or mail.accounts.<account>.sendcommand
-    * mail.postsendcommand or mail.accounts.<account>.postsendcommand (optional)
+    * mail.accounts.[.outgoingbox]
+    * mail.accounts.[.sentbox]
+    * mail.sendcommand or mail.accounts[.sendcommand]
+    * mail.postsendcommand or mail.accounts[.postsendcommand] (optional)
 
     --outbox        - Specify the outbox for where the mails that are about to
                       be send are stored in, if it is not given in the config
@@ -285,7 +328,7 @@ The CLI of the imag-mail module is planned as follows:
 * imag mail reply <args...>
   Reply to an email.
 
-  Requires configuration: mail.accounts.<account>.outgoingbox
+  Requires configuration: mail.accounts[.outgoingbox]
 
   Specify the mail to reply to by msgid, filepath or imag entry id.
 
@@ -294,4 +337,23 @@ The CLI of the imag-mail module is planned as follows:
     --add-bcc       - Add another recipient. Multiple allowed.
 
     --no-track      - Do not track new mailfile with imag.
+
+### Format specifiers
+
+The `imag-mail` command supports formatting output automatically and via
+predefined formats in the configuration file or by passing formatting
+specifications via CLI.
+
+The available formatting variables are:
+
+* `H`: The complete message header as key-value-table
+* `subject`: The subject of the message
+* `date`: The date field of the message
+* `body`: The body of the message
+* `from`: The sender of the message
+* `to`: The address of the receipient of message
+* `fancyfromto`: The address of the sender of the message, or, if the sender was
+  you, the receipient (prefixed with `F:` or `T:` respecively).
+
+<!-- more might be defined -->
 
