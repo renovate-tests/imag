@@ -91,6 +91,7 @@ whether the functionality could be outsourced to a more general
 All libraries should be tested as much as possible. Sometimes it may not be
 possible without a lot of effort, but still: more tests = better!
 
+
 ## Commandline tools
 
 The commandline tools are the CLI-frontends for their respective libraries.
@@ -99,10 +100,15 @@ So `libimagdiary` has a CLI frontend `imag-diary`.
 Those CLI frontends use functionality from `libimagrt` to build a 
 commandline interface which is consistent with the rest of the ecosystem.
 
-Commandline interfaces should receive store IDs as positional arguments.
-Commandline interfaces should also provide a flag "-I" (that's a big i) which
-marks that the store IDs shall be read from stdin and are not passed via the
-commandline.
+Commandline applications use the runtime interfaces for receiving IDs from the
+CLI or IDs which are piped into the application.
+Commandline applications use the 'stdin'/'stdout'/'stderr' wrappers provided by
+the runtime (see section below).
+
+Commandline applications are _only_ interactive when specified by the user
+(normally via a `--interactive` flag). An application _must_ provide the full
+functionality via its commandline interface, thus it is not allowed to provide
+functionality which is only usable in interactive mode.
 
 
 ### IO
