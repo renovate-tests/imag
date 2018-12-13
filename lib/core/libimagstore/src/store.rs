@@ -222,13 +222,7 @@ impl Store {
 
         debug!("Creating id: '{}'", id);
 
-        let exists =
-            self.entries
-                .read()
-                .map(|map| map.contains_key(&id))
-                .map_err(|_| Error::from(EM::LockError))
-                .context(format_err!("CreateCallError: {}", id))? ||
-            self.backend.exists(&id.clone().into_pathbuf()?)?;
+        let exists = self.exists(id.clone())?;
 
         if exists {
             debug!("Entry exists: {:?}", id);
@@ -306,14 +300,7 @@ impl Store {
 
         debug!("Getting id: '{}'", id);
 
-        let exists =
-            self.entries
-                .read()
-                .map(|map| map.contains_key(&id))
-                .map_err(|_| Error::from(EM::LockError))
-                .context(format_err!("CreateCallError: {}", id))? ||
-            self.backend.exists(&id.clone().into_pathbuf()?)?;
-
+        let exists = self.exists(id.clone())?;
 
         if !exists {
             debug!("Does not exist in internal cache or filesystem: {:?}", id);
@@ -646,6 +633,21 @@ impl Store {
         self.backend
             .pathes_recursively(self.path().clone(), self.path().clone(), self.backend.clone())
             .map(|i| Entries::new(i, self))
+    }
+
+    /// Check whether the store has the Entry pointed to by the StoreId `id`
+    pub fn exists<'a>(&'a self, id: StoreId) -> Result<bool> {
+        let cache_has_entry = |id: &StoreId|
+            self.entries
+                .read()
+                .map(|map| map.contains_key(id))
+                .map_err(|_| Error::from(EM::LockError))
+                .context(format_err!("CreateCallError: {}", id));
+
+        let backend_has_entry = |id: StoreId|
+            self.backend.exists(&id.with_base(self.path().to_path_buf()).into_pathbuf()?);
+
+        Ok(cache_has_entry(&id)? || backend_has_entry(id)?)
     }
 
     /// Gets the path where this store is on the disk
