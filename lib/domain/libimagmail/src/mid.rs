@@ -17,46 +17,17 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-#![forbid(unsafe_code)]
+/// Helper type for handling message IDs
+///
+/// Message IDs are used to identfy emails uniquely, so we should at least have a type for
+/// representing them and make handling a bit easier.
+///
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MessageId(String);
 
-#![recursion_limit="256"]
-
-#![deny(
-    dead_code,
-    non_camel_case_types,
-    non_snake_case,
-    path_statements,
-    trivial_numeric_casts,
-    unstable_features,
-    unused_allocation,
-    unused_import_braces,
-    unused_imports,
-    unused_must_use,
-    unused_mut,
-    unused_qualifications,
-    while_true,
-)]
-
-#[macro_use] extern crate log;
-extern crate mailparse;
-extern crate toml;
-extern crate toml_query;
-extern crate filters;
-#[macro_use] extern crate failure;
-extern crate serde;
-#[macro_use] extern crate serde_derive;
-
-extern crate libimagerror;
-#[macro_use] extern crate libimagstore;
-extern crate libimagentryref;
-#[macro_use] extern crate libimagentryutil;
-
-module_entry_path_mod!("mail");
-
-pub mod config;
-pub mod hasher;
-pub mod mail;
-pub mod mid;
-pub mod store;
-pub mod util;
+impl Into<String> for MessageId {
+    fn into(self) -> String {
+        self.0
+    }
+}
 

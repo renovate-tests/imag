@@ -17,39 +17,24 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-//! Module for the MailIter
-//!
-//! MailIter is a iterator which takes an Iterator that yields `Ref` and yields itself
-//! `Result<Mail>`, where `Err(_)` is returned if the Ref is not a Mail or parsing of the
-//! referenced mail file failed.
-//!
+use std::path::Path;
 
-use mail::Mail;
 use failure::Fallible as Result;
 
-use libimagstore::store::FileLockEntry;
+use libimagentryref::hasher::Hasher;
 
-use std::marker::PhantomData;
+pub struct MailHasher;
 
-pub struct MailIter<'a, I: Iterator<Item = FileLockEntry<'a>>> {
-    _marker: PhantomData<I>,
-    i: I,
-}
+impl Hasher for MailHasher {
+    const NAME: &'static str = "MailHasher";
 
-impl<'a, I: Iterator<Item = FileLockEntry<'a>>> MailIter<'a, I> {
-
-    pub fn new(i: I) -> MailIter<'a, I> {
-        MailIter { _marker: PhantomData, i: i }
+    /// hash the file at path `path`
+    ///
+    /// TODO: This is the expensive implementation. We use the message Id as hash, which is
+    /// convenient and _should_ be safe
+    ///
+    /// TODO: Confirm that this approach is right
+    fn hash<P: AsRef<Path>>(path: P) -> Result<String> {
+        ::util::get_message_id_for_mailfile(path)
     }
-
 }
-
-impl<'a, I: Iterator<Item = FileLockEntry<'a>>> Iterator for MailIter<'a, I> {
-    type Item = Result<Mail<'a>>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.i.next().map(Mail::from_fle)
-    }
-
-}
-
