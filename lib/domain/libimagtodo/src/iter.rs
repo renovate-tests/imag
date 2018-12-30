@@ -17,22 +17,22 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use libimagstore::storeid::StoreIdIterator;
+use libimagstore::iter::Entries;
 use libimagstore::storeid::StoreId;
 
 use failure::Fallible as Result;
 
-pub struct TaskIdIterator(StoreIdIterator);
+pub struct TaskIdIterator<'a>(Entries<'a>);
 
-impl TaskIdIterator {
+impl<'a> TaskIdIterator<'a> {
 
-    pub fn new(inner: StoreIdIterator) -> Self {
+    pub fn new(inner: Entries<'a>) -> Self {
         TaskIdIterator(inner)
     }
 
 }
 
-impl Iterator for TaskIdIterator {
+impl<'a> Iterator for TaskIdIterator<'a> {
     type Item = Result<StoreId>;
 
     fn next(&mut self) -> Option<Self::Item> {
