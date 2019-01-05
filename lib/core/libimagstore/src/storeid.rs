@@ -309,7 +309,7 @@ impl<'a> StoreIdIteratorWithStore<'a> {
         StoreIdIteratorWithStore(StoreIdIterator::new(iter), store)
     }
 
-    pub fn without_store(self) -> StoreIdIterator {
+    pub fn into_storeid_iter(self) -> StoreIdIterator {
         self.0
     }
 
