@@ -91,8 +91,8 @@ impl<'a, 'b> Wiki<'a, 'b> {
         entry.add_internal_link(&mut index).map(|_| entry)
     }
 
-    pub fn all_ids(&self) -> Result<StoreIdIterator> {
-        self.0.entries().map(|iter| iter.in_collection("wiki").without_store())
+    pub fn all_ids(&self) -> Result<Entries<'a>> {
+        self.0.entries().map(|iter| iter.in_collection("wiki"))
     }
 
     pub fn delete_entry<EN: AsRef<str>>(&self, entry_name: EN) -> Result<()> {
