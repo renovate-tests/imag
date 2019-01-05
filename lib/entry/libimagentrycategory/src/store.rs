@@ -109,7 +109,7 @@ impl CategoryStore for Store {
     /// Get all category names
     fn all_category_names(&self) -> Result<CategoryNameIter> {
         trace!("Getting all category names");
-        Ok(CategoryNameIter::new(self, self.entries()?.without_store()))
+        Ok(CategoryNameIter::new(self, self.entries()?.into_storeid_iter()))
     }
 
     /// Get a category by its name
@@ -213,7 +213,6 @@ fn mk_category_storeid(base: PathBuf, s: &str) -> Result<StoreId> {
     use libimagstore::storeid::IntoStoreId;
     ::module_path::ModuleEntryPath::new(s)
         .into_storeid()
-        .map(|id| id.with_base(base))
         .context(err_msg("Store id handling error"))
         .map_err(Error::from)
 }
