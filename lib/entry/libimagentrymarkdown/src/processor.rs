@@ -232,7 +232,6 @@ mod tests {
     use super::*;
 
     use std::path::PathBuf;
-    use std::sync::Arc;
 
     use libimagstore::store::Store;
     use libimagentrylink::internal::InternalLinker;
@@ -399,7 +398,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(2, entries.len(), "Expected 2 links, got: {:?}", entries);
 
@@ -438,7 +437,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(2, entries.len(), "Expected 2 links, got: {:?}", entries);
         debug!("{:?}", entries);
@@ -471,7 +470,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(3, entries.len(), "Expected 3 links, got: {:?}", entries);
         debug!("{:?}", entries);
@@ -504,7 +503,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(1, entries.len(), "Expected 1 entries, got: {:?}", entries);
         debug!("{:?}", entries);
@@ -532,7 +531,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(1, entries.len(), "Expected 1 entries, got: {:?}", entries);
     }
