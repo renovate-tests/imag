@@ -138,6 +138,7 @@ mod compile_test {
 }
 
 use storeid::StoreId;
+use storeid::StoreIdIterator;
 use self::delete::StoreDeleteIterator;
 use self::get::StoreGetIterator;
 use self::retrieve::StoreRetrieveIterator;
@@ -178,10 +179,18 @@ impl<'a> Entries<'a> {
         Entries(self.0.in_collection(c), self.1)
     }
 
-    // TODO: Remove or fix me
-    //pub fn without_store(self) -> StoreIdIterator {
-    //    StoreIdIterator::new(Box::new(self.0.map(|r| r.map(|id| id.without_base()))))
-    //}
+    /// Turn `Entries` iterator into generic `StoreIdIterator`
+    ///
+    /// # TODO
+    ///
+    /// Revisit whether this can be done in a cleaner way. See commit message for why this is
+    /// needed.
+    pub fn into_storeid_iter(self) -> StoreIdIterator {
+        let iter = self.0
+            .into_inner()
+            .map(|r| r.and_then(StoreId::new));
+        StoreIdIterator::new(Box::new(iter))
+    }
 
     /// Transform the iterator into a StoreDeleteIterator
     ///

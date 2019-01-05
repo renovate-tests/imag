@@ -71,6 +71,18 @@ impl<'a> PathIterator<'a> {
         self
     }
 
+    /// Turn iterator into its internals
+    ///
+    /// Used for `Entries::into_storeid_iter()`
+    ///
+    /// # TODO
+    ///
+    /// Revisit whether this can be done in a cleaner way. See commit message for why this is
+    /// needed.
+    pub(crate) fn into_inner(self) -> Box<Iterator<Item = Result<PathBuf>>> {
+        self.iter
+    }
+
 }
 
 impl<'a> Iterator for PathIterator<'a> {
