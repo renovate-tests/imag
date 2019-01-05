@@ -95,7 +95,7 @@ impl Diary for Store {
     fn entries(&self, diary_name: &str) -> Result<DiaryEntryIterator> {
         debug!("Building iterator for module 'diary' with diary name = '{}'", diary_name);
         Store::entries(self)
-            .map(|iter| DiaryEntryIterator::new(String::from(diary_name), iter.without_store()))
+            .map(|iter| DiaryEntryIterator::new(String::from(diary_name), iter.into_storeid_iter()))
     }
 
     /// get the id of the youngest entry
@@ -151,7 +151,7 @@ impl Diary for Store {
     /// Get all diary names
     fn diary_names(&self) -> Result<DiaryNameIterator> {
         self.entries()
-            .map(|it| DiaryNameIterator::new(it.without_store()))
+            .map(|it| DiaryNameIterator::new(it.into_storeid_iter()))
             .map_err(Error::from)
     }
 
