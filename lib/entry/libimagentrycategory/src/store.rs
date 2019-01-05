@@ -223,7 +223,7 @@ fn mk_category_storeid(base: PathBuf, s: &str) -> Result<StoreId> {
 
 #[inline]
 fn represents_category(store: &Store, sid: StoreId, name: &str) -> Result<bool> {
-    sid.exists()
+    store.exists(sid.clone())
         .context(err_msg("Store id handling error"))
         .map_err(Error::from)
         .and_then(|bl| {
