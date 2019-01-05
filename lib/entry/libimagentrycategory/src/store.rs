@@ -130,7 +130,6 @@ impl CategoryStore for Store {
 mod tests {
     extern crate env_logger;
     use std::path::PathBuf;
-    use std::sync::Arc;
 
     use super::*;
 
