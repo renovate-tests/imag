@@ -157,9 +157,7 @@ fn alter(rt: &Runtime, path: StoreId, add: Option<Vec<Tag>>, rem: Option<Vec<Tag
         },
     }
 
-    let _ = rt
-        .report_touched(&path)
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(&path).unwrap_or_exit();
 }
 
 fn list(path: StoreId, rt: &Runtime) {
@@ -207,9 +205,7 @@ fn list(path: StoreId, rt: &Runtime) {
             .unwrap_or_exit();
     }
 
-    let _ = rt
-        .report_touched(&path)
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(&path).unwrap_or_exit();
 }
 
 /// Get the tags which should be added from the commandline

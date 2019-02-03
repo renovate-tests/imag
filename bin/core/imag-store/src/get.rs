@@ -37,7 +37,7 @@ pub fn get(rt: &Runtime) {
     let _ = match rt.store().get(path.clone()).map_err_trace_exit_unwrap(1) {
         Some(entry) => {
             print_entry(rt, scmd, entry);
-            let _ = rt.report_touched(&path).map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(&path).unwrap_or_exit();
         },
         None        => info!("No entry found"),
     };

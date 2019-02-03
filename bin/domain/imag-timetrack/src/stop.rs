@@ -98,8 +98,7 @@ pub fn stop(rt: &Runtime) -> i32 {
                 }
                 Ok(_) => {
                     format!("Setting end time worked: {:?}", elem);
-                    let _ = rt.report_touched(elem.get_location())
-                        .map_err_trace_exit_unwrap(1);
+                    let _ = rt.report_touched(elem.get_location()).unwrap_or_exit();
                     acc
                 }
             }

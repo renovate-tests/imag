@@ -102,7 +102,7 @@ fn deref(rt: &Runtime) {
                 .map(|s| info!("{}", s))
                 .ok(); // safe here because we exited already in the error case
 
-            let _ = rt.report_touched(&id).map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(&id).unwrap_or_exit();
         },
         None => {
             error!("No entry for id '{}' found", id);

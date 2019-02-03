@@ -25,6 +25,7 @@ use std::io::Stdin;
 use std::sync::Arc;
 use std::io::StdoutLock;
 use std::borrow::Borrow;
+use std::result::Result as RResult;
 
 pub use clap::App;
 use clap::AppSettings;
@@ -41,8 +42,10 @@ use configuration::{fetch_config, override_config, InternalConfiguration};
 use logger::ImagLogger;
 use io::OutputProxy;
 
+use libimagerror::exit::ExitCode;
 use libimagerror::errors::ErrorMsg as EM;
 use libimagerror::trace::*;
+use libimagerror::io::ToExitCode;
 use libimagstore::store::Store;
 use libimagstore::storeid::StoreId;
 use libimagstore::file_abstraction::InMemoryFileAbstraction;
@@ -573,14 +576,14 @@ impl<'a> Runtime<'a> {
             .map_err(Error::from)
     }
 
-    pub fn report_touched(&self, id: &StoreId) -> Result<()> {
+    pub fn report_touched(&self, id: &StoreId) -> RResult<(), ExitCode> {
         let out      = ::std::io::stdout();
         let mut lock = out.lock();
 
         self.report_touched_id(id, &mut lock)
     }
 
-    pub fn report_all_touched<ID, I>(&self, ids: I) -> Result<()>
+    pub fn report_all_touched<ID, I>(&self, ids: I) -> RResult<(), ExitCode>
         where ID: Borrow<StoreId> + Sized,
               I: Iterator<Item = ID>
     {
@@ -595,15 +598,15 @@ impl<'a> Runtime<'a> {
     }
 
     #[inline]
-    fn report_touched_id(&self, id: &StoreId, output: &mut StdoutLock) -> Result<()> {
+    fn report_touched_id(&self, id: &StoreId, output: &mut StdoutLock) -> RResult<(), ExitCode> {
         use std::io::Write;
 
         if self.output_is_pipe() && !self.ignore_ids {
             trace!("Reporting: {} to {:?}", id, output);
-            writeln!(output, "{}", id)?;
+            writeln!(output, "{}", id).to_exit_code()
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 }
 

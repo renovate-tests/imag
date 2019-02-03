@@ -52,6 +52,7 @@ use std::path::PathBuf;
 use libimagrt::setup::generate_runtime_setup;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
+use libimagerror::exit::ExitUnwrap;
 use libimagstore::storeid::StoreId;
 use libimagstore::store::Store;
 use libimagstore::store::FileLockEntry;
@@ -131,8 +132,7 @@ fn main() {
         })
         .map_err_trace_exit_unwrap(1);
 
-    let _ = rt.report_touched(&destname)
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(&destname).unwrap_or_exit();
 
     // re-add links to moved entry
     relink(rt.store(), destname, &mut linked_entries);

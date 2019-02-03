@@ -155,7 +155,7 @@ fn create(rt: &Runtime) {
     debug!("Builder = {:?}", hb);
 
     let fle = hb.build(rt.store()).map_err_trace_exit_unwrap(1);
-    let _   = rt.report_touched(fle.get_location()).map_err_trace_exit_unwrap(1);
+    let _   = rt.report_touched(fle.get_location()).unwrap_or_exit();
 }
 
 fn delete(rt: &Runtime) {
@@ -441,9 +441,7 @@ fn list(rt: &Runtime) {
             let mut list = lister_fn(&e);
 
             {
-                let _ = rt
-                    .report_touched(e.get_location())
-                    .map_err_trace_exit_unwrap(1);
+                let _ = rt.report_touched(e.get_location()).unwrap_or_exit();
             }
 
             v.append(&mut list);
@@ -520,9 +518,7 @@ fn show(rt: &Runtime) {
                     let mut instances = instance_lister_fn(&e);
 
                     {
-                        let _ = rt
-                            .report_touched(e.get_location())
-                            .map_err_trace_exit_unwrap(1);
+                        let _ = rt.report_touched(e.get_location()).unwrap_or_exit();
                     }
 
                     v.append(&mut instances);
@@ -582,9 +578,7 @@ fn done(rt: &Runtime) {
         }
 
         {
-            let _ = rt
-                .report_touched(r.get_location())
-                .map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(r.get_location()).unwrap_or_exit();
         }
 
     }

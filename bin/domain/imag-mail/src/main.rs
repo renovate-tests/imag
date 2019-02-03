@@ -95,7 +95,7 @@ fn import_mail(rt: &Runtime) {
         .map_info_str("Ok")
         .map_err_trace_exit_unwrap(1);
 
-    let _ = rt.report_touched(mail.fle().get_location()).map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(mail.fle().get_location()).unwrap_or_exit();
 }
 
 fn list(rt: &Runtime) {
@@ -147,7 +147,7 @@ fn list(rt: &Runtime) {
                  to   = to
         ).to_exit_code().unwrap_or_exit();
 
-        let _ = rt.report_touched(m.fle().get_location()).map_err_trace_exit_unwrap(1);
+        let _ = rt.report_touched(m.fle().get_location()).unwrap_or_exit();
     }
 
     let _ = rt.store()

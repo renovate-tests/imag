@@ -138,9 +138,7 @@ fn add(rt: &Runtime) {
                 .set_coordinates(c.clone())
                 .map_err_trace_exit_unwrap(1);
 
-            let _ = rt
-                .report_touched(&id)
-                .map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(&id).unwrap_or_exit();
         });
 }
 
@@ -175,9 +173,7 @@ fn remove(rt: &Runtime) {
                 let _ = writeln!(rt.stdout(), "{}", removed_value).to_exit_code().unwrap_or_exit();
             }
 
-            let _ = rt
-                .report_touched(&id)
-                .map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(&id).unwrap_or_exit();
         });
 }
 
@@ -204,9 +200,7 @@ fn get(rt: &Runtime) {
 
             let _ = writeln!(stdout, "{}", value).to_exit_code().unwrap_or_exit();
 
-            let _ = rt
-                .report_touched(&id)
-                .map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(&id).unwrap_or_exit();
         })
 
 }

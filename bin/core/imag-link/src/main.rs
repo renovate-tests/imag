@@ -164,7 +164,7 @@ fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
                 .map_err_trace_exit_unwrap(1)
                 .into_iter();
 
-            let _ = rt.report_all_touched(iter).map_err_trace_exit_unwrap(1);
+            let _ = rt.report_all_touched(iter).unwrap_or_exit();
         } else {
             debug!("Linking internally: {:?} -> {:?}", from, entry);
 
@@ -187,18 +187,14 @@ fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
                 .add_internal_link(&mut to_entry)
                 .map_err_trace_exit_unwrap(1);
 
-            let _ = rt
-                .report_touched(to_entry.get_location())
-                .map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(to_entry.get_location()).unwrap_or_exit();
         }
 
 
         info!("Ok: {} -> {}", from, entry);
     }
 
-    let _ = rt
-        .report_touched(from_entry.get_location())
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(from_entry.get_location()).unwrap_or_exit();
 }
 
 fn remove_linking(rt: &Runtime) {
@@ -226,9 +222,7 @@ fn remove_linking(rt: &Runtime) {
                     .remove_internal_link(&mut from)
                     .map_err_trace_exit_unwrap(1);
 
-                let _ = rt
-                    .report_touched(to_entry.get_location())
-                    .map_err_trace_exit_unwrap(1);
+                let _ = rt.report_touched(to_entry.get_location()).unwrap_or_exit();
             },
             Ok(None) => {
                 // looks like this is not an entry, but a filesystem URI and therefor an
@@ -250,9 +244,7 @@ fn remove_linking(rt: &Runtime) {
             }
         });
 
-    let _ = rt
-        .report_touched(from.get_location())
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(from.get_location()).unwrap_or_exit();
 }
 
 fn unlink(rt: &Runtime) {
@@ -267,9 +259,7 @@ fn unlink(rt: &Runtime) {
             .unlink(rt.store())
             .map_err_trace_exit_unwrap(1);
 
-        let _ = rt
-            .report_touched(&id)
-            .map_err_trace_exit_unwrap(1);
+        let _ = rt.report_touched(&id).unwrap_or_exit();
     });
 }
 
@@ -323,18 +313,14 @@ fn list_linkings(rt: &Runtime) {
                         })
                 }
 
-                let _ = rt
-                    .report_touched(entry.get_location())
-                    .map_err_trace_exit_unwrap(1);
+                let _ = rt.report_touched(entry.get_location()).unwrap_or_exit();
 
             },
             Ok(None)        => warn!("Not found: {}", id),
             Err(e)          => trace_error(&e),
         }
 
-        let _ = rt
-            .report_touched(&id)
-            .map_err_trace_exit_unwrap(1);
+        let _ = rt.report_touched(&id).unwrap_or_exit();
     });
 
     if !list_plain {

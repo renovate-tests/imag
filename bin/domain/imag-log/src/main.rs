@@ -171,7 +171,7 @@ fn show(rt: &Runtime) {
 
             let _ = rt
                 .report_touched(entry.get_location())
-                .map_err_trace_exit_unwrap(1);
+                .unwrap_or_exit();
             Ok(())
         })
         .collect::<Result<Vec<()>, ExitCode>>()

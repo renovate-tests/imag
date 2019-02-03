@@ -87,8 +87,7 @@ pub fn cont(rt: &Runtime) -> i32 {
                              .map(|_| 0)
                              .map_err_trace();
 
-                         let _ = rt.report_touched(tracking.get_location())
-                             .map_err_trace_exit_unwrap(1);
+                         let _ = rt.report_touched(tracking.get_location()).unwrap_or_exit();
 
                          val
                      })

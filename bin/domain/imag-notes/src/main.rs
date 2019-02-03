@@ -112,9 +112,7 @@ fn create(rt: &Runtime) {
             .map_err_trace_exit_unwrap(1);
     }
 
-    let _ = rt
-        .report_touched(note.get_location())
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(note.get_location()).unwrap_or_exit();
 }
 
 fn delete(rt: &Runtime) {
@@ -136,9 +134,7 @@ fn edit(rt: &Runtime) {
                 .map_warn_err_str("Editing failed")
                 .map_err_trace_exit_unwrap(1);
 
-            let _ = rt
-                .report_touched(note.get_location())
-                .map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(note.get_location()).unwrap_or_exit();
         })
         .unwrap_or_else(|| {
             error!("Cannot find note with name '{}'", name);
@@ -170,9 +166,7 @@ fn list(rt: &Runtime) {
                 .to_exit_code()
                 .unwrap_or_exit();
 
-            let _ = rt
-                .report_touched(note.get_location())
-                .map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(note.get_location()).unwrap_or_exit();
         });
 }
 

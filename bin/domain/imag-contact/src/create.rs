@@ -204,8 +204,7 @@ pub fn create(rt: &Runtime) {
                 .create_from_path(&location)
                 .map_err_trace_exit_unwrap(1);
 
-            let _ = rt.report_touched(entry.get_location())
-                .map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(entry.get_location()).unwrap_or_exit();
 
             info!("Created entry in store");
         } else {

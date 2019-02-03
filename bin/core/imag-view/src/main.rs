@@ -98,8 +98,7 @@ fn main() {
         let files = entries
             .map(|entry| {
                 let tmpfile = create_tempfile_for(&entry, view_header, hide_content);
-                rt.report_touched(entry.get_location())
-                    .map_err_trace_exit_unwrap(1);
+                rt.report_touched(entry.get_location()).unwrap_or_exit();
                 tmpfile
             })
             .collect::<Vec<_>>();
@@ -209,8 +208,7 @@ fn main() {
                         .view_entry(&entry, &mut outlock)
                         .map_err_trace_exit_unwrap(1);
 
-                    rt.report_touched(entry.get_location())
-                        .map_err_trace_exit_unwrap(1);
+                    rt.report_touched(entry.get_location()).unwrap_or_exit();
                 });
         } else {
             let mut viewer = StdoutViewer::new(view_header, !hide_content);
@@ -244,8 +242,7 @@ fn main() {
                         .view_entry(&entry, &mut outlock)
                         .map_err_trace_exit_unwrap(1);
 
-                    rt.report_touched(entry.get_location())
-                        .map_err_trace_exit_unwrap(1);
+                    rt.report_touched(entry.get_location()).unwrap_or_exit();
                 });
         }
     }

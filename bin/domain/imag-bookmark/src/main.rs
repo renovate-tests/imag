@@ -101,18 +101,14 @@ fn add(rt: &Runtime) {
         .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
         .map_err_trace_exit_unwrap(1);
 
-    let _ = rt
-        .report_touched(collection.get_location())
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(collection.get_location()).unwrap_or_exit();
 
     for url in scmd.values_of("urls").unwrap() { // unwrap saved by clap
         let new_ids = collection
             .add_link(rt.store(), BookmarkLink::from(url))
             .map_err_trace_exit_unwrap(1);
 
-        let _ = rt
-            .report_all_touched(new_ids.into_iter())
-            .map_err_trace_exit_unwrap(1);
+        let _ = rt.report_all_touched(new_ids.into_iter()).unwrap_or_exit();
     }
 
     info!("Ready");
@@ -124,7 +120,7 @@ fn collection(rt: &Runtime) {
     if scmd.is_present("add") { // adding a new collection
         let name = scmd.value_of("add").unwrap();
         if let Ok(id) = BookmarkCollectionStore::new(rt.store(), &name) {
-            let _ = rt.report_touched(id.get_location()).map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(id.get_location()).unwrap_or_exit();
             info!("Created: {}", name);
         } else {
             warn!("Creating collection {} failed", name);
@@ -151,9 +147,7 @@ fn list(rt: &Runtime) {
         .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
         .map_err_trace_exit_unwrap(1);
 
-    let _ = rt
-        .report_touched(collection.get_location())
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(collection.get_location()).unwrap_or_exit();
 
     collection
         .links(rt.store())
@@ -177,18 +171,14 @@ fn remove(rt: &Runtime) {
         .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
         .map_err_trace_exit_unwrap(1);
 
-    let _ = rt
-        .report_touched(collection.get_location())
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(collection.get_location()).unwrap_or_exit();
 
     for url in scmd.values_of("urls").unwrap() { // enforced by clap
         let removed_links = collection
             .remove_link(rt.store(), BookmarkLink::from(url))
             .map_err_trace_exit_unwrap(1);
 
-        let _ = rt
-            .report_all_touched(removed_links.into_iter())
-            .map_err_trace_exit_unwrap(1);
+        let _ = rt.report_all_touched(removed_links.into_iter()).unwrap_or_exit();
     }
 
     info!("Ready");

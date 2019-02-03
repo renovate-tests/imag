@@ -181,9 +181,7 @@ fn create(rt: &Runtime, wiki_name: &str) {
         writeln!(lock, "{}", id).to_exit_code().unwrap_or_exit()
     }
 
-    let _ = rt
-        .report_touched(&id)
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(&id).unwrap_or_exit();
 }
 
 fn create_wiki(rt: &Runtime) {
@@ -191,9 +189,7 @@ fn create_wiki(rt: &Runtime) {
     let wiki_name  = String::from(scmd.value_of("create-wiki-name").unwrap()); // safe by clap
     let (_, index) = rt.store().create_wiki(&wiki_name).map_err_trace_exit_unwrap(1);
 
-    let _ = rt
-        .report_touched(index.get_location())
-        .map_err_trace_exit_unwrap(1);
+    let _ = rt.report_touched(index.get_location()).unwrap_or_exit();
 }
 
 fn show(rt: &Runtime, wiki_name: &str) {
@@ -251,9 +247,7 @@ fn show(rt: &Runtime, wiki_name: &str) {
                 .to_exit_code()
                 .unwrap_or_exit();
 
-        let _ = rt
-            .report_touched(entry.get_location())
-            .map_err_trace_exit_unwrap(1);
+        let _ = rt.report_touched(entry.get_location()).unwrap_or_exit();
     }
 }
 

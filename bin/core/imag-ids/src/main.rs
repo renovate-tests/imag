@@ -127,11 +127,12 @@ fn main() {
     trace!("Got output: {:?}", stdout);
 
     iterator.for_each(|id| {
-        rt.report_touched(&id).map_err_trace_exit_unwrap(1);
+        let _ = rt.report_touched(&id).unwrap_or_exit(); // .map_err_trace_exit_unwrap(1);
+
         if !rt.output_is_pipe() {
             let id = id.to_str().map_err_trace_exit_unwrap(1);
             trace!("Writing to {:?}", stdout);
-            let _ = writeln!(stdout, "{}", id)
+            writeln!(stdout, "{}", id)
                 .to_exit_code()
                 .unwrap_or_exit();
         }

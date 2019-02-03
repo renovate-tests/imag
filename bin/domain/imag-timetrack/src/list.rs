@@ -162,8 +162,7 @@ pub fn list_impl(rt: &Runtime,
                     .collect();
                 tab.add_row(Row::new(cells));
 
-                let _ = rt.report_touched(e.get_location())
-                    .map_err_trace_exit_unwrap(1);
+                let _ = rt.report_touched(e.get_location()).unwrap_or_exit();
 
                 Ok(tab)
             })

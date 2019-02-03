@@ -48,7 +48,7 @@ pub fn retrieve(rt: &Runtime) {
                 .map_dbg(|e| format!("{:?}", e))
                 .map_err_trace_exit_unwrap(1);
 
-            let _ = rt.report_touched(&path).map_err_trace_exit_unwrap(1);
+            let _ = rt.report_touched(&path).unwrap_or_exit();
         });
 }
 
