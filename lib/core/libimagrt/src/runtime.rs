@@ -140,6 +140,7 @@ impl<'a> Runtime<'a> {
         debug!("RTP path    = {:?}", rtp);
         debug!("Store path  = {:?}", storepath);
         debug!("CLI         = {:?}", matches);
+        trace!("Config      = {:#?}", config);
 
         let store_result = if cli_app.use_inmemory_fs() {
             Store::new_with_backend(storepath,
