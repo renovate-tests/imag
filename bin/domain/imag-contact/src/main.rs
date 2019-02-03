@@ -288,52 +288,56 @@ fn find(rt: &Runtime) {
         })
         .enumerate();
 
-    if scmd.is_present("json") {
-        let v : Vec<DeserVcard> = iterator.map(|(_, tlp)| tlp.1).collect();
+    if !rt.output_is_pipe() {
+        if scmd.is_present("json") {
+            let v : Vec<DeserVcard> = iterator.map(|(_, tlp)| tlp.1).collect();
 
-        match ::serde_json::to_string(&v) {
-            Ok(s) => writeln!(rt.stdout(), "{}", s).to_exit_code().unwrap_or_exit(),
-            Err(e) => {
-                error!("Error generating JSON: {:?}", e);
-                ::std::process::exit(1)
+            match ::serde_json::to_string(&v) {
+                Ok(s) => writeln!(rt.stdout(), "{}", s).to_exit_code().unwrap_or_exit(),
+                Err(e) => {
+                    error!("Error generating JSON: {:?}", e);
+                    ::std::process::exit(1)
+                }
             }
+        } else if scmd.is_present("find-id") {
+            iterator
+            .for_each(|(_i, (entry, _))| {
+                writeln!(rt.stdout(), "{}", entry.get_location())
+                    .to_exit_code()
+                    .unwrap_or_exit();
+            })
+        } else if scmd.is_present("find-full-id") {
+            let storepath = rt.store().path().display();
+            iterator
+            .for_each(|(_i, (entry, _))| {
+                writeln!(rt.stdout(), "{}/{}", storepath, entry.get_location())
+                    .to_exit_code()
+                    .unwrap_or_exit();
+            })
+        } else {
+            iterator
+            .for_each(|(i, (_, card))| {
+                let fmt = if scmd.is_present("find-show") {
+                    &show_format
+                } else if scmd.is_present("find-list") {
+                    &list_format
+                } else { // default: find-list
+                    &list_format
+                };
+
+                let data = build_data_object_for_handlebars(i, &card);
+                let s = fmt
+                    .render("format", &data)
+                    .map_err(Error::from)
+                    .map_err_trace_exit_unwrap(1);
+
+                let _ = writeln!(rt.stdout(), "{}", s)
+                    .to_exit_code()
+                    .unwrap_or_exit();
+            });
         }
-    } else if scmd.is_present("find-id") {
-        iterator
-        .for_each(|(_i, (entry, _))| {
-            writeln!(rt.stdout(), "{}", entry.get_location())
-                .to_exit_code()
-                .unwrap_or_exit();
-        })
-    } else if scmd.is_present("find-full-id") {
-        let storepath = rt.store().path().display();
-        iterator
-        .for_each(|(_i, (entry, _))| {
-            writeln!(rt.stdout(), "{}/{}", storepath, entry.get_location())
-                .to_exit_code()
-                .unwrap_or_exit();
-        })
-    } else {
-        iterator
-        .for_each(|(i, (_, card))| {
-            let fmt = if scmd.is_present("find-show") {
-                &show_format
-            } else if scmd.is_present("find-list") {
-                &list_format
-            } else { // default: find-list
-                &list_format
-            };
-
-            let data = build_data_object_for_handlebars(i, &card);
-            let s = fmt
-                .render("format", &data)
-                .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1);
-
-            let _ = writeln!(rt.stdout(), "{}", s)
-                .to_exit_code()
-                .unwrap_or_exit();
-        });
+    } else { // if not printing, we still have to consume the iterator to report the touched IDs
+        let _ = iterator.collect::<Vec<_>>();
     }
 }
 
