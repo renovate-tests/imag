@@ -19,14 +19,10 @@
 
 use std::path::PathBuf;
 
-use filters::filter::Filter;
-
 use libimagstore::store::Store;
-use libimagstore::store::Entry;
 use libimagstore::store::FileLockEntry;
 use libimagstore::storeid::IntoStoreId;
-use libimagstore::storeid::StoreId;
-use libimagstore::storeid::StoreIdIteratorWithStore;
+use libimagstore::storeid::StoreIdIterator;
 use libimagentrylink::internal::InternalLinker;
 
 use failure::Fallible as Result;
@@ -95,9 +91,8 @@ impl<'a, 'b> Wiki<'a, 'b> {
         entry.add_internal_link(&mut index).map(|_| entry)
     }
 
-    pub fn all_ids(&self) -> Result<WikiIdIterator> {
-        let filter = IdIsInWikiFilter(self.1);
-        Ok(WikiIdIterator(self.0.entries()?.without_store().with_store(self.0), filter))
+    pub fn all_ids(&self) -> Result<StoreIdIterator> {
+        self.0.entries().map(|iter| iter.in_collection("wiki").without_store())
     }
 
     pub fn delete_entry<EN: AsRef<str>>(&self, entry_name: EN) -> Result<()> {
@@ -106,44 +101,4 @@ impl<'a, 'b> Wiki<'a, 'b> {
         self.0.delete(sid)
     }
 }
-
-pub struct WikiIdIterator<'a>(StoreIdIteratorWithStore<'a>, IdIsInWikiFilter<'a>);
-
-impl<'a> Iterator for WikiIdIterator<'a> {
-    type Item = Result<StoreId>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some(next) = self.0.next() {
-            match next {
-                Ok(next) => if self.1.filter(&next) {
-                    return Some(Ok(next));
-                },
-                Err(e) => return Some(Err(e)),
-            }
-        }
-
-        None
-    }
-}
-
-pub struct IdIsInWikiFilter<'a>(&'a str);
-
-impl<'a> IdIsInWikiFilter<'a> {
-    pub fn new(wiki_name: &'a str) -> Self {
-        IdIsInWikiFilter(wiki_name)
-    }
-}
-
-impl<'a> Filter<StoreId> for IdIsInWikiFilter<'a> {
-    fn filter(&self, id: &StoreId) -> bool {
-        id.is_in_collection(&["wiki", &self.0])
-    }
-}
-
-impl<'a> Filter<Entry> for IdIsInWikiFilter<'a> {
-    fn filter(&self, e: &Entry) -> bool {
-        e.get_location().is_in_collection(&["wiki", &self.0])
-    }
-}
-
 
