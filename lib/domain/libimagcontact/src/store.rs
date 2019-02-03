@@ -77,15 +77,7 @@ impl<'a> ContactStore<'a> for Store {
     }
 
     fn all_contacts(&'a self) -> Result<StoreIdIterator> {
-        let iter = self
-            .entries()?
-            .without_store()
-            .filter(|id| match *id {
-                Ok(ref id) => id.is_in_collection(&["contact"]),
-                Err(_) => true,
-            });
-
-        Ok(StoreIdIterator::new(Box::new(iter)))
+        self.entries().map(|iter| iter.in_collection("contact").without_store())
     }
 
 }
