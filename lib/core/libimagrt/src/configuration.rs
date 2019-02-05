@@ -46,7 +46,7 @@ pub fn fetch_config(searchpath: &PathBuf) -> Result<Option<Value>> {
     use libimagutil::variants::generate_variants as gen_vars;
     use libimagerror::trace::trace_error;
 
-    let variants = vec!["config", "config.toml", "imagrc", "imagrc.toml"];
+    let variants : Vec<&'static str> = vec!["config", "config.toml", "imagrc", "imagrc.toml"];
     let modifier = |base: &PathBuf, v: &'static str| {
         let mut base = base.clone();
         base.push(String::from(v));
@@ -55,13 +55,15 @@ pub fn fetch_config(searchpath: &PathBuf) -> Result<Option<Value>> {
 
     let vals = vec![
         vec![searchpath.clone()],
-        gen_vars(searchpath, variants.clone(), &modifier),
+        gen_vars(searchpath, variants, &modifier),
 
-        env::var("HOME").map(|home| gen_vars(&PathBuf::from(home), variants.clone(), &modifier))
-                        .unwrap_or(vec![]),
+        env::var("HOME")
+            .map(|home| gen_vars(&PathBuf::from(home), variants, &modifier))
+            .unwrap_or(vec![]),
 
-        xdg_basedir::get_data_home().map(|data_dir| gen_vars(&data_dir, variants.clone(), &modifier))
-                                    .unwrap_or(vec![]),
+        xdg_basedir::get_data_home()
+            .map(|data_dir| gen_vars(&data_dir, variants, &modifier))
+            .unwrap_or(vec![]),
     ];
 
     let config = Itertools::flatten(vals.iter())
