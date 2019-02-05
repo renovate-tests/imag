@@ -245,13 +245,6 @@ impl<'a> Runtime<'a> {
                 .required(false)
                 .takes_value(true))
 
-            .arg(Arg::with_name(Runtime::arg_logdest_name())
-                .long(Runtime::arg_logdest_name())
-                .help("Override the logging destinations from the configuration: values can be seperated by ',', a value of '-' marks the stderr output, everything else is expected to be a path")
-                .required(false)
-                .takes_value(true)
-                .value_name("LOGDESTS"))
-
             .arg(Arg::with_name(Runtime::arg_ignore_ids_name())
                 .long(Runtime::arg_ignore_ids_name())
                 .help("Do not assume that the output is a pipe to another imag command. This overrides the default behaviour where imag only prints the IDs of the touched entries to stdout if stdout is a pipe.")
@@ -342,11 +335,6 @@ impl<'a> Runtime<'a> {
     pub fn with_store(mut self, s: Store) -> Self {
         self.store = s;
         self
-    }
-
-    /// Get the argument name for the logging destination
-    pub fn arg_logdest_name() -> &'static str {
-        "logging-destinations"
     }
 
     #[cfg(feature = "pub_logging_initialization")]

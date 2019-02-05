@@ -280,8 +280,8 @@ fn translate_destinations(raw: &Vec<Value>) -> Result<Vec<LogDestination>> {
 fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
     -> Result<Vec<LogDestination>>
 {
-
     match config {
+        None      => Ok(vec![LogDestination::default()]),
         Some(cfg) => cfg
             .read("imag.logging.destinations")
             .map_err(Error::from)
@@ -293,21 +293,6 @@ fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
                 Error::from(err_msg(msg))
             })
             .and_then(translate_destinations),
-        None => {
-            if let Some(values) = matches.value_of(Runtime::arg_logdest_name()) {
-                // parse logdest specification from commandline
-
-                values.split(",")
-                    .fold(Ok(vec![]), move |acc, dest| {
-                        acc.and_then(|mut v| {
-                            v.push(translate_destination(dest)?);
-                            Ok(v)
-                        })
-                    })
-            } else {
-                Ok(vec![ LogDestination::default() ])
-            }
-        }
     }
 }
 
