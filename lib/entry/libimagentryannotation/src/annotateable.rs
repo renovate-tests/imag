@@ -18,6 +18,7 @@
 //
 
 use toml::Value;
+use uuid::Uuid;
 
 use libimagstore::store::Entry;
 use libimagstore::store::FileLockEntry;
@@ -28,7 +29,6 @@ use libimagentrylink::internal::InternalLinker;
 use libimagentryutil::isa::Is;
 use libimagentryutil::isa::IsKindHeaderPathProvider;
 
-use toml_query::read::TomlValueReadTypeExt;
 use toml_query::insert::TomlValueInsertExt;
 
 use failure::Fallible as Result;
@@ -37,9 +37,10 @@ use failure::Error;
 use failure::err_msg;
 
 use iter::*;
+use module_path::ModuleEntryPath;
 
 pub trait Annotateable {
-    fn annotate<'a>(&mut self, store: &'a Store, ann_name: &str) -> Result<FileLockEntry<'a>>;
+    fn annotate<'a>(&mut self, store: &'a Store) -> Result<FileLockEntry<'a>>;
     fn denotate<'a>(&mut self, store: &'a Store, ann_name: &str) -> Result<Option<FileLockEntry<'a>>>;
     fn annotations<'a>(&self, store: &'a Store) -> Result<AnnotationIter<'a>>;
     fn is_annotation(&self) -> Result<bool>;
@@ -50,9 +51,11 @@ provide_kindflag_path!(IsAnnotation, "annotation.is_annotation");
 impl Annotateable for Entry {
 
     /// Annotate an entry, returns the new entry which is used to annotate
-    fn annotate<'a>(&mut self, store: &'a Store, ann_name: &str) -> Result<FileLockEntry<'a>> {
-        use module_path::ModuleEntryPath;
-        store.retrieve(ModuleEntryPath::new(ann_name).into_storeid()?)
+    fn annotate<'a>(&mut self, store: &'a Store) -> Result<FileLockEntry<'a>> {
+        let ann_name = Uuid::new_v4().to_hyphenated().to_string();
+        debug!("Creating annotation with name = {}", ann_name);
+
+        store.retrieve(ModuleEntryPath::new(ann_name.clone()).into_storeid()?)
             .and_then(|mut anno| {
                 {
                     let _ = anno.set_isflag::<IsAnnotation>()?;
@@ -70,23 +73,17 @@ impl Annotateable for Entry {
             })
     }
 
-    /// Checks the current entry for all annotations and removes the one where the name is
-    /// `ann_name`, which is then returned
+    // Removes the annotation `ann_name` from the current entry.
+    // Fails if there's no such annotation entry or if the link to that annotation entry does not
+    // exist.
     fn denotate<'a>(&mut self, store: &'a Store, ann_name: &str) -> Result<Option<FileLockEntry<'a>>> {
-        for annotation in self.annotations(store)? {
-            let mut anno = annotation?;
-            let name = match anno.get_header().read_string("annotation.name")? {
-                Some(ref name) => name.clone(),
-                None           => continue,
-            };
-
-            if name == ann_name {
-                let _ = self.remove_internal_link(&mut anno)?;
-                return Ok(Some(anno));
-            }
+        if let Some(mut annotation) = store.get(ModuleEntryPath::new(ann_name).into_storeid()?)? {
+            let _ = self.remove_internal_link(&mut annotation)?;
+            Ok(Some(annotation))
+        } else {
+            // error: annotation does not exist
+            Err(format_err!("Annotation '{}' does not exist", ann_name)).map_err(Error::from)
         }
-
-        Ok(None)
     }
 
     /// Get all annotations of an entry
