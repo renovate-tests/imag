@@ -24,7 +24,7 @@ use failure::Error;
 
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::trace_error;
-use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 use libimagtimetrack::tag::TimeTrackingTag;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
 

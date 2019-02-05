@@ -38,7 +38,7 @@ pub fn retrieve(rt: &Runtime) {
             let id    = scmd.value_of("id").unwrap();
             let path  = PathBuf::from(id);
             let store = Some(rt.store().path().clone());
-            let path  = StoreId::new(store, path).map_err_trace_exit_unwrap(1);
+            let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
             debug!("path = {:?}", path);
 
             rt.store()
@@ -46,7 +46,7 @@ pub fn retrieve(rt: &Runtime) {
                 .map(|e| print_entry(rt, scmd, e))
                 .map_dbg_str("No entry")
                 .map_dbg(|e| format!("{:?}", e))
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let _ = rt.report_touched(&path).unwrap_or_exit();
         });
@@ -55,7 +55,7 @@ pub fn retrieve(rt: &Runtime) {
 pub fn print_entry(rt: &Runtime, scmd: &ArgMatches, e: FileLockEntry) {
     if do_print_raw(scmd) {
         debug!("Printing raw content...");
-        let _ = writeln!(rt.stdout(), "{}", e.to_str().map_err_trace_exit_unwrap(1))
+        let _ = writeln!(rt.stdout(), "{}", e.to_str().map_err_trace_exit_unwrap())
             .to_exit_code()
             .unwrap_or_exit();
     } else if do_filter(scmd) {

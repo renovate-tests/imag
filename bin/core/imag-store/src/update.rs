@@ -22,6 +22,7 @@ use std::path::PathBuf;
 
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 use libimagstore::storeid::StoreId;
 
 use util::build_toml_header;
@@ -31,7 +32,7 @@ pub fn update(rt: &Runtime) {
     let id    = scmd.value_of("id").unwrap(); // Safe by clap
     let path  = PathBuf::from(id);
     let store = Some(rt.store().path().clone());
-    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap(1);
+    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
 
     let _ = rt.store()
         .retrieve(path)

@@ -111,7 +111,7 @@ fn main() {
                 other    => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-link", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 },
@@ -125,7 +125,7 @@ fn main() {
             }
         })
         .ok_or_else(|| Error::from(err_msg("No commandline call".to_owned())))
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 }
 
 fn get_entry_by_name<'a>(rt: &'a Runtime, name: &str) -> Result<Option<FileLockEntry<'a>>> {
@@ -142,7 +142,7 @@ fn get_entry_by_name<'a>(rt: &'a Runtime, name: &str) -> Result<Option<FileLockE
 fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
     where I: Iterator<Item = &'a str>
 {
-    let mut from_entry = match get_entry_by_name(rt, from).map_err_trace_exit_unwrap(1) {
+    let mut from_entry = match get_entry_by_name(rt, from).map_err_trace_exit_unwrap() {
         Some(e) => e,
         None    => {
             debug!("No 'from' entry");
@@ -152,7 +152,7 @@ fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
 
     for entry in to {
         debug!("Handling 'to' entry: {:?}", entry);
-        if !rt.store().get(PathBuf::from(entry)).map_err_trace_exit_unwrap(1).is_some() {
+        if !rt.store().get(PathBuf::from(entry)).map_err_trace_exit_unwrap().is_some() {
             debug!("Linking externally: {:?} -> {:?}", from, entry);
             let url = Url::parse(entry).unwrap_or_else(|e| {
                 error!("Error parsing URL: {:?}", e);
@@ -161,22 +161,22 @@ fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
 
             let iter = from_entry
                 .add_external_link(rt.store(), url)
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .into_iter();
 
             let _ = rt.report_all_touched(iter).unwrap_or_exit();
         } else {
             debug!("Linking internally: {:?} -> {:?}", from, entry);
 
-            let from_id = StoreId::new_baseless(PathBuf::from(from)).map_err_trace_exit_unwrap(1);
-            let entr_id = StoreId::new_baseless(PathBuf::from(entry)).map_err_trace_exit_unwrap(1);
+            let from_id = StoreId::new_baseless(PathBuf::from(from)).map_err_trace_exit_unwrap();
+            let entr_id = StoreId::new_baseless(PathBuf::from(entry)).map_err_trace_exit_unwrap();
 
             if from_id == entr_id {
                 error!("Cannot link entry with itself. Exiting");
                 ::std::process::exit(1)
             }
 
-            let mut to_entry = match rt.store().get(entr_id).map_err_trace_exit_unwrap(1) {
+            let mut to_entry = match rt.store().get(entr_id).map_err_trace_exit_unwrap() {
                 Some(e) => e,
                 None    => {
                     warn!("No 'to' entry: {}", entry);
@@ -185,7 +185,7 @@ fn link_from_to<'a, I>(rt: &'a Runtime, from: &'a str, to: I)
             };
             let _ = from_entry
                 .add_internal_link(&mut to_entry)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let _ = rt.report_touched(to_entry.get_location()).unwrap_or_exit();
         }
@@ -206,21 +206,21 @@ fn remove_linking(rt: &Runtime) {
         .map(|id| {
             rt.store()
                 .get(id)
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .ok_or_else(|| warn_exit("No 'from' entry", 1))
                 .unwrap() // safe by line above
         })
         .unwrap();
 
     rt.ids::<::ui::PathProvider>()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_iter()
         .for_each(|id| match rt.store().get(id.clone()) {
             Err(e) => trace_error(&e),
             Ok(Some(mut to_entry)) => {
                 let _ = to_entry
                     .remove_internal_link(&mut from)
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
 
                 let _ = rt.report_touched(to_entry.get_location()).unwrap_or_exit();
             },
@@ -236,7 +236,7 @@ fn remove_linking(rt: &Runtime) {
                         error!("Error parsing URL: {:?}", e);
                         ::std::process::exit(1);
                     });
-                    from.remove_external_link(rt.store(), url).map_err_trace_exit_unwrap(1);
+                    from.remove_external_link(rt.store(), url).map_err_trace_exit_unwrap();
                     info!("Ok: {}", id);
                 } else {
                     warn!("Entry not found: {:?}", id);
@@ -248,16 +248,16 @@ fn remove_linking(rt: &Runtime) {
 }
 
 fn unlink(rt: &Runtime) {
-    rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1).into_iter().for_each(|id| {
+    rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap().into_iter().for_each(|id| {
         rt.store()
             .get(id.clone())
-            .map_err_trace_exit_unwrap(1)
+            .map_err_trace_exit_unwrap()
             .unwrap_or_else(|| {
                 warn!("No entry for {}", id);
                 ::std::process::exit(1)
             })
             .unlink(rt.store())
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
 
         let _ = rt.report_touched(&id).unwrap_or_exit();
     });
@@ -274,10 +274,10 @@ fn list_linkings(rt: &Runtime) {
     let mut tab = ::prettytable::Table::new();
     tab.set_titles(row!["#", "Link"]);
 
-    rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1).into_iter().for_each(|id| {
+    rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap().into_iter().for_each(|id| {
         match rt.store().get(id.clone()) {
             Ok(Some(entry)) => {
-                for (i, link) in entry.get_internal_links().map_err_trace_exit_unwrap(1).enumerate() {
+                for (i, link) in entry.get_internal_links().map_err_trace_exit_unwrap().enumerate() {
                     let link = link
                         .to_str()
                         .map_warn_err(|e| format!("Failed to convert StoreId to string: {:?}", e))
@@ -296,11 +296,11 @@ fn list_linkings(rt: &Runtime) {
 
                 if list_externals {
                     entry.get_external_links(rt.store())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .enumerate()
                         .for_each(|(i, link)| {
                             let link = link
-                                .map_err_trace_exit_unwrap(1)
+                                .map_err_trace_exit_unwrap()
                                 .into_string();
 
                             if list_plain {

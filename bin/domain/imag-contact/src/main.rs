@@ -104,7 +104,7 @@ fn main() {
                 other    => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-contact", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 },
@@ -119,17 +119,17 @@ fn list(rt: &Runtime) {
     let iterator = rt
         .store()
         .all_contacts()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|fle| fle.ok_or_else(|| Error::from(err_msg("StoreId not found".to_owned()))))
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|fle| {
             let _ = rt.report_touched(fle.get_location()).unwrap_or_exit();
             fle
         })
         .map(|e| e.deser())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .enumerate();
 
     if scmd.is_present("json") {
@@ -148,7 +148,7 @@ fn list(rt: &Runtime) {
         iterator
             .map(|(i, dvcard)| build_data_object_for_handlebars(i, &dvcard))
             .map(|data| list_format.render("format", &data).map_err(Error::from))
-            .trace_unwrap_exit(1)
+            .trace_unwrap_exit()
             .for_each(|s| {
                 writeln!(output, "{}", s).to_exit_code().unwrap_or_exit()
             });
@@ -168,21 +168,21 @@ fn import(rt: &Runtime) {
         let entry = rt
             .store()
             .retrieve_from_path(&path)
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
 
         let _ = rt.report_touched(entry.get_location()).unwrap_or_exit();
     } else if path.is_dir() {
         for entry in WalkDir::new(path).min_depth(1).into_iter() {
             let entry = entry
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             if entry.file_type().is_file() {
                 let pb = PathBuf::from(entry.path());
                 let fle = rt
                     .store()
                     .retrieve_from_path(&pb)
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
 
                 let _ = rt.report_touched(fle.get_location()).unwrap_or_exit();
                 info!("Imported: {}", entry.path().to_str().unwrap_or("<non UTF-8 path>"));
@@ -205,15 +205,15 @@ fn show(rt: &Runtime) {
 
     rt.store()
         .all_contacts()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|o| o.unwrap_or_else(|| {
             error!("Failed to get entry");
             exit(1)
         }))
         .filter_map(|entry| {
-            let deser = entry.deser().map_err_trace_exit_unwrap(1);
+            let deser = entry.deser().map_err_trace_exit_unwrap();
 
             if deser.uid()
                 .ok_or_else(|| {
@@ -236,7 +236,7 @@ fn show(rt: &Runtime) {
             let s = show_format
                 .render("format", &data)
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
             let _ = writeln!(outlock, "{}", s).to_exit_code().unwrap_or_exit();
         });
 }
@@ -256,10 +256,10 @@ fn find(rt: &Runtime) {
     let iterator = rt
         .store()
         .all_contacts()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_get_iter(rt.store())
         .map(|el| {
-            el.map_err_trace_exit_unwrap(1)
+            el.map_err_trace_exit_unwrap()
                 .ok_or_else(|| {
                     error!("Could not get StoreId from Store::all_contacts(). This is a BUG!");
                     ::std::process::exit(1)
@@ -267,7 +267,7 @@ fn find(rt: &Runtime) {
                 .unwrap() // safed above
         })
         .filter_map(|entry| {
-            let card = entry.deser().map_err_trace_exit_unwrap(1);
+            let card = entry.deser().map_err_trace_exit_unwrap();
 
             let str_contains_any = |s: &String, v: &Vec<String>| {
                 v.iter().any(|i| s.contains(i))
@@ -329,7 +329,7 @@ fn find(rt: &Runtime) {
                 let s = fmt
                     .render("format", &data)
                     .map_err(Error::from)
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
 
                 let _ = writeln!(rt.stdout(), "{}", s)
                     .to_exit_code()
@@ -348,19 +348,19 @@ fn get_contact_print_format(config_value_path: &'static str, rt: &Runtime, scmd:
         .unwrap_or_else(|| {
             rt.config()
                 .ok_or_else(|| Error::from(err_msg("No configuration file")))
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .read_string(config_value_path)
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .ok_or_else(|| Error::from(err_msg("Configuration 'contact.list_format' does not exist")))
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
         });
 
     let mut hb = Handlebars::new();
     let _ = hb
         .register_template_string("format", fmt)
         .map_err(Error::from)
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     hb.register_escape_fn(::handlebars::no_escape);
     ::libimaginteraction::format::register_all_color_helpers(&mut hb);

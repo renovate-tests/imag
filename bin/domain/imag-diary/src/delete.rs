@@ -28,6 +28,7 @@ use libimagtimeui::parse::Parse;
 use libimagutil::warn_exit::warn_exit;
 use libimagstore::storeid::IntoStoreId;
 use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 
 use util::get_diary_name;
 
@@ -48,7 +49,7 @@ pub fn delete(rt: &Runtime) {
         .ok_or_else(|| warn_exit("Not deleting entries: missing date/time specification", 1))
         .and_then(|dt: NDT| DiaryId::from_datetime(diaryname.clone(), dt).into_storeid())
         .and_then(|id| rt.store().retrieve(id))
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .get_location()
         .clone();
 
@@ -60,7 +61,7 @@ pub fn delete(rt: &Runtime) {
     let mut output = rt.stdout();
 
     if !ask_bool(&format!("Deleting {:?}", to_del_location), Some(true), &mut input, &mut output)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
     {
         info!("Aborting delete action");
         return;
@@ -71,7 +72,7 @@ pub fn delete(rt: &Runtime) {
     let _ = rt
         .store()
         .delete(to_del_location)
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     info!("Ok!");
 }

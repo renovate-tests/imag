@@ -26,6 +26,7 @@ use chrono::NaiveDateTime;
 use libimagerror::trace::trace_error;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
+use libimagerror::exit::ExitUnwrap;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
 use libimagtimetrack::timetracking::TimeTracking;
 use libimagtimetrack::iter::filter::*;
@@ -35,7 +36,7 @@ use libimagrt::runtime::Runtime;
 pub fn cont(rt: &Runtime) -> i32 {
     let groups = rt.store()
         .get_timetrackings()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .trace_unwrap()
         .filter(|e| has_end_time.filter(&e))
         .group_by(|elem| match elem.get_end_datetime() { // Now group them by the end time
@@ -98,6 +99,6 @@ pub fn cont(rt: &Runtime) -> i32 {
             info!("No trackings to continue");
             Ok(1)
         },
-    }.map_err_trace_exit_unwrap(1)
+    }.map_err_trace_exit_unwrap()
 }
 

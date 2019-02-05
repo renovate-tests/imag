@@ -87,9 +87,9 @@ fn main() {
     let overall_count = rt
         .store()
         .entries()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_get_iter()
-        .filter_map(|res| res.map_err_trace_exit_unwrap(1))
+        .filter_map(|res| res.map_err_trace_exit_unwrap())
         .filter(|entry| pattern.is_match(entry.get_content()))
         .map(|entry| show(&rt, &entry, &pattern, &opts, &mut count))
         .count();

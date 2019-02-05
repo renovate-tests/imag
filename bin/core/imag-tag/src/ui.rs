@@ -108,7 +108,7 @@ impl IdPathProvider for PathProvider {
     fn get_ids(matches: &ArgMatches) -> Vec<StoreId> {
         matches.values_of("id")
             .unwrap()
-            .map(|s| PathBuf::from(s).into_storeid().map_err_trace_exit_unwrap(1))
+            .map(|s| PathBuf::from(s).into_storeid().map_err_trace_exit_unwrap())
             .collect()
     }
 }

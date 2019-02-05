@@ -79,7 +79,7 @@ fn main() {
                 other    => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-gps", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 }
@@ -96,7 +96,7 @@ fn add(rt: &Runtime) {
                 .map(FromStr::from_str)
                 .map(|elem| {
                     elem.or_else(|_| Err(Error::from(err_msg("Error while converting number"))))
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                 })
                 .collect::<Vec<i64>>();
 
@@ -125,18 +125,18 @@ fn add(rt: &Runtime) {
     };
 
     rt.ids::<::ui::PathProvider>()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_iter()
         .for_each(|id| {
             rt.store()
                 .get(id.clone())
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .unwrap_or_else(|| { // if we have Ok(None)
                     error!("No such entry: {}", id);
                     exit(1)
                 })
                 .set_coordinates(c.clone())
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let _ = rt.report_touched(&id).unwrap_or_exit();
         });
@@ -150,24 +150,24 @@ fn remove(rt: &Runtime) {
         .is_present("print-removed"); // safed by main()
 
     rt.ids::<::ui::PathProvider>()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_iter()
         .for_each(|id| {
             let removed_value = rt
                 .store()
                 .get(id.clone())
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .unwrap_or_else(|| { // if we have Ok(None)
                     error!("No such entry: {}", id);
                     exit(1)
                 })
                 .remove_coordinates()
-                .map_err_trace_exit_unwrap(1) // The delete action failed
+                .map_err_trace_exit_unwrap() // The delete action failed
                 .unwrap_or_else(|| { // if we have Ok(None)
                     error!("Entry had no coordinates: {}", id);
                     exit(1)
                 })
-                .map_err_trace_exit_unwrap(1); // The parsing of the deleted values failed
+                .map_err_trace_exit_unwrap(); // The parsing of the deleted values failed
 
             if print_removed {
                 let _ = writeln!(rt.stdout(), "{}", removed_value).to_exit_code().unwrap_or_exit();
@@ -180,19 +180,19 @@ fn remove(rt: &Runtime) {
 fn get(rt: &Runtime) {
     let mut stdout = rt.stdout();
     rt.ids::<::ui::PathProvider>()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_iter()
         .for_each(|id| {
             let value = rt
                 .store()
                 .get(id.clone())
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .unwrap_or_else(|| { // if we have Ok(None)
                     error!("No such entry: {}", id);
                     exit(1)
                 })
                 .get_coordinates()
-                .map_err_trace_exit_unwrap(1) // The get action failed
+                .map_err_trace_exit_unwrap() // The get action failed
                 .unwrap_or_else(|| { // if we have Ok(None)
                     error!("Entry has no coordinates: {}", id);
                     exit(1)

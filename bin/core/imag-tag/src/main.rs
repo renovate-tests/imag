@@ -84,7 +84,7 @@ fn main() {
                                     "Direct interface to the store. Use with great care!",
                                     build_ui);
 
-    let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
+    let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap();
 
     rt.cli()
         .subcommand_name()
@@ -107,7 +107,7 @@ fn main() {
             other => {
                 debug!("Unknown command");
                 let _ = rt.handle_unknown_subcommand("imag-tag", other, rt.cli())
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
                     .code()
                     .map(::std::process::exit);
             },
@@ -161,7 +161,7 @@ fn alter(rt: &Runtime, path: StoreId, add: Option<Vec<Tag>>, rem: Option<Vec<Tag
 }
 
 fn list(path: StoreId, rt: &Runtime) {
-    let entry = match rt.store().get(path.clone()).map_err_trace_exit_unwrap(1) {
+    let entry = match rt.store().get(path.clone()).map_err_trace_exit_unwrap() {
         Some(e) => e,
         None => warn_exit("No entry found.", 1),
     };
@@ -178,7 +178,7 @@ fn list(path: StoreId, rt: &Runtime) {
         comm_out = true;
     }
 
-    let tags = entry.get_tags().map_err_trace_exit_unwrap(1);
+    let tags = entry.get_tags().map_err_trace_exit_unwrap();
 
     if json_out {
         unimplemented!()

@@ -93,14 +93,14 @@ fn main() {
 
     let iterator = if rt.ids_from_stdin() {
         debug!("Fetching IDs from stdin...");
-        let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
+        let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap();
         Box::new(ids.into_iter().map(Ok))
             as Box<Iterator<Item = Result<StoreId, _>>>
     } else {
-        Box::new(rt.store().entries().map_err_trace_exit_unwrap(1))
+        Box::new(rt.store().entries().map_err_trace_exit_unwrap())
             as Box<Iterator<Item = Result<StoreId, _>>>
     }
-    .trace_unwrap_exit(1)
+    .trace_unwrap_exit()
     .filter(|id| collection_filter.filter(id))
     .filter(|id| match query_filter.as_ref() {
         None     => true,
@@ -108,7 +108,7 @@ fn main() {
             let entry = rt
                 .store()
                 .get(id.clone())
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .unwrap_or_else(|| {
                     error!("Tried to get '{}', but it does not exist!", id);
                     exit(1)
@@ -127,10 +127,10 @@ fn main() {
     trace!("Got output: {:?}", stdout);
 
     iterator.for_each(|id| {
-        let _ = rt.report_touched(&id).unwrap_or_exit(); // .map_err_trace_exit_unwrap(1);
+        let _ = rt.report_touched(&id).unwrap_or_exit(); // .map_err_trace_exit_unwrap();
 
         if !rt.output_is_pipe() {
-            let id = id.to_str().map_err_trace_exit_unwrap(1);
+            let id = id.to_str().map_err_trace_exit_unwrap();
             trace!("Writing to {:?}", stdout);
             writeln!(stdout, "{}", id)
                 .to_exit_code()

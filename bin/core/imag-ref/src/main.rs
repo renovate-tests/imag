@@ -51,6 +51,7 @@ use std::path::PathBuf;
 use std::process::exit;
 
 use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 use libimagrt::setup::generate_runtime_setup;
 use libimagrt::runtime::Runtime;
 use libimagstore::storeid::IntoStoreId;
@@ -72,7 +73,7 @@ fn main() {
                 other => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-ref", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 },
@@ -87,13 +88,13 @@ fn deref(rt: &Runtime) {
         .map(PathBuf::from)
         .unwrap() // saved by clap
         .into_storeid()
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
-    match rt.store().get(id.clone()).map_err_trace_exit_unwrap(1) {
+    match rt.store().get(id.clone()).map_err_trace_exit_unwrap() {
         Some(entry) => {
             entry
                 .get_path()
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .to_str()
                 .ok_or_else(|| {
                     error!("Could not transform path into string!");
@@ -121,7 +122,7 @@ fn remove(rt: &Runtime) {
         .map(PathBuf::from)
         .unwrap() // saved by clap
         .into_storeid()
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     let mut input = rt.stdin().unwrap_or_else(|| {
         error!("No input stream. Cannot ask for permission");
@@ -130,13 +131,13 @@ fn remove(rt: &Runtime) {
 
     let mut output = rt.stdout();
 
-    match rt.store().get(id.clone()).map_err_trace_exit_unwrap(1) {
+    match rt.store().get(id.clone()).map_err_trace_exit_unwrap() {
         Some(mut entry) => {
             if yes ||
                 ask_bool(&format!("Delete ref from entry '{}'", id), None, &mut input, &mut output)
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
             {
-                let _ = entry.remove_ref().map_err_trace_exit_unwrap(1);
+                let _ = entry.remove_ref().map_err_trace_exit_unwrap();
             } else {
                 info!("Aborted");
             }

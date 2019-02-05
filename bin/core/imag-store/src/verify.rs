@@ -22,6 +22,7 @@ use std::ops::Deref;
 use libimagrt::runtime::Runtime;
 use libimagutil::warn_exit::warn_exit;
 use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 use libimagerror::iter::TraceIterator;
 
 /// Verify the store.
@@ -33,9 +34,9 @@ pub fn verify(rt: &Runtime) {
     let result = rt
         .store()
         .entries()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_get_iter()
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .filter_map(|x| x)
         .all(|fle| {
             let p           = fle.get_location();

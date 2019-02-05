@@ -74,7 +74,7 @@ fn main() {
         Some(other) => {
             debug!("Unknown command");
             let _ = rt.handle_unknown_subcommand("imag-todo", other, rt.cli())
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .code()
                 .map(::std::process::exit);
         }
@@ -95,7 +95,7 @@ fn tw_hook(rt: &Runtime) {
         let (_, line, uuid ) = rt
             .store()
             .import_task_from_reader(stdin)
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
 
         let _ = writeln!(rt.stdout(), "{}\nTask {} stored in imag", line, uuid)
             .to_exit_code()
@@ -129,7 +129,7 @@ fn list(rt: &Runtime) {
     let res = rt.store().all_tasks() // get all tasks
         .map(|iter| { // and if this succeeded
             // filter out the ones were we can read the uuid
-            let uuids : Vec<_> = iter.trace_unwrap_exit(1).filter_map(|storeid| {
+            let uuids : Vec<_> = iter.trace_unwrap_exit().filter_map(|storeid| {
                 match rt.store().retrieve(storeid) {
                     Ok(fle) => {
                         match fle.get_header().read_string("todo.uuid") {

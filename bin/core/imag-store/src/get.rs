@@ -21,6 +21,7 @@ use std::path::PathBuf;
 
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 use libimagstore::storeid::StoreId;
 
 use retrieve::print_entry;
@@ -31,10 +32,10 @@ pub fn get(rt: &Runtime) {
     let id    = scmd.value_of("id").unwrap(); // safe by clap
     let path  = PathBuf::from(id);
     let store = Some(rt.store().path().clone());
-    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap(1);
+    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
     debug!("path = {:?}", path);
 
-    let _ = match rt.store().get(path.clone()).map_err_trace_exit_unwrap(1) {
+    let _ = match rt.store().get(path.clone()).map_err_trace_exit_unwrap() {
         Some(entry) => {
             print_entry(rt, scmd, entry);
             let _ = rt.report_touched(&path).unwrap_or_exit();

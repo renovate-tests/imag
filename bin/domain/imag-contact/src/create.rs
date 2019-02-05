@@ -51,6 +51,7 @@ use libimagcontact::store::ContactStore;
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::trace::trace_error;
+use libimagerror::exit::ExitUnwrap;
 use libimagutil::warn_result::WarnResult;
 
 const TEMPLATE : &'static str = include_str!("../static/new-contact-template.toml");
@@ -75,7 +76,7 @@ mod test {
 
 fn ask_continue(inputstream: &mut Read, outputstream: &mut Write) -> bool {
     ::libimaginteraction::ask::ask_bool("Edit tempfile", Some(true), inputstream, outputstream)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
 }
 
 pub fn create(rt: &Runtime) {
@@ -122,7 +123,7 @@ pub fn create(rt: &Runtime) {
                 .open(fl.clone())
                 .map_warn_err_str("Cannot create/open destination File. Stopping.")
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let uuid_string = uuid
                 .unwrap_or_else(|| {
@@ -153,7 +154,7 @@ pub fn create(rt: &Runtime) {
     loop {
         ::libimagentryedit::edit::edit_in_tmpfile(&rt, &mut template)
             .map_warn_err_str("Editing failed.")
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
 
         if template == TEMPLATE || template.is_empty() {
             error!("No (changed) content in tempfile. Not doing anything.");
@@ -179,7 +180,7 @@ pub fn create(rt: &Runtime) {
             Ok(Some(vcard)) => {
                 if template == TEMPLATE || template.is_empty() {
                     if ::libimaginteraction::ask::ask_bool("Abort contact creating", Some(false), &mut input, &mut output)
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                     {
                         exit(1)
                     } else {
@@ -191,7 +192,7 @@ pub fn create(rt: &Runtime) {
                 let _ = dest
                     .write_all(&vcard_string.as_bytes())
                     .map_err(Error::from)
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
 
                 break;
             }
@@ -202,7 +203,7 @@ pub fn create(rt: &Runtime) {
         if !scmd.is_present("dont-track") {
             let entry = rt.store()
                 .create_from_path(&location)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let _ = rt.report_touched(entry.get_location()).unwrap_or_exit();
 
@@ -253,7 +254,7 @@ fn parse_toml_into_vcard(output: &mut Write, input: &mut Read, toml: Value, uuid
 
     { // parse nicknames
         debug!("Parsing nicknames");
-        match toml.read("nickname").map_err(Error::from).map_err_trace_exit_unwrap(1) {
+        match toml.read("nickname").map_err(Error::from).map_err_trace_exit_unwrap() {
             Some(&Value::Array(ref ary)) => {
                 for (i, element) in ary.iter().enumerate() {
                     let nicktype = match read_str_from_toml(element, "type", false) {
@@ -323,7 +324,7 @@ fn parse_toml_into_vcard(output: &mut Write, input: &mut Read, toml: Value, uuid
 
     { // parse phone
         debug!("Parse phone");
-        match toml.read("person.phone").map_err(Error::from).map_err_trace_exit_unwrap(1) {
+        match toml.read("person.phone").map_err(Error::from).map_err_trace_exit_unwrap() {
             Some(&Value::Array(ref ary)) => {
                 for (i, element) in ary.iter().enumerate() {
                     let phonetype = match read_str_from_toml(element, "type", false) {
@@ -373,7 +374,7 @@ fn parse_toml_into_vcard(output: &mut Write, input: &mut Read, toml: Value, uuid
 
     { // parse address
         debug!("Parsing address");
-        match toml.read("addresses").map_err(Error::from).map_err_trace_exit_unwrap(1) {
+        match toml.read("addresses").map_err(Error::from).map_err_trace_exit_unwrap() {
             Some(&Value::Array(ref ary)) => {
                 for (i, element) in ary.iter().enumerate() {
                     let adrtype  = match read_str_from_toml(element, "type", false) {
@@ -428,7 +429,7 @@ fn parse_toml_into_vcard(output: &mut Write, input: &mut Read, toml: Value, uuid
 
     { // parse email
         debug!("Parsing email");
-        match toml.read("person.email").map_err(Error::from).map_err_trace_exit_unwrap(1) {
+        match toml.read("person.email").map_err(Error::from).map_err_trace_exit_unwrap() {
             Some(&Value::Array(ref ary)) => {
                 for (i, element) in ary.iter().enumerate() {
                     let mailtype  = match read_str_from_toml(element, "type", false) {

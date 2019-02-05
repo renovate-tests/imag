@@ -73,7 +73,7 @@ pub trait MapErrTrace {
     type Output;
 
     fn map_err_trace(self) -> Self;
-    fn map_err_trace_exit_unwrap(self, code: i32) -> Self::Output;
+    fn map_err_trace_exit_unwrap(self) -> Self::Output;
 }
 
 impl<U> MapErrTrace for Result<U, Error> {
@@ -87,8 +87,8 @@ impl<U> MapErrTrace for Result<U, Error> {
     }
 
     /// Trace the error and exit or unwrap the Ok(_).
-    fn map_err_trace_exit_unwrap(self, code: i32) -> Self::Output {
-        self.map_err(|e| { trace_error(&e); exit(code) }).unwrap()
+    fn map_err_trace_exit_unwrap(self) -> Self::Output {
+        self.map_err(|e| { trace_error(&e); exit(1) }).unwrap()
     }
 
 }

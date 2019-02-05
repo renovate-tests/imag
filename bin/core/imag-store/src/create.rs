@@ -32,6 +32,7 @@ use libimagrt::runtime::Runtime;
 use libimagstore::store::Entry;
 use libimagstore::storeid::StoreId;
 use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 use libimagutil::debug_result::*;
 
 use util::build_toml_header;
@@ -44,7 +45,7 @@ pub fn create(rt: &Runtime) {
     let path  = scmd.value_of("path").unwrap();
     let path  = PathBuf::from(path);
     let store = Some(rt.store().path().clone());
-    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap(1);
+    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
 
     debug!("path = {:?}", path);
 
@@ -61,7 +62,7 @@ pub fn create(rt: &Runtime) {
         create_with_content_and_header(rt, &path, String::new(),
             Entry::default_header())
     }
-    .map_err_trace_exit_unwrap(1);
+    .map_err_trace_exit_unwrap();
 
     let _ = rt.report_touched(&path).unwrap_or_exit();
 }

@@ -26,6 +26,7 @@ use failure::Error;
 use libimagerror::trace::trace_error;
 use libimagerror::iter::TraceIterator;
 use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 use libimagrt::runtime::Runtime;
 
 use libimagtimetrack::timetracking::TimeTracking;
@@ -57,12 +58,12 @@ pub fn stop(rt: &Runtime) -> i32 {
             // Get all timetrackings which do not have an end datetime.
             rt.store()
                 .get_timetrackings()
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .trace_unwrap()
                 .filter_map(|tracking| {
                     let is_none = tracking
                         .get_end_datetime()
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .is_none();
 
                     if is_none {
@@ -72,7 +73,7 @@ pub fn stop(rt: &Runtime) -> i32 {
                     }
                 })
                 .map(|t| t.get_timetrack_tag())
-                .map(|r| r.map_err_trace_exit_unwrap(1))
+                .map(|r| r.map_err_trace_exit_unwrap())
                 .collect()
         });
 
@@ -82,7 +83,7 @@ pub fn stop(rt: &Runtime) -> i32 {
         .store()
         .get_timetrackings()
         .map_warn_err_str("Getting timetrackings failed")
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .trace_unwrap()
 
         // Filter all timetrackings for the ones that are not yet ended.

@@ -79,7 +79,7 @@ fn main() {
                 other         => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-mail", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 }
@@ -93,7 +93,7 @@ fn import_mail(rt: &Runtime) {
 
     let mail = Mail::import_from_path(rt.store(), path)
         .map_info_str("Ok")
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     let _ = rt.report_touched(mail.fle().get_location()).unwrap_or_exit();
 }
@@ -152,15 +152,15 @@ fn list(rt: &Runtime) {
 
     let _ = rt.store()
         .entries()
-        .map_err_trace_exit_unwrap(1)
-        .trace_unwrap_exit(1)
+        .map_err_trace_exit_unwrap()
+        .trace_unwrap_exit()
         .filter(|id| id.is_in_collection(&["mail"]))
         .filter_map(|id| {
             rt.store()
                 .get(id)
                 .context(err_msg("Ref handling error"))
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .map(|fle| Mail::from_fle(fle).map_err_trace().ok())
         })
         .filter_map(|e| e)

@@ -81,7 +81,7 @@ fn main() {
                 other               => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-category", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 },
@@ -92,11 +92,11 @@ fn main() {
 fn set(rt: &Runtime) {
     let scmd = rt.cli().subcommand_matches("set").unwrap(); // safed by main()
     let name = scmd.value_of("set-name").map(String::from).unwrap(); // safed by clap
-    let sids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
+    let sids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap();
 
     StoreIdIterator::new(Box::new(sids.into_iter().map(Ok)))
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|o| o.unwrap_or_else(|| {
             error!("Did not find one entry");
             ::std::process::exit(1)
@@ -104,23 +104,23 @@ fn set(rt: &Runtime) {
         .for_each(|mut entry| {
             let _ = entry
                 .set_category_checked(rt.store(), &name)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
         })
 }
 
 fn get(rt: &Runtime) {
-    let sids        = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
+    let sids        = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap();
     let out         = rt.stdout();
     let mut outlock = out.lock();
 
     StoreIdIterator::new(Box::new(sids.into_iter().map(Ok)))
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|o| o.unwrap_or_else(|| {
             error!("Did not find one entry");
             ::std::process::exit(1)
         }))
-        .map(|entry| entry.get_category().map_err_trace_exit_unwrap(1))
+        .map(|entry| entry.get_category().map_err_trace_exit_unwrap())
         .for_each(|name| {
             let _ = writeln!(outlock, "{}", name).to_exit_code().unwrap_or_exit();
         })
@@ -130,15 +130,15 @@ fn list_category(rt: &Runtime) {
     let scmd = rt.cli().subcommand_matches("list-category").unwrap(); // safed by main()
     let name = scmd.value_of("list-category-name").map(String::from).unwrap(); // safed by clap
 
-    if let Some(category) = rt.store().get_category_by_name(&name).map_err_trace_exit_unwrap(1) {
+    if let Some(category) = rt.store().get_category_by_name(&name).map_err_trace_exit_unwrap() {
         let out         = rt.stdout();
         let mut outlock = out.lock();
 
         category
             .get_entries(rt.store())
-            .map_err_trace_exit_unwrap(1)
+            .map_err_trace_exit_unwrap()
             .for_each(|entry| {
-                writeln!(outlock, "{}", entry.map_err_trace_exit_unwrap(1).get_location())
+                writeln!(outlock, "{}", entry.map_err_trace_exit_unwrap().get_location())
                     .to_exit_code()
                     .unwrap_or_exit();
             })
@@ -155,7 +155,7 @@ fn create_category(rt: &Runtime) {
     let _ = rt
         .store()
         .create_category(&name)
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 }
 
 fn delete_category(rt: &Runtime) {
@@ -170,14 +170,14 @@ fn delete_category(rt: &Runtime) {
         ::std::process::exit(1)
     });
     let mut output = rt.stdout();
-    let answer = ask_bool(&ques, Some(false), &mut input, &mut output).map_err_trace_exit_unwrap(1);
+    let answer = ask_bool(&ques, Some(false), &mut input, &mut output).map_err_trace_exit_unwrap();
 
     if answer {
         info!("Deleting category '{}'", name);
         let _ = rt
             .store()
             .delete_category(&name)
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
     } else {
         info!("Not doing anything");
     }
@@ -189,9 +189,9 @@ fn list_categories(rt: &Runtime) {
 
     rt.store()
         .all_category_names()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .for_each(|name| {
-            writeln!(outlock, "{}", name.map_err_trace_exit_unwrap(1))
+            writeln!(outlock, "{}", name.map_err_trace_exit_unwrap())
                 .to_exit_code()
                 .unwrap_or_exit();
         })

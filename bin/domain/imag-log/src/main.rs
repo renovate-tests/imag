@@ -84,7 +84,7 @@ fn main() {
             other    => {
                 debug!("Unknown command");
                 let _ = rt.handle_unknown_subcommand("imag-log", other, rt.cli())
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
                     .code()
                     .map(::std::process::exit);
             },
@@ -102,10 +102,10 @@ fn main() {
             .store()
             .new_entry_now(&diary_name)
             .map(|mut fle| {
-                let _ = fle.make_log_entry().map_err_trace_exit_unwrap(1);
+                let _ = fle.make_log_entry().map_err_trace_exit_unwrap();
                 *fle.get_content_mut() = text;
             })
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
     }
 }
 
@@ -118,18 +118,18 @@ fn show(rt: &Runtime) {
     let scmd = rt.cli().subcommand_matches("show").unwrap(); // safed by main()
     let iters : Vec<DiaryEntryIterator> = match scmd.values_of("show-name") {
         Some(values) => values
-            .map(|diary_name| Diary::entries(rt.store(), diary_name).map_err_trace_exit_unwrap(1))
+            .map(|diary_name| Diary::entries(rt.store(), diary_name).map_err_trace_exit_unwrap())
             .collect(),
 
         None => if scmd.is_present("show-all") {
             debug!("Showing for all diaries");
             rt.store()
                 .diary_names()
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .map(|diary_name| {
-                    let diary_name = diary_name.map_err_trace_exit_unwrap(1);
+                    let diary_name = diary_name.map_err_trace_exit_unwrap();
                     debug!("Getting entries for Diary: {}", diary_name);
-                    let entries = Diary::entries(rt.store(), &diary_name).map_err_trace_exit_unwrap(1);
+                    let entries = Diary::entries(rt.store(), &diary_name).map_err_trace_exit_unwrap();
                     let diary_name = Cow::from(diary_name);
                     (entries, diary_name)
                 })
@@ -138,13 +138,13 @@ fn show(rt: &Runtime) {
                 .collect()
         } else {
             // showing default logs
-            vec![Diary::entries(rt.store(), &get_diary_name(rt)).map_err_trace_exit_unwrap(1)]
+            vec![Diary::entries(rt.store(), &get_diary_name(rt)).map_err_trace_exit_unwrap()]
         }
     };
 
     Itertools::flatten(iters.into_iter())
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .filter_map(|opt| {
             if opt.is_none() {
                 warn!("Failed to retrieve an entry from an existing store id");
@@ -152,8 +152,8 @@ fn show(rt: &Runtime) {
 
             opt
         })
-        .filter(|e| e.is_log().map_err_trace_exit_unwrap(1))
-        .map(|entry| (entry.diary_id().map_err_trace_exit_unwrap(1), entry))
+        .filter(|e| e.is_log().map_err_trace_exit_unwrap())
+        .map(|entry| (entry.diary_id().map_err_trace_exit_unwrap(), entry))
         .sorted_by_key(|tpl| tpl.0.clone())
         .into_iter()
         .map(|tpl| { debug!("Found entry: {:?}", tpl.1); tpl })
@@ -185,24 +185,24 @@ fn get_diary_name(rt: &Runtime) -> String {
     let cfg = rt
         .config()
         .ok_or_else(|| Error::from(err_msg("Configuration not present, cannot continue")))
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     let current_log = cfg
         .read_string("log.default")
         .map_err(Error::from)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .ok_or_else(|| Error::from(err_msg("Configuration missing: 'log.default'")))
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     if cfg
         .read("log.logs")
         .map_err(Error::from)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .ok_or_else(|| Error::from(err_msg("Configuration missing: 'log.logs'")))
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .as_array()
         .ok_or_else(|| Error::from(err_msg("Configuration 'log.logs' is not an Array")))
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .iter()
         .map(|e| if is_match!(e, &Value::String(_)) {
             error!("Configuration 'log.logs' is not an Array<String>!");

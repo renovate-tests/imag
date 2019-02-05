@@ -99,7 +99,7 @@ fn main() {
                 other    => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-habit", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 },
@@ -117,10 +117,10 @@ fn create(rt: &Runtime) {
     let comm  = scmd.value_of("create-comment").map(String::from).unwrap();          // safe by clap
     let date  = scmd.value_of("create-date").unwrap();                               // safe by clap
 
-    let parsedate = |d, pname| match kairos_parse(d).map_err_trace_exit_unwrap(1) {
+    let parsedate = |d, pname| match kairos_parse(d).map_err_trace_exit_unwrap() {
         Parsed::TimeType(tt) => tt.calculate()
             .map_dbg(|y| format!("TimeType yielded: '{:?}'", y))
-            .map_err_trace_exit_unwrap(1)
+            .map_err_trace_exit_unwrap()
             .get_moment()
             .ok_or_else(|| {
                 error!("Error: '{}' parameter does not yield a point in time", pname);
@@ -154,7 +154,7 @@ fn create(rt: &Runtime) {
 
     debug!("Builder = {:?}", hb);
 
-    let fle = hb.build(rt.store()).map_err_trace_exit_unwrap(1);
+    let fle = hb.build(rt.store()).map_err_trace_exit_unwrap();
     let _   = rt.report_touched(fle.get_location()).unwrap_or_exit();
 }
 
@@ -176,11 +176,11 @@ fn delete(rt: &Runtime) {
     let _ = rt
         .store()
         .all_habit_templates()
-        .map_err_trace_exit_unwrap(1)
-        .trace_unwrap_exit(1)
-        .map(|sid| (sid.clone(), rt.store().get(sid).map_err_trace_exit_unwrap(1))) // get the FileLockEntry
+        .map_err_trace_exit_unwrap()
+        .trace_unwrap_exit()
+        .map(|sid| (sid.clone(), rt.store().get(sid).map_err_trace_exit_unwrap())) // get the FileLockEntry
         .filter(|&(_, ref habit)| match habit { // filter for name of habit == name we look for
-            &Some(ref h) => h.habit_name().map_err_trace_exit_unwrap(1) == name,
+            &Some(ref h) => h.habit_name().map_err_trace_exit_unwrap() == name,
             &None => false,
         })
         .filter_map(|(a, o)| o.map(|x| (a, x))) // map: (a, Option<b>) -> Option<(a, b)> -> (a, b)
@@ -188,18 +188,18 @@ fn delete(rt: &Runtime) {
             if delete_instances {
 
                 // if this does not succeed, we did something terribly wrong
-                let t_name = fle.habit_name().map_err_trace_exit_unwrap(1);
+                let t_name = fle.habit_name().map_err_trace_exit_unwrap();
                 assert_eq!(t_name, name);
 
-                let get_instance          =  |iid| rt.store().get(iid).map_err_trace_exit_unwrap(1);
-                let has_template_name     =  |i: &FileLockEntry| t_name ==  i.get_template_name().map_err_trace_exit_unwrap(1);
+                let get_instance          =  |iid| rt.store().get(iid).map_err_trace_exit_unwrap();
+                let has_template_name     =  |i: &FileLockEntry| t_name ==  i.get_template_name().map_err_trace_exit_unwrap();
                 let instance_location     =  |i: FileLockEntry| i.get_location().clone();
                 let delete_instance_by_id =  |id| {
-                    let do_delete = |id| rt.store().delete(id).map_err_trace_exit_unwrap(1);
+                    let do_delete = |id| rt.store().delete(id).map_err_trace_exit_unwrap();
                     if !yes {
                         let q = format!("Really delete {}", id);
                         if ask_bool(&q, Some(false), &mut input, &mut output)
-                            .map_err_trace_exit_unwrap(1)
+                            .map_err_trace_exit_unwrap()
                         {
                             let _ = do_delete(id);
                         }
@@ -210,8 +210,8 @@ fn delete(rt: &Runtime) {
 
                 let _ = fle
                     .linked_instances()
-                    .map_err_trace_exit_unwrap(1)
-                    .trace_unwrap_exit(1)
+                    .map_err_trace_exit_unwrap()
+                    .trace_unwrap_exit()
                     .filter_map(get_instance)
                     .filter(has_template_name)
                     .map(instance_location)
@@ -221,11 +221,11 @@ fn delete(rt: &Runtime) {
 
             drop(fle);
 
-            let do_delete_template = |sid| rt.store().delete(sid).map_err_trace_exit_unwrap(1);
+            let do_delete_template = |sid| rt.store().delete(sid).map_err_trace_exit_unwrap();
             if !yes {
                 let q = format!("Really delete template {}", sid);
                 if ask_bool(&q, Some(false), &mut input, &mut output)
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                 {
                     let _ = do_delete_template(sid);
                 }
@@ -267,8 +267,8 @@ fn today(rt: &Runtime, future: bool) {
         let mut relevant : Vec<_> = rt
             .store()
             .all_habit_templates()
-            .map_err_trace_exit_unwrap(1)
-            .trace_unwrap_exit(1)
+            .map_err_trace_exit_unwrap()
+            .trace_unwrap_exit()
             .filter_map(|id| match rt.store().get(id.clone()) {
                 Ok(Some(h)) => Some(h),
                 Ok(None) => {
@@ -281,7 +281,7 @@ fn today(rt: &Runtime, future: bool) {
                 },
             })
             .filter(|h| {
-                let due = h.next_instance_date().map_err_trace_exit_unwrap(1);
+                let due = h.next_instance_date().map_err_trace_exit_unwrap();
                 // today or in future
                 debug!("Checking {due:?} == {today:?} or (future = {fut} && {due:?} > {today:?}",
                        due = due, today = today, fut = future);
@@ -290,14 +290,14 @@ fn today(rt: &Runtime, future: bool) {
             .collect();
 
         // unwrap is safe because we filtered above
-        relevant.sort_by_key(|h| h.next_instance_date().map_err_trace_exit_unwrap(1).unwrap());
+        relevant.sort_by_key(|h| h.next_instance_date().map_err_trace_exit_unwrap().unwrap());
         relevant
     };
 
     let any_today_relevant = show_done || relevant
         .iter()
         .filter(|h| {
-            let due = h.next_instance_date().map_err_trace_exit_unwrap(1);
+            let due = h.next_instance_date().map_err_trace_exit_unwrap();
             debug!("Checking: {:?} == {:?}", due, today);
             due.map(|d| d == today).unwrap_or(false) // relevant today
         })
@@ -314,7 +314,7 @@ fn today(rt: &Runtime, future: bool) {
                         x.parse::<usize>()
                             .context(format_err!("Cannot parse String '{}' to integer", x))
                             .map_err(Error::from)
-                            .map_err_trace_exit_unwrap(1)
+                            .map_err_trace_exit_unwrap()
                     })
             }).unwrap_or(5);
 
@@ -322,13 +322,13 @@ fn today(rt: &Runtime, future: bool) {
         info!("Upcoming:");
         // list `n` which are relevant in the future.
         relevant.iter().take(n).for_each(|element| {
-            let date = element.next_instance_date().map_err_trace_exit_unwrap(1);
-            let name = element.habit_name().map_err_trace_exit_unwrap(1);
+            let date = element.next_instance_date().map_err_trace_exit_unwrap();
+            let name = element.habit_name().map_err_trace_exit_unwrap();
 
             if let Some(date) = date {
                 let is_done = element
                     .instance_exists_for_date(&date)
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
 
                 if show_done || !is_done {
                     info!(" * {date}: {name}", date = date, name = name);
@@ -338,13 +338,13 @@ fn today(rt: &Runtime, future: bool) {
     } else {
         fn lister_fn(h: &FileLockEntry) -> Vec<String> {
             debug!("Listing: {:?}", h);
-            let name     = h.habit_name().map_err_trace_exit_unwrap(1);
-            let basedate = h.habit_basedate().map_err_trace_exit_unwrap(1);
-            let recur    = h.habit_recur_spec().map_err_trace_exit_unwrap(1);
-            let due      = h.next_instance_date().map_err_trace_exit_unwrap(1)
+            let name     = h.habit_name().map_err_trace_exit_unwrap();
+            let basedate = h.habit_basedate().map_err_trace_exit_unwrap();
+            let recur    = h.habit_recur_spec().map_err_trace_exit_unwrap();
+            let due      = h.next_instance_date().map_err_trace_exit_unwrap()
                 .map(date_to_string_helper)
                 .unwrap_or_else(|| String::from("<finished>"));
-            let comm     = h.habit_comment().map_err_trace_exit_unwrap(1);
+            let comm     = h.habit_comment().map_err_trace_exit_unwrap();
 
             let v = vec![name, basedate, recur, due, comm];
             debug!(" -> {:?}", v);
@@ -365,10 +365,10 @@ fn today(rt: &Runtime, future: bool) {
             .filter(|habit| show_done || {
                 habit
                     .next_instance_date()
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
                     .map(|date|  {
                         habit.instance_exists_for_date(&date)
-                            .map_err_trace_exit_unwrap(1)
+                            .map_err_trace_exit_unwrap()
                     })
                     .unwrap_or(false)
             })
@@ -380,7 +380,7 @@ fn today(rt: &Runtime, future: bool) {
                 {
                     let _ = rt
                         .report_touched(e.get_location())
-                        .map_err_trace_exit_unwrap(1);
+                        .unwrap_or_exit();
                 }
 
                 v.append(&mut list);
@@ -397,11 +397,11 @@ fn today(rt: &Runtime, future: bool) {
 fn list(rt: &Runtime) {
     fn lister_fn(h: &FileLockEntry) -> Vec<String> {
         debug!("Listing: {:?}", h);
-        let name     = h.habit_name().map_err_trace_exit_unwrap(1);
-        let basedate = h.habit_basedate().map_err_trace_exit_unwrap(1);
-        let recur    = h.habit_recur_spec().map_err_trace_exit_unwrap(1);
-        let comm     = h.habit_comment().map_err_trace_exit_unwrap(1);
-        let due      = h.next_instance_date().map_err_trace_exit_unwrap(1)
+        let name     = h.habit_name().map_err_trace_exit_unwrap();
+        let basedate = h.habit_basedate().map_err_trace_exit_unwrap();
+        let recur    = h.habit_recur_spec().map_err_trace_exit_unwrap();
+        let comm     = h.habit_comment().map_err_trace_exit_unwrap();
+        let due      = h.next_instance_date().map_err_trace_exit_unwrap()
             .map(date_to_string_helper)
             .unwrap_or_else(|| String::from("<finished>"));
 
@@ -422,8 +422,8 @@ fn list(rt: &Runtime) {
     let _ = rt
         .store()
         .all_habit_templates()
-        .map_err_trace_exit_unwrap(1)
-        .trace_unwrap_exit(1)
+        .map_err_trace_exit_unwrap()
+        .trace_unwrap_exit()
         .filter_map(|id| match rt.store().get(id.clone()) {
             Ok(Some(h)) => Some(h),
             Ok(None) => {
@@ -465,8 +465,8 @@ fn show(rt: &Runtime) {
         use libimagutil::date::date_to_string;
         use libimaghabit::instance::HabitInstance;
 
-        let date = date_to_string(&i.get_date().map_err_trace_exit_unwrap(1));
-        let comm = i.get_comment().map_err_trace_exit_unwrap(1);
+        let date = date_to_string(&i.get_date().map_err_trace_exit_unwrap());
+        let comm = i.get_comment().map_err_trace_exit_unwrap();
 
         vec![date, comm]
     }
@@ -482,16 +482,16 @@ fn show(rt: &Runtime) {
     let _ = rt
         .store()
         .all_habit_templates()
-        .map_err_trace_exit_unwrap(1)
-        .trace_unwrap_exit(1)
+        .map_err_trace_exit_unwrap()
+        .trace_unwrap_exit()
         .filter_map(|id| get_from_store(rt.store(), id))
-        .filter(|h| h.habit_name().map(|n| name == n).map_err_trace_exit_unwrap(1))
+        .filter(|h| h.habit_name().map(|n| name == n).map_err_trace_exit_unwrap())
         .enumerate()
         .map(|(i, habit)| {
-            let name     = habit.habit_name().map_err_trace_exit_unwrap(1);
-            let basedate = habit.habit_basedate().map_err_trace_exit_unwrap(1);
-            let recur    = habit.habit_recur_spec().map_err_trace_exit_unwrap(1);
-            let comm     = habit.habit_comment().map_err_trace_exit_unwrap(1);
+            let name     = habit.habit_name().map_err_trace_exit_unwrap();
+            let basedate = habit.habit_basedate().map_err_trace_exit_unwrap();
+            let recur    = habit.habit_recur_spec().map_err_trace_exit_unwrap();
+            let comm     = habit.habit_comment().map_err_trace_exit_unwrap();
 
             let _ = writeln!(rt.stdout(),
                      "{i} - {name}\nBase      : {b},\nRecurrence: {r}\nComment   : {c}\n",
@@ -506,11 +506,11 @@ fn show(rt: &Runtime) {
             let mut empty = true;
             let _ = habit
                 .linked_instances()
-                .map_err_trace_exit_unwrap(1)
-                .trace_unwrap_exit(1)
+                .map_err_trace_exit_unwrap()
+                .trace_unwrap_exit()
                 .filter_map(|instance_id| {
                     debug!("Getting: {:?}", instance_id);
-                    rt.store().get(instance_id).map_err_trace_exit_unwrap(1)
+                    rt.store().get(instance_id).map_err_trace_exit_unwrap()
                 })
                 .enumerate()
                 .for_each(|(i, e)| {
@@ -543,31 +543,31 @@ fn done(rt: &Runtime) {
         let mut relevant : Vec<_> = rt
             .store()
             .all_habit_templates()
-            .map_err_trace_exit_unwrap(1)
-            .trace_unwrap_exit(1)
+            .map_err_trace_exit_unwrap()
+            .trace_unwrap_exit()
             .filter_map(|id| get_from_store(rt.store(), id))
             .filter(|h| {
-                let due = h.next_instance_date().map_err_trace_exit_unwrap(1);
+                let due = h.next_instance_date().map_err_trace_exit_unwrap();
                 due.map(|d| (d == today || d < today) || scmd.is_present("allow-future"))
                     .unwrap_or(false)
             })
             .filter(|h| {
-                names.contains(&h.habit_name().map_err_trace_exit_unwrap(1))
+                names.contains(&h.habit_name().map_err_trace_exit_unwrap())
             })
             .collect();
 
         // unwrap is safe because we filtered above
-        relevant.sort_by_key(|h| h.next_instance_date().map_err_trace_exit_unwrap(1).unwrap());
+        relevant.sort_by_key(|h| h.next_instance_date().map_err_trace_exit_unwrap().unwrap());
         relevant
     };
 
     for mut r in relevant {
-        let next_instance_name = r.habit_name().map_err_trace_exit_unwrap(1);
-        let next_instance_date = r.next_instance_date().map_err_trace_exit_unwrap(1);
+        let next_instance_name = r.habit_name().map_err_trace_exit_unwrap();
+        let next_instance_date = r.next_instance_date().map_err_trace_exit_unwrap();
         if let Some(next) = next_instance_date {
             debug!("Creating new instance on {:?}", next);
             r.create_instance_with_date(rt.store(), &next)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             info!("Done on {date}: {name}",
                   date = libimagutil::date::date_to_string(&next),

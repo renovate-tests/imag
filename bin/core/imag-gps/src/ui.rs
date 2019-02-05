@@ -112,7 +112,7 @@ impl IdPathProvider for PathProvider {
                     .map(PathBuf::from)
                     .map(|pb| pb.into_storeid())
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
             },
 
             ("remove", Some(subm)) => {
@@ -126,7 +126,7 @@ impl IdPathProvider for PathProvider {
                     .map(PathBuf::from)
                     .map(|pb| pb.into_storeid())
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
             },
 
             ("get", Some(subm)) => {
@@ -140,7 +140,7 @@ impl IdPathProvider for PathProvider {
                     .map(PathBuf::from)
                     .map(|pb| pb.into_storeid())
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
             },
 
             (other, _) => {

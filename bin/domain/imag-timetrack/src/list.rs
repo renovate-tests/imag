@@ -33,6 +33,7 @@ use failure::Error;
 use libimagerror::trace::trace_error;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
+use libimagerror::exit::ExitUnwrap;
 use libimagstore::store::FileLockEntry;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
 use libimagtimetrack::timetracking::TimeTracking;
@@ -122,7 +123,7 @@ pub fn list_impl(rt: &Runtime,
 
     rt.store()
         .get_timetrackings()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .trace_unwrap()
         .filter(|e| filter.filter(e))
         .fold(Ok(table), |acc: Result<_>, e| {
@@ -167,7 +168,7 @@ pub fn list_impl(rt: &Runtime,
                 Ok(tab)
             })
         })
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .print(&mut rt.stdout())
         .context(err_msg("Failed to print table"))
         .map_err(Error::from)

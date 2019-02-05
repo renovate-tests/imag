@@ -29,6 +29,7 @@ use libimagdiary::diary::Diary;
 use libimagentryedit::edit::Edit;
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
+use libimagerror::exit::ExitUnwrap;
 use libimagutil::warn_exit::warn_exit;
 use libimagutil::debug_result::DebugResult;
 use libimagutil::debug_option::DebugOption;
@@ -55,7 +56,7 @@ pub fn create(rt: &Runtime) {
         entry.edit_content(rt).context(err_msg("Diary edit error")).map_err(Error::from)
     };
 
-    let _ = res.map_err_trace_exit_unwrap(1);
+    let _ = res.map_err_trace_exit_unwrap();
     info!("Ok!");
 }
 
@@ -65,10 +66,10 @@ fn create_entry<'a>(diary: &'a Store, diaryname: &str, rt: &Runtime) -> FileLock
     let create = rt.cli().subcommand_matches("create").unwrap();
 
     create.value_of("timed")
-        .map(|t| parse_timed_string(t, diaryname).map_err_trace_exit_unwrap(1))
+        .map(|t| parse_timed_string(t, diaryname).map_err_trace_exit_unwrap())
         .map(Some)
         .unwrap_or_else(|| {
-            match get_diary_timed_config(rt, diaryname).map_err_trace_exit_unwrap(1) {
+            match get_diary_timed_config(rt, diaryname).map_err_trace_exit_unwrap() {
                 Some(t) => Some(t),
                 None    => {
                     warn!("Missing config: 'diary.diaries.{}.timed'", diaryname);
@@ -88,7 +89,7 @@ fn create_entry<'a>(diary: &'a Store, diaryname: &str, rt: &Runtime) -> FileLock
             diary.new_entry_today(diaryname)
         })
         .map_dbg(|e| format!("Created: {}", e.get_location()))
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
 }
 
 

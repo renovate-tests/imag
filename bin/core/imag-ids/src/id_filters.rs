@@ -405,7 +405,7 @@ pub mod header_filter_lang {
                 .get_header()
                 .read(selector_str)
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .map(|value| {
                     let comp = Comparator(&self.compare_operator, &self.compare_value);
                     let val = match self.selector.function() {

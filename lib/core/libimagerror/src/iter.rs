@@ -59,7 +59,7 @@ impl<I, F, T> Iterator for UnwrapWith<I, F>
 
 
 /// Iterator helper for Unwrap with exiting on error
-pub struct UnwrapExit<I, T>(I, i32)
+pub struct UnwrapExit<I, T>(I)
     where I: Iterator<Item = Result<T, Error>>;
 
 impl<I, T> Iterator for UnwrapExit<I, T>
@@ -69,7 +69,7 @@ impl<I, T> Iterator for UnwrapExit<I, T>
 
     fn next(&mut self) -> Option<Self::Item> {
         use trace::MapErrTrace;
-        self.0.next().map(|e| e.map_err_trace_exit_unwrap(self.1))
+        self.0.next().map(|e| e.map_err_trace_exit_unwrap())
     }
 }
 
@@ -78,7 +78,7 @@ impl<I, T> DoubleEndedIterator for UnwrapExit<I, T>
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         use trace::MapErrTrace;
-        self.0.next_back().map(|e| e.map_err_trace_exit_unwrap(self.1))
+        self.0.next_back().map(|e| e.map_err_trace_exit_unwrap())
     }
 }
 
@@ -111,8 +111,8 @@ pub trait TraceIterator<T> : Iterator<Item = Result<T, Error>> + Sized {
     /// nothing will be passed to `::trace::trace_error_exit`, no matter how many `Err` items might
     /// be present.
     #[inline]
-    fn trace_unwrap_exit(self, exitcode: i32) -> UnwrapExit<Self, T> {
-        UnwrapExit(self, exitcode)
+    fn trace_unwrap_exit(self) -> UnwrapExit<Self, T> {
+        UnwrapExit(self)
     }
 
 

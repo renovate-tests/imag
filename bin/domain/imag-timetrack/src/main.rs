@@ -99,7 +99,7 @@ fn main() {
             other      => {
                 debug!("Unknown command");
                 rt.handle_unknown_subcommand("imag-timetrack", other, rt.cli())
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
                     .code()
                     .unwrap_or(0)
             },

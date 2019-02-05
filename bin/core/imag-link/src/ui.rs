@@ -26,7 +26,6 @@ use libimagstore::storeid::IntoStoreId;
 use libimagrt::runtime::IdPathProvider;
 use libimagerror::trace::MapErrTrace;
 
-
 pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
     app
         .subcommand(SubCommand::with_name("remove")
@@ -131,7 +130,7 @@ impl IdPathProvider for PathProvider {
                     .map(PathBuf::from)
                     .map(|pb| pb.into_storeid())
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
                 Some(to)
             },
 
@@ -147,7 +146,7 @@ impl IdPathProvider for PathProvider {
                     .map(PathBuf::from)
                     .map(|pb| pb.into_storeid())
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
 
                 Some(ids)
             },
@@ -164,7 +163,7 @@ impl IdPathProvider for PathProvider {
                     .map(PathBuf::from)
                     .map(|pb| pb.into_storeid())
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
 
                 Some(ids)
             },
@@ -175,7 +174,7 @@ impl IdPathProvider for PathProvider {
         ids.unwrap_or_else(|| {
             matches.values_of("to")
                 .unwrap()
-                .map(|s| PathBuf::from(s).into_storeid().map_err_trace_exit_unwrap(1))
+                .map(|s| PathBuf::from(s).into_storeid().map_err_trace_exit_unwrap())
                 .collect()
         })
     }

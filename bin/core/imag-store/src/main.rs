@@ -94,7 +94,7 @@ fn main() {
             other      => {
                 debug!("Unknown command");
                 let _ = rt.handle_unknown_subcommand("imag-store", other, rt.cli())
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
                     .code()
                     .map(::std::process::exit);
             },

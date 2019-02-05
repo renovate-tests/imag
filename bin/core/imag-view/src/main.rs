@@ -83,15 +83,15 @@ fn main() {
     let view_header  = rt.cli().is_present("view-header");
     let hide_content = rt.cli().is_present("not-view-content");
     let entries      = rt.ids::<::ui::PathProvider>()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_iter()
         .map(Ok)
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|e| {
              e.ok_or_else(|| err_msg("Entry not found"))
                  .map_err(Error::from)
-                 .map_err_trace_exit_unwrap(1)
+                 .map_err_trace_exit_unwrap()
         });
 
     if rt.cli().is_present("in") {
@@ -108,19 +108,19 @@ fn main() {
                 .cli()
                 .value_of("in")
                 .ok_or_else(|| Error::from(err_msg("No viewer given")))
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let config = rt
                 .config()
                 .ok_or_else(|| Error::from(err_msg("No configuration, cannot continue")))
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let query = format!("view.viewers.{}", viewer);
 
             let viewer_template = config
                 .read_string(&query)
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
                 .unwrap_or_else(|| {
                     error!("Cannot find '{}' in config", query);
                     exit(1)
@@ -132,7 +132,7 @@ fn main() {
             let _ = handlebars
                 .register_template_string("template", viewer_template)
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let mut data = BTreeMap::new();
 
@@ -147,12 +147,12 @@ fn main() {
             let call = handlebars
                 .render("template", &data)
                 .map_err(Error::from)
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
             let mut elems = call.split_whitespace();
             let command_string = elems
                 .next()
                 .ok_or_else(|| Error::from(err_msg("No command")))
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
             let mut cmd = Command::new(command_string);
 
             for arg in elems {
@@ -167,7 +167,7 @@ fn main() {
         if !command
             .status()
             .map_err(Error::from)
-            .map_err_trace_exit_unwrap(1)
+            .map_err_trace_exit_unwrap()
             .success()
         {
             exit(1)
@@ -206,7 +206,7 @@ fn main() {
 
                     viewer
                         .view_entry(&entry, &mut outlock)
-                        .map_err_trace_exit_unwrap(1);
+                        .map_err_trace_exit_unwrap();
 
                     rt.report_touched(entry.get_location()).unwrap_or_exit();
                 });
@@ -240,7 +240,7 @@ fn main() {
 
                     viewer
                         .view_entry(&entry, &mut outlock)
-                        .map_err_trace_exit_unwrap(1);
+                        .map_err_trace_exit_unwrap();
 
                     rt.report_touched(entry.get_location()).unwrap_or_exit();
                 });
@@ -253,21 +253,21 @@ fn create_tempfile_for<'a>(entry: &FileLockEntry<'a>, view_header: bool, hide_co
 {
     let mut tmpfile = tempfile::NamedTempFile::new()
         .map_err(Error::from)
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     if view_header {
         let hdr = toml::ser::to_string_pretty(entry.get_header())
             .map_err(Error::from)
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
         let _ = tmpfile.write(format!("---\n{}---\n", hdr).as_bytes())
             .map_err(Error::from)
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
     }
 
     if !hide_content {
         let _ = tmpfile.write(entry.get_content().as_bytes())
             .map_err(Error::from)
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
     }
 
     let file_path = tmpfile
@@ -275,7 +275,7 @@ fn create_tempfile_for<'a>(entry: &FileLockEntry<'a>, view_header: bool, hide_co
         .to_str()
         .map(String::from)
         .ok_or_else(|| Error::from(err_msg("Cannot build path")))
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     (tmpfile, file_path)
 }

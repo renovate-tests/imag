@@ -22,6 +22,7 @@ use libimagdiary::viewer::DiaryViewer as DV;
 use libimagrt::runtime::Runtime;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
+use libimagerror::exit::ExitUnwrap;
 use libimagutil::warn_exit::warn_exit;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
 use libimagentryview::viewer::Viewer;
@@ -33,9 +34,9 @@ pub fn view(rt: &Runtime) {
     let hdr       = rt.cli().subcommand_matches("view").unwrap().is_present("show-header");
 
     let entries = Diary::entries(rt.store(), &diaryname)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|e| e.unwrap_or_else(|| {
             error!("Failed to fetch entry");
             ::std::process::exit(1)
@@ -49,6 +50,6 @@ pub fn view(rt: &Runtime) {
 
     let out = rt.stdout();
     DV::new(hdr).view_entries(entries, &mut out.lock())
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 }
 

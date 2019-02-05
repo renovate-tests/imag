@@ -28,6 +28,7 @@ use libimagerror::trace::trace_error;
 use libimagerror::trace::MapErrTrace;
 use libimagerror::iter::TraceIterator;
 use libimagerror::io::ToExitCode;
+use libimagerror::exit::ExitUnwrap;
 use libimagstore::store::FileLockEntry;
 use libimagtimetrack::timetrackingstore::TimeTrackStore;
 use libimagtimetrack::timetracking::TimeTracking;
@@ -101,7 +102,7 @@ pub fn year(rt: &Runtime) -> i32 {
     let mut out = rt.stdout();
     rt.store()
         .get_timetrackings()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .trace_unwrap()
         .filter(|e| filter.filter(e))
         .map(|e| -> Result<_, Error> {
@@ -120,7 +121,7 @@ pub fn year(rt: &Runtime) -> i32 {
 
             Ok((tag, start, end))
         })
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|(tag, start, end)| {
             match (start, end) {
                 (None, _)          => writeln!(out, "{} has no start time.", tag),

@@ -29,13 +29,13 @@ pub fn delete(rt: &Runtime) {
     let id    = scmd.value_of("id").unwrap(); // safe by clap
     let path  = PathBuf::from(id);
     let store = Some(rt.store().path().clone());
-    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap(1);
+    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
     debug!("Deleting file at {:?}", id);
 
     let _ = rt.store()
         .delete(path)
         .map_warn_err(|e| format!("Error: {:?}", e))
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 }
 
 #[cfg(test)]

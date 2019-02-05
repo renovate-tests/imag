@@ -92,7 +92,7 @@ fn main() {
                 other    => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-diary", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 },
@@ -111,8 +111,8 @@ fn diaries(rt: &Runtime) {
 
     rt.store()
         .diary_names()
-        .map_err_trace_exit_unwrap(1)
-        .trace_unwrap_exit(1)
+        .map_err_trace_exit_unwrap()
+        .trace_unwrap_exit()
         .unique()
         .for_each(|n| writeln!(outlock, "{}", n).to_exit_code().unwrap_or_exit())
 }

@@ -86,7 +86,7 @@ fn main() {
                 other    => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-notes", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 },
@@ -103,13 +103,13 @@ fn create(rt: &Runtime) {
     let mut note = rt
         .store()
         .new_note(name.clone(), String::new())
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     if rt.cli().subcommand_matches("create").unwrap().is_present("edit") {
         let _ = note
             .edit_content(rt)
             .map_warn_err_str("Editing failed")
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
     }
 
     let _ = rt.report_touched(note.get_location()).unwrap_or_exit();
@@ -119,7 +119,7 @@ fn delete(rt: &Runtime) {
     let _ = rt.store()
         .delete_note(name_from_cli(rt, "delete"))
         .map_info_str("Ok")
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 }
 
 fn edit(rt: &Runtime) {
@@ -127,12 +127,12 @@ fn edit(rt: &Runtime) {
     let _ = rt
         .store()
         .get_note(name.clone())
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .map(|mut note| {
             let _ = note
                 .edit_content(rt)
                 .map_warn_err_str("Editing failed")
-                .map_err_trace_exit_unwrap(1);
+                .map_err_trace_exit_unwrap();
 
             let _ = rt.report_touched(note.get_location()).unwrap_or_exit();
         })
@@ -147,9 +147,9 @@ fn list(rt: &Runtime) {
     let _ = rt
         .store()
         .all_notes()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|opt| opt.unwrap_or_else(|| {
             error!("Fatal: Nonexistent entry where entry should exist");
             exit(1)
@@ -161,7 +161,7 @@ fn list(rt: &Runtime) {
         })
         .iter()
         .for_each(|note| {
-            let name = note.get_name().map_err_trace_exit_unwrap(1);
+            let name = note.get_name().map_err_trace_exit_unwrap();
             let _ = writeln!(rt.stdout(), "{}", name)
                 .to_exit_code()
                 .unwrap_or_exit();

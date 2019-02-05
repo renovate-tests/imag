@@ -143,12 +143,12 @@ fn main() {
 
     let diags = rt.store()
         .entries()
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_get_iter()
         .map(|e| {
-            e.map_err_trace_exit_unwrap(1)
+            e.map_err_trace_exit_unwrap()
                 .ok_or_else(|| Error::from(err_msg("Unable to get entry".to_owned())))
-                .map_err_trace_exit_unwrap(1)
+                .map_err_trace_exit_unwrap()
         })
         .map(|e| {
             let diag = Diagnostic::for_entry(&e);
@@ -162,14 +162,14 @@ fn main() {
             // The store has an API for it, but the cache size calculation is O(n) and we can do
             // better by simply flushing the cache each 100 entries
             if entries_counter > 100 {
-                let _ = rt.store().flush_cache().map_err_trace_exit_unwrap(1);
+                let _ = rt.store().flush_cache().map_err_trace_exit_unwrap();
                 entries_counter = 0;
             }
 
             diag
         })
         .collect::<Result<Vec<_>>>()
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     spinner.finish();
     let n                = diags.len();
@@ -244,7 +244,7 @@ fn main() {
                 num,
                 path
                     .into_pathbuf()
-                    .map_err_trace_exit_unwrap(1)
+                    .map_err_trace_exit_unwrap()
                     .to_str()
                     .unwrap_or("Failed converting path to string")
             );
@@ -257,7 +257,7 @@ fn main() {
                      num,
                      path
                         .into_pathbuf()
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .to_str()
                         .unwrap_or("Failed converting path to string")
             );
@@ -271,7 +271,7 @@ fn get_config(rt: &Runtime, s: &'static str) -> Option<String> {
     rt.config().and_then(|cfg| {
         cfg.read(s)
             .map_err(Error::from)
-            .map_err_trace_exit_unwrap(1)
+            .map_err_trace_exit_unwrap()
             .map(|opt| match opt {
                 &Value::String(ref s) => s.to_owned(),
                 _ => {

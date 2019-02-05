@@ -84,7 +84,7 @@ fn main() {
                 other        => {
                     debug!("Unknown command");
                     let _ = rt.handle_unknown_subcommand("imag-bookmark", other, rt.cli())
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .code()
                         .map(::std::process::exit);
                 },
@@ -97,16 +97,16 @@ fn add(rt: &Runtime) {
     let coll = get_collection_name(rt, "add", "collection");
 
     let mut collection = BookmarkCollectionStore::get(rt.store(), &coll)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     let _ = rt.report_touched(collection.get_location()).unwrap_or_exit();
 
     for url in scmd.values_of("urls").unwrap() { // unwrap saved by clap
         let new_ids = collection
             .add_link(rt.store(), BookmarkLink::from(url))
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
 
         let _ = rt.report_all_touched(new_ids.into_iter()).unwrap_or_exit();
     }
@@ -143,16 +143,16 @@ fn list(rt: &Runtime) {
     let coll = get_collection_name(rt, "list", "collection");
 
     let collection = BookmarkCollectionStore::get(rt.store(), &coll)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     let _ = rt.report_touched(collection.get_location()).unwrap_or_exit();
 
     collection
         .links(rt.store())
         .map_dbg_str("Listing...")
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .into_iter()
         .enumerate()
         .for_each(|(i, link)| match link {
@@ -167,16 +167,16 @@ fn remove(rt: &Runtime) {
     let coll = get_collection_name(rt, "list", "collection");
 
     let mut collection = BookmarkCollectionStore::get(rt.store(), &coll)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .ok_or_else(|| format_err!("No bookmark collection '{}' found", coll))
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     let _ = rt.report_touched(collection.get_location()).unwrap_or_exit();
 
     for url in scmd.values_of("urls").unwrap() { // enforced by clap
         let removed_links = collection
             .remove_link(rt.store(), BookmarkLink::from(url))
-            .map_err_trace_exit_unwrap(1);
+            .map_err_trace_exit_unwrap();
 
         let _ = rt.report_all_touched(removed_links.into_iter()).unwrap_or_exit();
     }
@@ -198,7 +198,7 @@ fn get_collection_name(rt: &Runtime,
                 .map(|cfg| {
                     cfg.read_string("bookmark.default_collection")
                         .map_err(Error::from)
-                        .map_err_trace_exit_unwrap(1)
+                        .map_err_trace_exit_unwrap()
                         .ok_or_else(|| {
                             error!("Missing config: 'bookmark.default_collection'. Set or use commandline to specify.");
                             exit(1)

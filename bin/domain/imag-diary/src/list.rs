@@ -41,11 +41,11 @@ pub fn list(rt: &Runtime) {
 
     let mut ids = Diary::entries(rt.store(), &diaryname)
         .map_dbg_str("Ok")
-        .map_err_trace_exit_unwrap(1)
-        .trace_unwrap_exit(1)
+        .map_err_trace_exit_unwrap()
+        .trace_unwrap_exit()
         .map(|id| DiaryId::from_storeid(&id))
         .collect::<Result<Vec<_>>>()
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     ids.sort_by_key(|id| {
         [id.year() as u32, id.month(), id.day(), id.hour(), id.minute(), id.second()]
@@ -53,7 +53,7 @@ pub fn list(rt: &Runtime) {
 
     ids.into_iter()
         .map(IntoStoreId::into_storeid)
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .for_each(|id| {
             let _ = rt.report_touched(&id).unwrap_or_exit();
 

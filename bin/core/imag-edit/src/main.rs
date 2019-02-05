@@ -63,11 +63,11 @@ fn main() {
     let edit_header = rt.cli().is_present("edit-header");
     let edit_header_only = rt.cli().is_present("edit-header-only");
 
-    let sids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
+    let sids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap();
 
     StoreIdIterator::new(Box::new(sids.into_iter().map(Ok)))
         .into_get_iter(rt.store())
-        .trace_unwrap_exit(1)
+        .trace_unwrap_exit()
         .map(|o| o.unwrap_or_else(|| {
             error!("Did not find one entry");
             ::std::process::exit(1)
@@ -76,15 +76,15 @@ fn main() {
             if edit_header {
                 let _ = entry
                     .edit_header_and_content(&rt)
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
             } else if edit_header_only {
                 let _ = entry
                     .edit_header(&rt)
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
             } else {
                 let _ = entry
                     .edit_content(&rt)
-                    .map_err_trace_exit_unwrap(1);
+                    .map_err_trace_exit_unwrap();
             }
         });
 }

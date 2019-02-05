@@ -74,7 +74,7 @@ fn main() {
         .map(PathBuf::from)
         .map(StoreId::new_baseless)
         .unwrap() // unwrap safe by clap
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     let destname = rt
         .cli()
@@ -82,22 +82,22 @@ fn main() {
         .map(PathBuf::from)
         .map(StoreId::new_baseless)
         .unwrap() // unwrap safe by clap
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     // remove links to entry, and re-add them later
     let mut linked_entries = {
         rt.store()
             .get(sourcename.clone())
-            .map_err_trace_exit_unwrap(1)
+            .map_err_trace_exit_unwrap()
             .unwrap_or_else(|| {
                 error!("Funny things happened: Entry moved to destination did not fail, but entry does not exist");
                 exit(1)
             })
             .get_internal_links()
-            .map_err_trace_exit_unwrap(1)
+            .map_err_trace_exit_unwrap()
             .map(|link| Ok(link.get_store_id().clone()) as Result<_, _>)
             .into_get_iter(rt.store())
-            .trace_unwrap_exit(1)
+            .trace_unwrap_exit()
             .map(|e| {
                 e.unwrap_or_else(|| {
                     error!("Linked entry does not exist");
@@ -111,14 +111,14 @@ fn main() {
         let mut entry = rt
             .store()
             .get(sourcename.clone())
-            .map_err_trace_exit_unwrap(1)
+            .map_err_trace_exit_unwrap()
             .unwrap_or_else(|| {
                 error!("Source Entry does not exist");
                 exit(1)
             });
 
         for link in linked_entries.iter_mut() {
-            let _ = entry.remove_internal_link(link).map_err_trace_exit_unwrap(1);
+            let _ = entry.remove_internal_link(link).map_err_trace_exit_unwrap();
         }
     }
 
@@ -130,7 +130,7 @@ fn main() {
             relink(rt.store(), sourcename.clone(), &mut linked_entries);
             e
         })
-        .map_err_trace_exit_unwrap(1);
+        .map_err_trace_exit_unwrap();
 
     let _ = rt.report_touched(&destname).unwrap_or_exit();
 
@@ -143,7 +143,7 @@ fn main() {
 fn relink<'a>(store: &'a Store, target: StoreId, linked_entries: &mut Vec<FileLockEntry<'a>>) {
     let mut entry = store
         .get(target)
-        .map_err_trace_exit_unwrap(1)
+        .map_err_trace_exit_unwrap()
         .unwrap_or_else(|| {
             error!("Funny things happened: Entry moved to destination did not fail, but entry does not exist");
             exit(1)
@@ -151,6 +151,6 @@ fn relink<'a>(store: &'a Store, target: StoreId, linked_entries: &mut Vec<FileLo
 
 
     for mut link in linked_entries {
-        let _ = entry.add_internal_link(&mut link).map_err_trace_exit_unwrap(1);
+        let _ = entry.add_internal_link(&mut link).map_err_trace_exit_unwrap();
     }
 }
