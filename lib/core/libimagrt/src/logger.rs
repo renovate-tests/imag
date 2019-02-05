@@ -263,18 +263,14 @@ fn translate_destination(raw: &str) -> Result<LogDestination> {
 
 fn translate_destinations(raw: &Vec<Value>) -> Result<Vec<LogDestination>> {
     raw.iter()
-        .fold(Ok(vec![]), |acc, val| {
-            acc.and_then(|mut v| {
-                let dest = val.as_str()
-                    .ok_or_else(|| {
-                        let msg = "Type error at 'imag.logging.modules.<mod>.destinations', expected Array<String>";
-                        Error::from(err_msg(msg))
-                    })
-                    .and_then(translate_destination)?;
-                v.push(dest);
-                Ok(v)
-            })
+        .map(|val| {
+            val.as_str()
+                .ok_or_else(|| "Type error at 'imag.logging.modules.<mod>.destinations', expected Array<String>")
+                .map_err(err_msg)
+                .map_err(Error::from)
+                .and_then(|s| translate_destination(s))
         })
+        .collect()
 }
 
 fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
