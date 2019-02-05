@@ -17,21 +17,22 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-/**
- * Generate variants of a base value by applying parts
- *
- * Example:
- *
- * ```ignore
- * generate_variants(path, vec!["foo", "bar", "baz"], |b, v| {
- *    let b = b.clone();
- *    b.push(v);
- *    b
- * })
- *
- * ```
- *
- */
+///
+/// Generate variants of a base value by applying parts
+///
+/// Example:
+///
+/// ```
+/// let base = "Base";
+/// let variants = generate_variants(base, vec!["foo", "bar", "baz"], |base, modder| {
+///    let mut variant = base.clone();
+///    variant.push(modder);
+///    variant
+/// });
+///
+/// assert!(variants, vec!["Basefoo", "Basebar", "Basebaz"]);
+/// ```
+///
 pub fn generate_variants<A, B, C, F>(base: &A, modders: Vec<B>, f: &F)
     -> Vec<C>
     where
