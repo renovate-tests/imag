@@ -111,28 +111,26 @@ pub fn override_config(val: &mut Value, v: Vec<String>) -> Result<()> {
     use libimagutil::key_value_split::*;
     use toml_query::read::TomlValueReadExt;
 
-    let iter = v.into_iter()
+    v.into_iter()
         .map(|s| { debug!("Trying to process '{}'", s); s })
         .filter_map(|s| s.into_kv().map(Into::into).or_else(|| {
             warn!("Could split at '=' - will be ignore override");
             None
         }))
         .map(|(k, v)| {
-            let value = val
-                .read(&k)
+            let value = val.read_mut(&k)
                 .context(EM::TomlQueryError)?
-                .ok_or_else(|| Error::from(err_msg("Confit parser error")))?;
+                .ok_or_else(|| Error::from(err_msg("No config value there, cannot override.")))?;
 
-            into_value(value, v)
-                .map(|v| info!("Successfully overridden: {} = {}", k, v))
-                .ok_or_else(|| Error::from(err_msg("Config override type not matching")))
-        });
+            let new_value = into_value(value, v)
+                .ok_or_else(|| Error::from(err_msg("Config override type not matching")))?;
 
-    for elem in iter {
-        let _ = elem.context(err_msg("Config override error"))?;
-    }
-
-    Ok(())
+            info!("Successfully overridden: {} = {}", k, new_value);
+            *value = new_value;
+            Ok(())
+        })
+        .map(|elem: Result<()>| elem.context(err_msg("Config override error")).map_err(Error::from))
+        .collect::<Result<()>>()
 }
 
 /// Tries to convert the String `s` into the same type as `value`.
