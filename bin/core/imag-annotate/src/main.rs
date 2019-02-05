@@ -37,7 +37,9 @@
 extern crate clap;
 #[macro_use]
 extern crate log;
+#[macro_use]
 extern crate failure;
+extern crate toml_query;
 
 extern crate libimagentryannotation;
 extern crate libimagentryedit;
@@ -45,6 +47,7 @@ extern crate libimagerror;
 #[macro_use] extern crate libimagrt;
 extern crate libimagstore;
 extern crate libimagutil;
+extern crate libimagentrylink;
 
 use std::io::Write;
 
@@ -57,9 +60,12 @@ use libimagerror::trace::MapErrTrace;
 use libimagerror::exit::ExitUnwrap;
 use libimagerror::io::ToExitCode;
 use libimagerror::errors::ErrorMsg as EM;
+use libimagerror::iter::TraceIterator;
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
 use libimagstore::store::FileLockEntry;
+use libimagstore::iter::get::StoreIdGetIteratorExtension;
+use libimagentrylink::internal::InternalLinker;
 
 mod ui;
 
@@ -89,23 +95,45 @@ fn main() {
 }
 
 fn add(rt: &Runtime) {
-    let scmd            = rt.cli().subcommand_matches("add").unwrap(); // safed by main()
-    let annotation_name = scmd.value_of("annotation_name").unwrap(); // safed by clap
-    let ids             = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1);
+    let scmd    = rt.cli().subcommand_matches("add").unwrap(); // safed by main()
+    let mut ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap(1).into_iter();
 
-    ids.into_iter().for_each(|id| {
-        let _ = rt.store()
-            .get(id.clone())
+    if let Some(first) = ids.next() {
+        let mut annotation = rt.store()
+            .get(first.clone())
             .map_err_trace_exit_unwrap(1)
-            .ok_or_else(|| EM::EntryNotFound(id.local_display_string()))
+            .ok_or_else(|| EM::EntryNotFound(first.local_display_string()))
             .map_err(Error::from)
             .map_err_trace_exit_unwrap(1)
-            .annotate(rt.store(), annotation_name)
-            .map_err_trace_exit_unwrap(1)
-            .edit_content(&rt)
+            .annotate(rt.store())
             .map_err_trace_exit_unwrap(1);
-    })
 
+        let _ = annotation.edit_content(&rt).map_err_trace_exit_unwrap(1);
+
+        for id in ids {
+            let mut entry = rt.store().get(id.clone())
+                .map_err_trace_exit_unwrap(1)
+                .ok_or_else(|| format_err!("Not found: {}", id.local_display_string()))
+                .map_err_trace_exit_unwrap(1);
+
+            let _ = entry.add_internal_link(&mut annotation).map_err_trace_exit_unwrap(1);
+        }
+
+        if let Some(annotation_id) = annotation
+            .get_header()
+            .read_string("annotation.name")
+            .map_err_trace_exit_unwrap(1)
+        {
+            let _ = writeln!(rt.stdout(), "Name of the annotation: {}", annotation_id)
+                .to_exit_code()
+                .unwrap_or_exit(1);
+        } else {
+            error!("Unnamed annotation: {:?}", annotation.get_location());
+            error!("This is most likely a BUG, please report!");
+        }
+    } else {
+        debug!("No entries to annotate");
+    }
 }
 
 fn remove(rt: &Runtime) {
@@ -164,11 +192,12 @@ fn list(rt: &Runtime) {
                     .map_err_trace_exit_unwrap(1)
                     .annotations(rt.store())
                     .map_err_trace_exit_unwrap(1)
+                    .into_get_iter(rt.store())
+                    .trace_unwrap_exit(1)
+                    .map(|opt| opt.ok_or_else(|| format_err!("Cannot find entry")))
+                    .trace_unwrap_exit(1)
                     .enumerate()
-                    .map(|(i, a)| {
-                        list_annotation(&rt, i, a.map_err_trace_exit_unwrap(1), with_text)
-                    })
-                    .collect::<Vec<_>>();
+                    .for_each(|(i, entry)| list_annotation(&rt, i, entry, with_text));
             });
     } else { // ids.len() == 0
         // show them all

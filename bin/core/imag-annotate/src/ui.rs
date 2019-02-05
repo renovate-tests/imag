@@ -38,13 +38,6 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                          .multiple(false)
                          .help("The entry to add the latitude/longitude to")
                          .value_name("ENTRY"))
-                    .arg(Arg::with_name("annotation_name")
-                         .index(2)
-                         .takes_value(true)
-                         .required(true)
-                         .multiple(false)
-                         .help("Name of the new annotation")
-                         .value_name("NAME"))
                    )
 
         .subcommand(SubCommand::with_name("remove")
