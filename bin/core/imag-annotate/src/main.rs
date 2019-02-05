@@ -52,6 +52,7 @@ extern crate libimagentrylink;
 use std::io::Write;
 
 use failure::Error;
+use toml_query::read::TomlValueReadTypeExt;
 
 use libimagentryannotation::annotateable::*;
 use libimagentryannotation::annotation_fetcher::*;
@@ -119,17 +120,20 @@ fn add(rt: &Runtime) {
             let _ = entry.add_internal_link(&mut annotation).map_err_trace_exit_unwrap(1);
         }
 
-        if let Some(annotation_id) = annotation
-            .get_header()
-            .read_string("annotation.name")
-            .map_err_trace_exit_unwrap(1)
-        {
-            let _ = writeln!(rt.stdout(), "Name of the annotation: {}", annotation_id)
-                .to_exit_code()
-                .unwrap_or_exit(1);
-        } else {
-            error!("Unnamed annotation: {:?}", annotation.get_location());
-            error!("This is most likely a BUG, please report!");
+        if !scmd.is_present("dont-print-name") {
+            if let Some(annotation_id) = annotation
+                .get_header()
+                .read_string("annotation.name")
+                .map_err(Error::from)
+                .map_err_trace_exit_unwrap(1)
+            {
+                let _ = writeln!(rt.stdout(), "Name of the annotation: {}", annotation_id)
+                    .to_exit_code()
+                    .unwrap_or_exit();
+            } else {
+                error!("Unnamed annotation: {:?}", annotation.get_location());
+                error!("This is most likely a BUG, please report!");
+            }
         }
     } else {
         debug!("No entries to annotate");
