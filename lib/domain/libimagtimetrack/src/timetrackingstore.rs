@@ -104,7 +104,7 @@ impl<'a> TimeTrackStore<'a> for Store {
     }
 
     fn get_timetrackings(&'a self) -> Result<TimeTrackingsGetIterator<'a>> {
-        Ok(TimeTrackingsGetIterator::new(self.entries()?, self))
+        Ok(TimeTrackingsGetIterator::new(self.entries()?.in_collection("timetrack"), self))
     }
 
 }
