@@ -121,7 +121,9 @@ pub fn list_impl(rt: &Runtime,
     let mut table = Table::new();
     table.set_titles(Row::new(["Tag", "Start", "End"].into_iter().map(|s| Cell::new(s)).collect()));
 
-    rt.store()
+    let mut table_empty = true;
+
+    let table = rt.store()
         .get_timetrackings()
         .map_err_trace_exit_unwrap()
         .trace_unwrap()
@@ -165,15 +167,21 @@ pub fn list_impl(rt: &Runtime,
 
                 let _ = rt.report_touched(e.get_location()).unwrap_or_exit();
 
+                table_empty = false;
                 Ok(tab)
             })
         })
-        .map_err_trace_exit_unwrap()
-        .print(&mut rt.stdout())
-        .context(err_msg("Failed to print table"))
-        .map_err(Error::from)
-        .map(|_| 0)
-        .map_err_trace()
-        .unwrap_or(1)
+        .map_err_trace_exit_unwrap();
+
+    if !table_empty {
+        table.print(&mut rt.stdout())
+            .context(err_msg("Failed to print table"))
+            .map_err(Error::from)
+            .map(|_| 0)
+            .map_err_trace()
+            .unwrap_or(1)
+    } else {
+        0
+    }
 }
 
