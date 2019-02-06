@@ -57,6 +57,14 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                         .conflicts_with("show-all")
                         .help("Show logs. Multiple possible (will be sorted by date, still)."))
 
+                   .arg(Arg::with_name("show-wrap")
+                        .long("wrap")
+                        .short("w")
+                        .takes_value(true)
+                        .multiple(false)
+                        .required(false)
+                        .help("Wrap at N characters, defaults to 80."))
+
                 )
 
 }

@@ -41,6 +41,7 @@ extern crate toml;
 extern crate toml_query;
 extern crate itertools;
 extern crate failure;
+extern crate textwrap;
 
 extern crate libimaglog;
 #[macro_use] extern crate libimagrt;
@@ -49,6 +50,9 @@ extern crate libimagerror;
 extern crate libimagdiary;
 
 use std::io::Write;
+use std::io::Cursor;
+use std::result::Result as RResult;
+use std::str::FromStr;
 
 use failure::Error;
 use failure::err_msg;
@@ -61,8 +65,10 @@ use libimagerror::exit::ExitUnwrap;
 use libimagerror::iter::TraceIterator;
 use libimagerror::exit::ExitCode;
 use libimagdiary::diary::Diary;
+use libimagdiary::diaryid::DiaryId;
 use libimaglog::log::Log;
 use libimagstore::iter::get::StoreIdGetIteratorExtension;
+use libimagstore::store::FileLockEntry;
 
 mod ui;
 use ui::build_ui;
@@ -142,6 +148,18 @@ fn show(rt: &Runtime) {
         }
     };
 
+    let mut do_wrap = if scmd.is_present("show-wrap") {
+        Some(80)
+    } else {
+        None
+    };
+
+    if let Some(wrap_value) = scmd.value_of("show-wrap") {
+        do_wrap = Some(usize::from_str(wrap_value).map_err(Error::from).map_err_trace_exit_unwrap());
+    }
+
+    let mut output = rt.stdout();
+
     Itertools::flatten(iters.into_iter())
         .into_get_iter(rt.store())
         .trace_unwrap_exit()
@@ -158,16 +176,24 @@ fn show(rt: &Runtime) {
         .into_iter()
         .map(|tpl| { debug!("Found entry: {:?}", tpl.1); tpl })
         .map(|(id, entry)| {
-            let _ = writeln!(rt.stdout(),
-                    "{dname: >10} - {y: >4}-{m:0>2}-{d:0>2}T{H:0>2}:{M:0>2} - {text}",
-                     dname = id.diary_name(),
-                     y = id.year(),
-                     m = id.month(),
-                     d = id.day(),
-                     H = id.hour(),
-                     M = id.minute(),
-                     text = entry.get_content().trim_right())
-                .to_exit_code()?;
+            if let Some(wrap_limit) = do_wrap {
+                // assume a capacity here:
+                // diaryname + year + month + day + hour + minute + delimiters + whitespace
+                // 10 + 4 + 2 + 2 + 2 + 2 + 6 + 4 = 32
+                // plus text, which we assume to be 120 characters... lets allocate 256 bytes.
+                let mut buffer = Cursor::new(Vec::with_capacity(256));
+                let _ = do_write_to(&mut buffer, id, &entry).unwrap_or_exit();
+                let buffer = String::from_utf8(buffer.into_inner())
+                    .map_err(Error::from)
+                    .map_err_trace_exit_unwrap();
+
+                // now lets wrap
+                for line in ::textwrap::wrap(&buffer, wrap_limit).iter() {
+                    let _ = writeln!(&mut output, "{}", line).to_exit_code()?;
+                }
+            } else {
+                let _ = do_write_to(&mut output, id, &entry).unwrap_or_exit();
+            }
 
             let _ = rt
                 .report_touched(entry.get_location())
@@ -237,3 +263,17 @@ fn get_log_text(rt: &Runtime) -> String {
             acc
         })
 }
+
+fn do_write_to<'a>(sink: &mut Write, id: DiaryId, entry: &FileLockEntry<'a>) -> RResult<(), ExitCode> {
+    writeln!(sink,
+            "{dname: >10} - {y: >4}-{m:0>2}-{d:0>2}T{H:0>2}:{M:0>2} - {text}",
+             dname = id.diary_name(),
+             y = id.year(),
+             m = id.month(),
+             d = id.day(),
+             H = id.hour(),
+             M = id.minute(),
+             text = entry.get_content().trim_right())
+        .to_exit_code()
+}
+
