@@ -65,7 +65,7 @@ pub fn month(rt: &Runtime) -> i32 {
                 let (year, month)  = if now.month() == 12 {
                     (now.year() + 1, 1)
                 } else {
-                    (now.year(), now.month())
+                    (now.year(), now.month() + 1)
                 };
 
                 NaiveDate::from_ymd(year, month, 1).and_hms(0, 0, 0)
