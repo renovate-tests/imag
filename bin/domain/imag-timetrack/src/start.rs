@@ -32,15 +32,19 @@ pub fn start(rt: &Runtime) -> i32 {
     let (_, cmd) = rt.cli().subcommand();
     let cmd = cmd.unwrap(); // checked in main()
 
-    let start = match cmd.value_of("start-time") {
-        None | Some("now") => ::chrono::offset::Local::now().naive_local(),
-        Some(ndt)          => match NaiveDateTime::from_str(ndt).map_err(Error::from) {
-            Ok(ndt) => ndt,
-            Err(e) =>  {
-                trace_error(&e);
-                error!("Cannot continue, not having start time");
-                return 1
-            },
+    let start = {
+        let startstr = cmd.value_of("start-time").unwrap(); // safe by clap
+        if startstr == "now" {
+            ::chrono::offset::Local::now().naive_local()
+        } else {
+            match NaiveDateTime::from_str(startstr).map_err(Error::from) {
+                Ok(ndt) => ndt,
+                Err(e) =>  {
+                    trace_error(&e);
+                    error!("Cannot continue, not having start time");
+                    return 1
+                },
+            }
         }
     };
 
