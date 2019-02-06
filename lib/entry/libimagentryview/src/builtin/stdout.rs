@@ -29,6 +29,7 @@ use failure::Fallible as Result;
 pub struct StdoutViewer {
     view_header: bool,
     view_content: bool,
+    trim_right: bool,
     wrap_content: Option<usize>,
 }
 
@@ -38,12 +39,17 @@ impl StdoutViewer {
         StdoutViewer {
             view_header: view_header,
             view_content: view_content,
+            trim_right: false,
             wrap_content: None,
         }
     }
 
     pub fn wrap_at(&mut self, wrap: usize) {
         self.wrap_content = Some(wrap)
+    }
+
+    pub fn trim_right(&mut self, trim: bool) {
+        self.trim_right = trim;
     }
 
 }
@@ -59,11 +65,18 @@ impl Viewer for StdoutViewer {
         }
 
         if self.view_content {
+            let content = if self.trim_right {
+                e.get_content().trim_right()
+            } else {
+                &e.get_content()
+            };
+
             match self.wrap_content {
-                Some(limit) => for line in ::textwrap::wrap(e.get_content(), limit).iter() {
+
+                Some(limit) => for line in ::textwrap::wrap(content, limit).iter() {
                     let _ = writeln!(sink, "{}", line)?;
                 },
-                None => writeln!(sink, "{}", e.get_content())?,
+                None => writeln!(sink, "{}", content)?,
             }
         }
 
