@@ -166,7 +166,7 @@ fn show(rt: &Runtime) {
                      d = id.day(),
                      H = id.hour(),
                      M = id.minute(),
-                     text = entry.get_content())
+                     text = entry.get_content().trim_right())
                 .to_exit_code()?;
 
             let _ = rt
