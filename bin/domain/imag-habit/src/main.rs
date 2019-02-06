@@ -252,7 +252,11 @@ fn today(rt: &Runtime, future: bool) {
             let done = scmd.is_present("today-done");
             (futu, done)
         } else {
-            (true, rt.cli().subcommand_matches("status").unwrap().is_present("status-done"))
+            if let Some(status) = rt.cli().subcommand_matches("status") {
+                (true, status.is_present("status-done"))
+            } else {
+                (true, false)
+            }
         }
     };
     let today = ::chrono::offset::Local::today().naive_local();
