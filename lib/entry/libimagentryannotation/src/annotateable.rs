@@ -36,13 +36,12 @@ use failure::ResultExt;
 use failure::Error;
 use failure::err_msg;
 
-use iter::*;
 use module_path::ModuleEntryPath;
 
 pub trait Annotateable {
     fn annotate<'a>(&mut self, store: &'a Store) -> Result<FileLockEntry<'a>>;
     fn denotate<'a>(&mut self, store: &'a Store, ann_name: &str) -> Result<Option<FileLockEntry<'a>>>;
-    fn annotations<'a>(&self, store: &'a Store) -> Result<AnnotationIter<'a>>;
+    fn annotations(&self) -> Result<StoreIdIterator>;
     fn is_annotation(&self) -> Result<bool>;
 }
 
@@ -87,10 +86,14 @@ impl Annotateable for Entry {
     }
 
     /// Get all annotations of an entry
-    fn annotations<'a>(&self, store: &'a Store) -> Result<AnnotationIter<'a>> {
+    fn annotations(&self) -> Result<StoreIdIterator> {
         self.get_internal_links()
-            .map(|iter| StoreIdIterator::new(Box::new(iter.map(|e| e.get_store_id().clone()).map(Ok))))
-            .map(|i| AnnotationIter::new(i, store))
+            .map(|it| {
+                it.filter(|link| link.get_store_id().is_in_collection(&["annotation"]))
+                    .map(|link| Ok(link.get_store_id().clone()))
+            })
+            .map(Box::new)
+            .map(|inner| StoreIdIterator::new(inner))
     }
 
     fn is_annotation(&self) -> Result<bool> {

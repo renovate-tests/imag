@@ -194,7 +194,7 @@ fn list(rt: &Runtime) {
                     .ok_or_else(|| EM::EntryNotFound(id.local_display_string()))
                     .map_err(Error::from)
                     .map_err_trace_exit_unwrap(1)
-                    .annotations(rt.store())
+                    .annotations()
                     .map_err_trace_exit_unwrap(1)
                     .into_get_iter(rt.store())
                     .trace_unwrap_exit(1)

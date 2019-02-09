@@ -52,5 +52,4 @@ module_entry_path_mod!("annotations");
 
 pub mod annotateable;
 pub mod annotation_fetcher;
-pub mod iter;
 
