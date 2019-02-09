@@ -205,15 +205,15 @@ fn list(rt: &Runtime) {
             });
     } else { // ids.len() == 0
         // show them all
-        let _ = rt
-            .store()
+        rt.store()
             .all_annotations()
             .map_err_trace_exit_unwrap(1)
+            .into_get_iter(rt.store())
+            .trace_unwrap_exit(1)
+            .map(|opt| opt.ok_or_else(|| format_err!("Cannot find entry")))
+            .trace_unwrap_exit(1)
             .enumerate()
-            .map(|(i, a)| {
-                list_annotation(&rt, i, a.map_err_trace_exit_unwrap(1), with_text)
-            })
-            .collect::<Vec<_>>();
+            .for_each(|(i, entry)| list_annotation(&rt, i, entry, with_text));
     }
 }
 
