@@ -47,22 +47,22 @@ pub fn fetch_config(searchpath: &PathBuf) -> Result<Option<Value>> {
     use libimagerror::trace::trace_error;
 
     let variants : Vec<&'static str> = vec!["config", "config.toml", "imagrc", "imagrc.toml"];
-    let modifier = |base: &PathBuf, v: &'static str| {
+    let modifier = |base: &PathBuf, v: &&str| {
         let mut base = base.clone();
-        base.push(String::from(v));
+        base.push(String::from(*v));
         base
     };
 
     let vals = vec![
         vec![searchpath.clone()],
-        gen_vars(searchpath, variants, &modifier),
+        gen_vars(searchpath, variants.iter(), &modifier),
 
         env::var("HOME")
-            .map(|home| gen_vars(&PathBuf::from(home), variants, &modifier))
+            .map(|home| gen_vars(&PathBuf::from(home), variants.iter(), &modifier))
             .unwrap_or(vec![]),
 
         xdg_basedir::get_data_home()
-            .map(|data_dir| gen_vars(&data_dir, variants, &modifier))
+            .map(|data_dir| gen_vars(&data_dir, variants.iter(), &modifier))
             .unwrap_or(vec![]),
     ];
 
