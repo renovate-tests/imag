@@ -23,22 +23,20 @@
 /// Example:
 ///
 /// ```
-/// let base = "Base";
-/// let variants = generate_variants(base, vec!["foo", "bar", "baz"], |base, modder| {
-///    let mut variant = base.clone();
-///    variant.push(modder);
-///    variant
-/// });
-///
-/// assert!(variants, vec!["Basefoo", "Basebar", "Basebaz"]);
+/// use libimagutil::variants::generate_variants;
+///     let base = 1;
+///     let vars = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+///     let res = generate_variants(&base, vars.iter(), &|base, var| base + var);
+///     assert_eq!(res, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 /// ```
 ///
-pub fn generate_variants<A, B, C, F>(base: &A, modders: Vec<B>, f: &F)
+pub fn generate_variants<A, B, C, F, I>(base: &A, modders: I, f: &F)
     -> Vec<C>
     where
-        F: Fn(&A, B) -> C
+        F: Fn(&A, B) -> C,
+        I: Iterator<Item = B>
 {
-    modders.into_iter().map(|m| f(base, m)).collect()
+    modders.map(|m| f(base, m)).collect()
 }
 
 #[cfg(test)]
@@ -50,7 +48,7 @@ mod test {
     fn test_variants_simple() {
         let base = 1;
         let vars = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-        let res = generate_variants(&base, vars, &|base, var| base + var);
+        let res = generate_variants(&base, vars.iter(), &|base, var| base + var);
 
         assert!(res.len() == 11, format!("Length is {} instead of 11", res.len()));
         assert!(res.iter().all(|i| *i > 0));
@@ -63,7 +61,7 @@ mod test {
 
         let base = PathBuf::from("/");
         let vars = vec!["foo", "bar", "baz"];
-        let res = generate_variants(&base, vars, &|base, var| {
+        let res = generate_variants(&base, vars.iter(), &|base, var| {
             let mut base = base.clone();
             base.push(var);
             base
