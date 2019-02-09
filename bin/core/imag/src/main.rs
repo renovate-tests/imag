@@ -419,7 +419,7 @@ fn forward_commandline_arguments(m: &ArgMatches, scmd: &mut Vec<String>) {
     push(Some("editor"),
          Runtime::arg_editor_name(), m , scmd);
 
-    push(None , Runtime::arg_logdest_name()                         , m , scmd);
-
+    push(Some("ignore-ids"),
+         Runtime::arg_ignore_ids_name(), m , scmd);
 }
 

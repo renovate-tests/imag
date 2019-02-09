@@ -62,6 +62,8 @@ pub struct Runtime<'a> {
 
     has_output_pipe: bool,
     has_input_pipe: bool,
+
+    ignore_ids: bool
 }
 
 impl<'a> Runtime<'a> {
@@ -146,9 +148,11 @@ impl<'a> Runtime<'a> {
 
         let has_output_pipe = !atty::is(atty::Stream::Stdout);
         let has_input_pipe  = !atty::is(atty::Stream::Stdin);
+        let ignore_ids      = matches.is_present(Runtime::arg_ignore_ids_name());
 
         debug!("has output pipe = {}", has_output_pipe);
         debug!("has input pipe  = {}", has_input_pipe);
+        debug!("ignore ids      = {}", ignore_ids);
 
         store_result.map(|store| Runtime {
             cli_matches: matches,
@@ -158,6 +162,7 @@ impl<'a> Runtime<'a> {
 
             has_output_pipe,
             has_input_pipe,
+            ignore_ids,
         })
         .context(err_msg("Cannot instantiate runtime"))
         .map_err(Error::from)
@@ -240,12 +245,12 @@ impl<'a> Runtime<'a> {
                 .required(false)
                 .takes_value(true))
 
-            .arg(Arg::with_name(Runtime::arg_logdest_name())
-                .long(Runtime::arg_logdest_name())
-                .help("Override the logging destinations from the configuration: values can be seperated by ',', a value of '-' marks the stderr output, everything else is expected to be a path")
+            .arg(Arg::with_name(Runtime::arg_ignore_ids_name())
+                .long(Runtime::arg_ignore_ids_name())
+                .help("Do not assume that the output is a pipe to another imag command. This overrides the default behaviour where imag only prints the IDs of the touched entries to stdout if stdout is a pipe.")
+                .long_help("Without this flag, imag assumes that if stdout is a pipe, the command imag pipes to is also an imag command. Thus, it prints the IDs of the processed entries to stdout and automatically redirects the command output to stderr. By providing this flag, this behaviour gets overridden: The IDs are not printed at all and the normal output is printed to stdout.")
                 .required(false)
-                .takes_value(true)
-                .value_name("LOGDESTS"))
+                .takes_value(false))
 
     }
 
@@ -260,7 +265,13 @@ impl<'a> Runtime<'a> {
             Runtime::arg_runtimepath_name(),
             Runtime::arg_storepath_name(),
             Runtime::arg_editor_name(),
+            Runtime::arg_ignore_ids_name(),
         ]
+    }
+
+    /// Get the normal-output argument name for the Runtime
+    pub fn arg_ignore_ids_name() -> &'static str {
+        "ignore-ids"
     }
 
     /// Get the verbosity argument name for the Runtime
@@ -324,11 +335,6 @@ impl<'a> Runtime<'a> {
     pub fn with_store(mut self, s: Store) -> Self {
         self.store = s;
         self
-    }
-
-    /// Get the argument name for the logging destination
-    pub fn arg_logdest_name() -> &'static str {
-        "logging-destinations"
     }
 
     #[cfg(feature = "pub_logging_initialization")]
@@ -461,8 +467,15 @@ impl<'a> Runtime<'a> {
         self.has_output_pipe
     }
 
+    /// Check whether the runtime ignores touched ids
+    ///
+    /// "Ignoring" in this context means whether the runtime prints them or not.
+    pub fn ignore_ids(&self) -> bool {
+        self.ignore_ids
+    }
+
     pub fn stdout(&self) -> OutputProxy {
-        if self.output_is_pipe() {
+        if self.output_is_pipe() && !self.ignore_ids {
             OutputProxy::Err(::std::io::stderr())
         } else {
             OutputProxy::Out(::std::io::stdout())
@@ -585,7 +598,7 @@ impl<'a> Runtime<'a> {
     fn report_touched_id(&self, id: &StoreId, output: &mut StdoutLock) -> Result<()> {
         use std::io::Write;
 
-        if self.output_is_pipe() {
+        if self.output_is_pipe() && !self.ignore_ids {
             trace!("Reporting: {} to {:?}", id, output);
             writeln!(output, "{}", id)?;
         }
