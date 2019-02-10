@@ -32,6 +32,7 @@ libimagstore           = { version = "0.10.0", path = "../../../lib/core/libimag
 libimagrt              = { version = "0.10.0", path = "../../../lib/core/libimagrt" }
 libimagerror           = { version = "0.10.0", path = "../../../lib/core/libimagerror" }
 libimagentryannotation = { version = "0.10.0", path = "../../../lib/entry/libimagentryannotation" }
+libimagentrylink       = { version = "0.10.0", path = "../../../lib/entry/libimagentrylink" }
 libimagentryedit       = { version = "0.10.0", path = "../../../lib/entry/libimagentryedit" }
 libimagutil            = { version = "0.10.0", path = "../../../lib/etc/libimagutil" }
 

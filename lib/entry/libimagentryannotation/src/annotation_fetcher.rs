@@ -18,21 +18,17 @@
 //
 
 use libimagstore::store::Store;
+use libimagstore::storeid::StoreIdIterator;
 
 use failure::Fallible as Result;
-use iter::*;
 
-pub trait AnnotationFetcher<'a> {
-
-    fn all_annotations(&'a self) -> Result<AnnotationIter<'a>>;
-
+pub trait AnnotationFetcher {
+    fn all_annotations(&self) -> Result<StoreIdIterator>;
 }
 
-impl<'a> AnnotationFetcher<'a> for Store {
-
-    fn all_annotations(&'a self) -> Result<AnnotationIter<'a>> {
-        Ok(AnnotationIter::new(self.entries()?.without_store(), self))
+impl<'a> AnnotationFetcher for Store {
+    fn all_annotations(&self) -> Result<StoreIdIterator> {
+        self.entries().map(|iter| iter.in_collection("annotation").without_store())
     }
-
 }
 
