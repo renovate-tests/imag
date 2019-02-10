@@ -304,6 +304,8 @@ fn today(rt: &Runtime, future: bool) {
         .count() != 0;
 
     debug!("Any today relevant = {}", any_today_relevant);
+    debug!("relevant = {:?}", relevant);
+
     if !any_today_relevant {
         let n = rt
             .cli()
@@ -367,8 +369,16 @@ fn today(rt: &Runtime, future: bool) {
                     .next_instance_date()
                     .map_err_trace_exit_unwrap()
                     .map(|date|  {
-                        habit.instance_exists_for_date(&date)
-                            .map_err_trace_exit_unwrap()
+                        let instance_exists = habit
+                            .instance_exists_for_date(&date)
+                            .map_err_trace_exit_unwrap();
+
+                        debug!("instance exists for {:?} for {:?} = {:?}",
+                               habit.get_location().local_display_string(),
+                               date,
+                               instance_exists);
+
+                        instance_exists
                     })
                     .unwrap_or(false)
             })
