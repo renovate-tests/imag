@@ -365,7 +365,7 @@ fn today(rt: &Runtime, future: bool) {
         relevant
             .into_iter()
             .filter(|habit| show_done || {
-                habit
+                let instance_exists = habit
                     .next_instance_date()
                     .map_err_trace_exit_unwrap()
                     .map(|date|  {
@@ -380,7 +380,9 @@ fn today(rt: &Runtime, future: bool) {
 
                         instance_exists
                     })
-                    .unwrap_or(false)
+                    .unwrap_or(false);
+
+                !instance_exists
             })
             .enumerate()
             .for_each(|(i, e)| {
