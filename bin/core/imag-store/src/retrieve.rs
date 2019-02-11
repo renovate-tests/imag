@@ -37,8 +37,7 @@ pub fn retrieve(rt: &Runtime) {
             // unwrap() is safe as arg is required
             let id    = scmd.value_of("id").unwrap();
             let path  = PathBuf::from(id);
-            let store = Some(rt.store().path().clone());
-            let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
+            let path  = StoreId::new(path).map_err_trace_exit_unwrap();
             debug!("path = {:?}", path);
 
             rt.store()

@@ -44,8 +44,7 @@ pub fn create(rt: &Runtime) {
     // unwrap is safe as value is required
     let path  = scmd.value_of("path").unwrap();
     let path  = PathBuf::from(path);
-    let store = Some(rt.store().path().clone());
-    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
+    let path  = StoreId::new(path).map_err_trace_exit_unwrap();
 
     debug!("path = {:?}", path);
 

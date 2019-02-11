@@ -31,8 +31,7 @@ pub fn update(rt: &Runtime) {
     let scmd  = rt.cli().subcommand_matches("update").unwrap();
     let id    = scmd.value_of("id").unwrap(); // Safe by clap
     let path  = PathBuf::from(id);
-    let store = Some(rt.store().path().clone());
-    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
+    let path  = StoreId::new(path).map_err_trace_exit_unwrap();
 
     let _ = rt.store()
         .retrieve(path)
