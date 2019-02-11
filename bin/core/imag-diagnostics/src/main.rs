@@ -242,12 +242,7 @@ fn main() {
         if let Some((num, path)) = max_overall_byte_size {
             do_write!(out, "Largest Entry ({} bytes): {}",
                 num,
-                path
-                    .into_pathbuf()
-                    .map_err_trace_exit_unwrap()
-                    .to_str()
-                    .unwrap_or("Failed converting path to string")
-            );
+                path.local_display_string());
         }
 
         do_write!(out, "{} average internal link count per entry", num_internal_links / n);
@@ -255,12 +250,7 @@ fn main() {
         if let Some((num, path)) = max_internal_links {
             do_write!(out, "Entry with most internal links ({}): {}",
                      num,
-                     path
-                        .into_pathbuf()
-                        .map_err_trace_exit_unwrap()
-                        .to_str()
-                        .unwrap_or("Failed converting path to string")
-            );
+                     path.local_display_string());
         }
         do_write!(out, "{} verified entries", verified_count);
         do_write!(out, "{} unverified entries", unverified_count);

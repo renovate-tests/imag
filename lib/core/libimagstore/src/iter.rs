@@ -236,7 +236,7 @@ mod tests {
 
     use store::Store;
     use storeid::StoreId;
-    use file_abstraction::InMemoryFileAbstraction;
+    use file_abstraction::inmemory::InMemoryFileAbstraction;
     use libimagutil::variants::generate_variants;
 
     pub fn get_store() -> Store {
