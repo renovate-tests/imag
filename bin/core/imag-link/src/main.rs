@@ -132,8 +132,7 @@ fn get_entry_by_name<'a>(rt: &'a Runtime, name: &str) -> Result<Option<FileLockE
     use libimagstore::storeid::StoreId;
 
     debug!("Getting: {:?}", name);
-    let result = StoreId::new(Some(rt.store().path().clone()), PathBuf::from(name))
-        .and_then(|id| rt.store().get(id));
+    let result = StoreId::new(PathBuf::from(name)).and_then(|id| rt.store().get(id));
 
     debug!(" => : {:?}", result);
     result
