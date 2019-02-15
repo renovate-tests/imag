@@ -348,10 +348,6 @@ impl<'a> StoreIdIteratorWithStore<'a> {
 
 #[cfg(test)]
 mod test {
-    use std::path::PathBuf;
-
-    use storeid::StoreId;
-    use storeid::StoreIdWithBase;
     use storeid::IntoStoreId;
 
     module_entry_path_mod!("test");
@@ -361,70 +357,6 @@ mod test {
         let p = module_path::ModuleEntryPath::new("test");
 
         assert_eq!(p.into_storeid().unwrap().to_str().unwrap(), "test/test");
-    }
-
-    #[test]
-    fn test_baseless_path() {
-        let id = StoreId::new(PathBuf::from("test"));
-        assert!(id.is_ok());
-        assert_eq!(id.unwrap(), StoreId(PathBuf::from("test")));
-    }
-
-    #[test]
-    fn test_base_path() {
-        let id = StoreId::new(PathBuf::from("test"));
-        assert!(id.is_ok());
-        assert_eq!(id.unwrap(), StoreId(PathBuf::from("test")));
-    }
-
-    #[test]
-    fn test_adding_base_to_baseless_path() {
-        let id = StoreId::new(PathBuf::from("test"));
-
-        assert!(id.is_ok());
-        let id = id.unwrap();
-
-        assert_eq!(id, StoreId(PathBuf::from("test")));
-
-        let storebase = PathBuf::from("/tmp/");
-        let id = id.with_base(&storebase);
-        assert_eq!(id, StoreIdWithBase(&PathBuf::from("/tmp/"), PathBuf::from("test")));
-    }
-
-    #[test]
-    fn test_removing_base_from_base_path() {
-        let id = StoreId::new(PathBuf::from("/tmp/test"));
-
-        assert!(id.is_ok());
-        let storebase = PathBuf::from("/tmp/");
-        let id = id.unwrap().with_base(&storebase);
-
-        assert_eq!(id, StoreIdWithBase(&PathBuf::from("/tmp/"), PathBuf::from("test")));
-
-        let id = id.without_base();
-        assert_eq!(id, StoreId(PathBuf::from("test")));
-    }
-
-    #[test]
-    fn test_basefull_into_pathbuf_is_ok() {
-        let id = StoreId::new(PathBuf::from("/tmp/test"));
-        assert!(id.is_ok());
-
-        let storebase = PathBuf::from("/tmp/");
-        let id = id.unwrap().with_base(&storebase);
-        assert!(id.into_pathbuf().is_ok());
-    }
-
-    #[test]
-    fn test_basefull_into_pathbuf_is_correct() {
-        let id = StoreId::new(PathBuf::from("/tmp/test"));
-        assert!(id.is_ok());
-
-        let storebase = PathBuf::from("/tmp/");
-        let pb = id.unwrap().with_base(&storebase).into_pathbuf();
-        assert!(pb.is_ok());
-
-        assert_eq!(pb.unwrap(), PathBuf::from("/tmp/test"));
     }
 
     #[test]
