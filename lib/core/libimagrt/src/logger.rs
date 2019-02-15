@@ -98,7 +98,7 @@ impl ImagLogger {
 
         Ok(ImagLogger {
             global_loglevel     : aggregate_global_loglevel(matches, config)?,
-            global_destinations : aggregate_global_destinations(matches, config)?,
+            global_destinations : aggregate_global_destinations(config)?,
             module_settings     : aggregate_module_settings(matches, config)?,
             handlebars          : handlebars,
         })
@@ -273,7 +273,7 @@ fn translate_destinations(raw: &Vec<Value>) -> Result<Vec<LogDestination>> {
         .collect()
 }
 
-fn aggregate_global_destinations(matches: &ArgMatches, config: Option<&Value>)
+fn aggregate_global_destinations(config: Option<&Value>)
     -> Result<Vec<LogDestination>>
 {
     match config {
