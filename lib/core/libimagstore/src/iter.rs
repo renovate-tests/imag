@@ -214,3 +214,53 @@ impl<'a> Iterator for Entries<'a> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    extern crate env_logger;
+
+    use std::path::PathBuf;
+    use std::sync::Arc;
+
+    fn setup_logging() {
+        let _ = env_logger::try_init();
+    }
+
+    use store::Store;
+    use storeid::StoreId;
+    use file_abstraction::InMemoryFileAbstraction;
+    use libimagutil::variants::generate_variants;
+
+    pub fn get_store() -> Store {
+        let backend = Arc::new(InMemoryFileAbstraction::default());
+        Store::new_with_backend(PathBuf::from("/"), &None, backend).unwrap()
+    }
+
+    #[test]
+    fn test_entries_iterator_in_collection() {
+        setup_logging();
+        let store = get_store();
+
+        let ids = {
+            let base = String::from("entry");
+            let variants = vec!["coll_1", "coll_2", "coll_3"];
+            let modifier = |base: &String, v: &&str| {
+                StoreId::new(Some(store.path().clone()), PathBuf::from(format!("{}/{}", *v, base))).unwrap()
+            };
+
+            generate_variants(&base, variants.iter(), &modifier)
+        };
+
+        for id in ids {
+            let _ = store.retrieve(id).unwrap();
+        }
+
+        let succeeded = store.entries()
+            .unwrap()
+            .in_collection("coll_3")
+            .map(|id| { debug!("Processing id = {:?}", id); id })
+            .all(|id| id.unwrap().is_in_collection(&["coll_3"]));
+
+        assert!(succeeded, "not all entries in iterator are from coll_3 collection");
+    }
+}
+

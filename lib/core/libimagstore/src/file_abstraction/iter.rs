@@ -67,6 +67,7 @@ impl PathIterator {
     pub fn in_collection(mut self, c: &str) -> Self {
         trace!("Generating iterator object for collection: {}", c);
         self.iter_builder.in_collection(c);
+        self.iter = self.iter_builder.build_iter();
         self
     }
 
