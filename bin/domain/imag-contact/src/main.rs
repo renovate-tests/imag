@@ -288,7 +288,7 @@ fn find(rt: &Runtime) {
         })
         .enumerate();
 
-    if !rt.output_is_pipe() {
+    if !rt.output_is_pipe() || rt.ignore_ids() {
         if scmd.is_present("json") {
             let v : Vec<DeserVcard> = iterator.map(|(_, tlp)| tlp.1).collect();
 
