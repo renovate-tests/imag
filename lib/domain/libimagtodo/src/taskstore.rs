@@ -162,7 +162,7 @@ impl<'a> TaskStore<'a> for Store {
     }
 
     fn all_tasks(&self) -> Result<TaskIdIterator> {
-        self.entries().map(|i| TaskIdIterator::new(i.without_store()))
+        self.entries().map(|i| TaskIdIterator::new(i))
     }
 
     fn new_from_twtask(&'a self, task: TTask) -> Result<FileLockEntry<'a>> {

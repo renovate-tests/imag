@@ -72,7 +72,7 @@ fn main() {
         .cli()
         .value_of("source")
         .map(PathBuf::from)
-        .map(StoreId::new_baseless)
+        .map(StoreId::new)
         .unwrap() // unwrap safe by clap
         .map_err_trace_exit_unwrap();
 
@@ -80,7 +80,7 @@ fn main() {
         .cli()
         .value_of("dest")
         .map(PathBuf::from)
-        .map(StoreId::new_baseless)
+        .map(StoreId::new)
         .unwrap() // unwrap safe by clap
         .map_err_trace_exit_unwrap();
 

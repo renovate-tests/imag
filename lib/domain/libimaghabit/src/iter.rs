@@ -52,7 +52,7 @@ impl From<StoreIdIterator> for HabitTemplateStoreIdIterator {
 
 impl<'a> From<StoreIdIteratorWithStore<'a>> for HabitTemplateStoreIdIterator {
     fn from(sii: StoreIdIteratorWithStore<'a>) -> Self {
-        HabitTemplateStoreIdIterator(sii.without_store())
+        HabitTemplateStoreIdIterator(sii.into_storeid_iter())
     }
 }
 
@@ -88,7 +88,7 @@ impl From<StoreIdIterator> for HabitInstanceStoreIdIterator {
 
 impl<'a> From<StoreIdIteratorWithStore<'a>> for HabitInstanceStoreIdIterator {
     fn from(sii: StoreIdIteratorWithStore<'a>) -> Self {
-        HabitInstanceStoreIdIterator(sii.without_store())
+        HabitInstanceStoreIdIterator(sii.into_storeid_iter())
     }
 }
 

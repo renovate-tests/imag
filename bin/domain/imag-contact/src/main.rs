@@ -73,7 +73,6 @@ use libimagerror::iter::TraceIterator;
 use libimagcontact::store::ContactStore;
 use libimagcontact::contact::Contact;
 use libimagcontact::deser::DeserVcard;
-use libimagstore::iter::get::StoreIdGetIteratorExtension;
 
 mod ui;
 mod util;
@@ -120,7 +119,7 @@ fn list(rt: &Runtime) {
         .store()
         .all_contacts()
         .map_err_trace_exit_unwrap()
-        .into_get_iter(rt.store())
+        .into_get_iter()
         .trace_unwrap_exit()
         .map(|fle| fle.ok_or_else(|| Error::from(err_msg("StoreId not found".to_owned()))))
         .trace_unwrap_exit()
@@ -206,7 +205,7 @@ fn show(rt: &Runtime) {
     rt.store()
         .all_contacts()
         .map_err_trace_exit_unwrap()
-        .into_get_iter(rt.store())
+        .into_get_iter()
         .trace_unwrap_exit()
         .map(|o| o.unwrap_or_else(|| {
             error!("Failed to get entry");
@@ -257,7 +256,7 @@ fn find(rt: &Runtime) {
         .store()
         .all_contacts()
         .map_err_trace_exit_unwrap()
-        .into_get_iter(rt.store())
+        .into_get_iter()
         .map(|el| {
             el.map_err_trace_exit_unwrap()
                 .ok_or_else(|| {

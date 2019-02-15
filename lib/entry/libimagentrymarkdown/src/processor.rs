@@ -133,8 +133,7 @@ impl LinkProcessor {
                         continue
                     }
 
-                    let spath      = Some(store.path().clone());
-                    let id         = StoreId::new(spath, PathBuf::from(&link.link))?;
+                    let id         = StoreId::new(PathBuf::from(&link.link))?;
                     let mut target = if self.create_internal_targets {
                         store.retrieve(id)?
                     } else {
@@ -232,7 +231,6 @@ mod tests {
     use super::*;
 
     use std::path::PathBuf;
-    use std::sync::Arc;
 
     use libimagstore::store::Store;
     use libimagentrylink::internal::InternalLinker;
@@ -242,9 +240,7 @@ mod tests {
     }
 
     pub fn get_store() -> Store {
-        use libimagstore::file_abstraction::InMemoryFileAbstraction;
-        let fs = InMemoryFileAbstraction::default();
-        Store::new_with_backend(PathBuf::from("/"), &None, Arc::new(fs)).unwrap()
+        Store::new_inmemory(PathBuf::from("/"), &None).unwrap()
     }
 
     #[test]
@@ -401,7 +397,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(2, entries.len(), "Expected 2 links, got: {:?}", entries);
 
@@ -440,7 +436,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(2, entries.len(), "Expected 2 links, got: {:?}", entries);
         debug!("{:?}", entries);
@@ -473,7 +469,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(3, entries.len(), "Expected 3 links, got: {:?}", entries);
         debug!("{:?}", entries);
@@ -506,7 +502,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(1, entries.len(), "Expected 1 entries, got: {:?}", entries);
         debug!("{:?}", entries);
@@ -534,7 +530,7 @@ mod tests {
 
         let entries = store.entries();
         assert!(entries.is_ok());
-        let entries : Vec<_> = entries.unwrap().without_store().collect();
+        let entries : Vec<_> = entries.unwrap().into_storeid_iter().collect();
 
         assert_eq!(1, entries.len(), "Expected 1 entries, got: {:?}", entries);
     }

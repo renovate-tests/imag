@@ -31,8 +31,7 @@ pub fn get(rt: &Runtime) {
 
     let id    = scmd.value_of("id").unwrap(); // safe by clap
     let path  = PathBuf::from(id);
-    let store = Some(rt.store().path().clone());
-    let path  = StoreId::new(store, path).map_err_trace_exit_unwrap();
+    let path  = StoreId::new(path).map_err_trace_exit_unwrap();
     debug!("path = {:?}", path);
 
     let _ = match rt.store().get(path.clone()).map_err_trace_exit_unwrap() {

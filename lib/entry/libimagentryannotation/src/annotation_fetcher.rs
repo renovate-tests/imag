@@ -17,18 +17,18 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
+use libimagstore::iter::Entries;
 use libimagstore::store::Store;
-use libimagstore::storeid::StoreIdIterator;
 
 use failure::Fallible as Result;
 
-pub trait AnnotationFetcher {
-    fn all_annotations(&self) -> Result<StoreIdIterator>;
+pub trait AnnotationFetcher<'a> {
+    fn all_annotations(&'a self) -> Result<Entries<'a>>;
 }
 
-impl<'a> AnnotationFetcher for Store {
-    fn all_annotations(&self) -> Result<StoreIdIterator> {
-        self.entries().map(|iter| iter.in_collection("annotation").without_store())
+impl<'a> AnnotationFetcher<'a> for Store {
+    fn all_annotations(&'a self) -> Result<Entries<'a>> {
+        self.entries().map(|iter| iter.in_collection("annotation"))
     }
 }
 

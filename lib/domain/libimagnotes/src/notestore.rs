@@ -74,7 +74,7 @@ impl<'a> NoteStore<'a> for Store {
     }
 
     fn all_notes(&'a self) -> Result<NoteIterator> {
-        self.entries().map(|it| it.without_store()).map(NoteIterator::new)
+        self.entries().map(|it| it.into_storeid_iter()).map(NoteIterator::new)
     }
 
 }

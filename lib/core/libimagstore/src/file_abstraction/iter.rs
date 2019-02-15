@@ -22,11 +22,11 @@ use std::sync::Arc;
 
 use failure::Fallible as Result;
 
-use storeid::StoreId;
+use storeid::StoreIdWithBase;
 use file_abstraction::FileAbstraction;
 
 /// See documentation for PathIterator
-pub trait PathIterBuilder {
+pub(crate) trait PathIterBuilder {
     fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf>>>;
     fn in_collection(&mut self, c: &str);
 }
@@ -45,19 +45,19 @@ pub trait PathIterBuilder {
 ///
 /// This means quite a few allocations down the road, as the PathIterator itself is not generic, but
 /// this seems to be the best way to implement this.
-pub struct PathIterator {
+pub(crate) struct PathIterator<'a> {
     iter_builder: Box<PathIterBuilder>,
     iter:         Box<Iterator<Item = Result<PathBuf>>>,
-    storepath:    PathBuf,
+    storepath:    &'a PathBuf,
     backend:      Arc<FileAbstraction>,
 }
 
-impl PathIterator {
+impl<'a> PathIterator<'a> {
 
     pub fn new(iter_builder: Box<PathIterBuilder>,
-               storepath: PathBuf,
+               storepath: &'a PathBuf,
                backend: Arc<FileAbstraction>)
-        -> PathIterator
+        -> PathIterator<'a>
     {
         trace!("Generating iterator object with PathIterBuilder");
         let iter = iter_builder.build_iter();
@@ -71,10 +71,22 @@ impl PathIterator {
         self
     }
 
+    /// Turn iterator into its internals
+    ///
+    /// Used for `Entries::into_storeid_iter()`
+    ///
+    /// # TODO
+    ///
+    /// Revisit whether this can be done in a cleaner way. See commit message for why this is
+    /// needed.
+    pub(crate) fn into_inner(self) -> Box<Iterator<Item = Result<PathBuf>>> {
+        self.iter
+    }
+
 }
 
-impl Iterator for PathIterator {
-    type Item = Result<StoreId>;
+impl<'a> Iterator for PathIterator<'a> {
+    type Item = Result<StoreIdWithBase<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.iter.next() {
@@ -82,7 +94,7 @@ impl Iterator for PathIterator {
                 Err(e)   => return Some(Err(e)),
                 Ok(next) => match self.backend.is_file(&next) {
                     Err(e)    => return Some(Err(e)),
-                    Ok(true)  => return Some(StoreId::from_full_path(&self.storepath, next)),
+                    Ok(true)  => return Some(StoreIdWithBase::from_full_path(&self.storepath, next)),
                     Ok(false) => { continue },
                 }
             }

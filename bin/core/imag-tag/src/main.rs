@@ -264,11 +264,11 @@ mod tests {
         let mut path = PathBuf::new();
         path.set_file_name(name);
 
-        let default_entry = Entry::new(StoreId::new_baseless(PathBuf::from("")).unwrap())
+        let default_entry = Entry::new(StoreId::new(PathBuf::from("")).unwrap())
             .to_str()
             .unwrap();
 
-        let id = StoreId::new_baseless(path)?;
+        let id = StoreId::new(path)?;
         let mut entry = rt.store().create(id.clone())?;
         entry.get_content_mut().push_str(&default_entry);
 
@@ -303,7 +303,7 @@ mod tests {
         debug!("Add-tags: {:?}", add);
 
         debug!("Altering things");
-        alter(&rt, StoreId::new_baseless(id.clone()).unwrap(), add, None);
+        alter(&rt, StoreId::new(id.clone()).unwrap(), add, None);
         debug!("Altered");
 
         let test_entry = rt.store().get(id).unwrap().unwrap();
@@ -338,7 +338,7 @@ mod tests {
         debug!("Rem-tags: {:?}", rem);
 
         debug!("Altering things");
-        alter(&rt, StoreId::new_baseless(id.clone()).unwrap(), add, rem);
+        alter(&rt, StoreId::new(id.clone()).unwrap(), add, rem);
         debug!("Altered");
 
         let test_entry = rt.store().get(id).unwrap().unwrap();
@@ -366,7 +366,7 @@ mod tests {
         debug!("Rem-tags: {:?}", rem);
 
         debug!("Altering things");
-        alter(&rt, StoreId::new_baseless(id.clone()).unwrap(), add, rem);
+        alter(&rt, StoreId::new(id.clone()).unwrap(), add, rem);
         debug!("Altered");
 
         let test_entry = rt.store().get(id).unwrap().unwrap();
@@ -394,7 +394,7 @@ mod tests {
         debug!("Rem-tags: {:?}", rem);
 
         debug!("Altering things");
-        alter(&rt, StoreId::new_baseless(id.clone()).unwrap(), add, rem);
+        alter(&rt, StoreId::new(id.clone()).unwrap(), add, rem);
         debug!("Altered");
 
         let test_entry = rt.store().get(id).unwrap().unwrap();

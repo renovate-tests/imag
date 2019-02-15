@@ -118,23 +118,27 @@ fn main() {
         }
     })
     .map(|id| if print_storepath {
-        id
+        (Some(rt.store().path()), id)
     } else {
-        id.without_base()
+        (None, id)
     });
 
     let mut stdout = rt.stdout();
     trace!("Got output: {:?}", stdout);
 
-    iterator.for_each(|id| {
-        let _ = rt.report_touched(&id).unwrap_or_exit(); // .map_err_trace_exit_unwrap();
-
+    iterator.for_each(|(storepath, id)| {
+        rt.report_touched(&id).unwrap_or_exit();
         if !rt.output_is_pipe() {
             let id = id.to_str().map_err_trace_exit_unwrap();
             trace!("Writing to {:?}", stdout);
-            writeln!(stdout, "{}", id)
-                .to_exit_code()
-                .unwrap_or_exit();
+
+            let result = if let Some(store) = storepath {
+                writeln!(stdout, "{}/{}", store.display(), id)
+            } else {
+                writeln!(stdout, "{}", id)
+            };
+
+            result.to_exit_code().unwrap_or_exit();
         }
     })
 }

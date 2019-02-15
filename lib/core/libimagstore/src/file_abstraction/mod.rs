@@ -25,20 +25,16 @@ use std::sync::Arc;
 use failure::Fallible as Result;
 
 use store::Entry;
-use storeid::StoreId;
+use storeid::StoreIdWithBase;
 
-mod fs;
-mod inmemory;
-pub(crate) mod iter;
+pub mod fs;
+pub mod inmemory;
+pub mod iter;
 
-pub use self::fs::FSFileAbstraction;
-pub use self::fs::FSFileAbstractionInstance;
-pub use self::inmemory::InMemoryFileAbstraction;
-pub use self::inmemory::InMemoryFileAbstractionInstance;
 use self::iter::PathIterator;
 
 /// An abstraction trait over filesystem actions
-pub trait FileAbstraction : Debug {
+pub(crate) trait FileAbstraction : Debug {
     fn remove_file(&self, path: &PathBuf) -> Result<()>;
     fn copy(&self, from: &PathBuf, to: &PathBuf) -> Result<()>;
     fn rename(&self, from: &PathBuf, to: &PathBuf) -> Result<()>;
@@ -52,17 +48,17 @@ pub trait FileAbstraction : Debug {
     fn drain(&self) -> Result<Drain>;
     fn fill<'a>(&'a mut self, d: Drain) -> Result<()>;
 
-    fn pathes_recursively(&self, basepath: PathBuf, storepath: PathBuf, backend: Arc<FileAbstraction>) -> Result<PathIterator>;
+    fn pathes_recursively<'a>(&self, basepath: PathBuf, storepath: &'a PathBuf, backend: Arc<FileAbstraction>) -> Result<PathIterator<'a>>;
 }
 
 /// An abstraction trait over actions on files
-pub trait FileAbstractionInstance : Debug {
+pub(crate) trait FileAbstractionInstance : Debug {
 
     /// Get the contents of the FileAbstractionInstance, as Entry object.
     ///
-    /// The `StoreId` is passed because the backend does not know where the Entry lives, but the
+    /// The `StoreIdWithBase` is passed because the backend does not know where the Entry lives, but the
     /// Entry type itself must be constructed with the id.
-    fn get_file_content(&mut self, id: StoreId) -> Result<Option<Entry>>;
+    fn get_file_content<'a>(&mut self, id: StoreIdWithBase<'a>) -> Result<Option<Entry>>;
     fn write_file_content(&mut self, buf: &Entry) -> Result<()>;
 }
 
@@ -101,18 +97,19 @@ mod test {
     use super::FileAbstractionInstance;
     use super::inmemory::InMemoryFileAbstraction;
     use super::inmemory::InMemoryFileAbstractionInstance;
-    use storeid::StoreId;
+    use storeid::StoreIdWithBase;
     use store::Entry;
 
     #[test]
     fn lazy_file() {
+        let store_path = PathBuf::from("/");
         let fs = InMemoryFileAbstraction::default();
 
         let mut path = PathBuf::from("tests");
         path.set_file_name("test1");
         let mut lf = InMemoryFileAbstractionInstance::new(fs.backend().clone(), path.clone());
 
-        let loca = StoreId::new_baseless(path).unwrap();
+        let loca = StoreIdWithBase::new(&store_path, path);
         let file = Entry::from_str(loca.clone(), &format!(r#"---
 [imag]
 version = "{}"
@@ -126,13 +123,14 @@ Hello World"#, env!("CARGO_PKG_VERSION"))).unwrap();
 
     #[test]
     fn lazy_file_multiline() {
+        let store_path = PathBuf::from("/");
         let fs = InMemoryFileAbstraction::default();
 
         let mut path = PathBuf::from("tests");
         path.set_file_name("test1");
         let mut lf = InMemoryFileAbstractionInstance::new(fs.backend().clone(), path.clone());
 
-        let loca = StoreId::new_baseless(path).unwrap();
+        let loca = StoreIdWithBase::new(&store_path, path);
         let file = Entry::from_str(loca.clone(), &format!(r#"---
 [imag]
 version = "{}"
@@ -147,13 +145,14 @@ baz"#, env!("CARGO_PKG_VERSION"))).unwrap();
 
     #[test]
     fn lazy_file_multiline_trailing_newlines() {
+        let store_path = PathBuf::from("/");
         let fs = InMemoryFileAbstraction::default();
 
         let mut path = PathBuf::from("tests");
         path.set_file_name("test1");
         let mut lf = InMemoryFileAbstractionInstance::new(fs.backend().clone(), path.clone());
 
-        let loca = StoreId::new_baseless(path).unwrap();
+        let loca = StoreIdWithBase::new(&store_path, path);
         let file = Entry::from_str(loca.clone(), &format!(r#"---
 [imag]
 version = "{}"

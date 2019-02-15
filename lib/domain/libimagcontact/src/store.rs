@@ -29,9 +29,9 @@ use failure::Fallible as Result;
 
 use libimagstore::storeid::IntoStoreId;
 use libimagstore::storeid::StoreId;
+use libimagstore::iter::Entries;
 use libimagstore::store::Store;
 use libimagstore::store::FileLockEntry;
-use libimagstore::storeid::StoreIdIterator;
 use libimagentryutil::isa::Is;
 
 use contact::IsContact;
@@ -51,7 +51,7 @@ pub trait ContactStore<'a> {
 
     // getting
 
-    fn all_contacts(&'a self) -> Result<StoreIdIterator>;
+    fn all_contacts(&'a self) -> Result<Entries<'a>>;
 }
 
 /// The extension for the Store to work with contacts
@@ -76,8 +76,8 @@ impl<'a> ContactStore<'a> for Store {
         postprocess_fetched_entry(self.retrieve(sid)?, value)
     }
 
-    fn all_contacts(&'a self) -> Result<StoreIdIterator> {
-        self.entries().map(|iter| iter.in_collection("contact").without_store())
+    fn all_contacts(&'a self) -> Result<Entries<'a>> {
+        self.entries().map(|ent| ent.in_collection("contact"))
     }
 
 }

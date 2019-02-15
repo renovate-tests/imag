@@ -208,7 +208,7 @@ fn list(rt: &Runtime) {
         rt.store()
             .all_annotations()
             .map_err_trace_exit_unwrap()
-            .into_get_iter(rt.store())
+            .into_get_iter()
             .trace_unwrap_exit()
             .map(|opt| opt.ok_or_else(|| format_err!("Cannot find entry")))
             .trace_unwrap_exit()
