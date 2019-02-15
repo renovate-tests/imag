@@ -52,6 +52,7 @@ impl Contact for Entry {
     }
 
     fn deser(&self) -> Result<DeserVcard> {
+        trace!("Reading header of {:?}", self.get_location());
         let data = self
             .get_header()
             .read("contact.data")?

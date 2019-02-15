@@ -211,7 +211,9 @@ impl PathIterBuilder for InMemPathIterBuilder {
     }
 
     fn in_collection(&mut self, c: &str) {
+        debug!("Altering PathIterBuilder path with: {:?}", c);
         self.0.retain(|p| p.starts_with(c));
+        debug!(" -> path : {:?}", self.0);
     }
 }
 

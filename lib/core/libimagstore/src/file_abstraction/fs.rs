@@ -182,7 +182,9 @@ impl PathIterBuilder for WalkDirPathIterBuilder {
     }
 
     fn in_collection(&mut self, c: &str) {
+        debug!("Altering PathIterBuilder path with: {:?}", c);
         self.basepath.push(c);
+        debug!(" -> path : {:?}", self.basepath);
     }
 }
 
