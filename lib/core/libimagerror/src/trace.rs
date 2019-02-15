@@ -41,7 +41,7 @@ impl<'a> Display for ImagTrace<'a, Error>
             for (i, cause) in self.0.iter_causes().enumerate() {
                 let _ = writeln!(fmt,
                                  "{prefix}: {error}",
-                                 prefix = Red.blink().paint(format!("ERROR[{:>4}]", i)),
+                                 prefix = Red.blink().paint(format!("ERROR[{:>4}]", i + 1)),
                                  error = cause)?;
             }
         }
