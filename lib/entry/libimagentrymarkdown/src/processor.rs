@@ -133,8 +133,7 @@ impl LinkProcessor {
                         continue
                     }
 
-                    let spath      = Some(store.path().clone());
-                    let id         = StoreId::new(spath, PathBuf::from(&link.link))?;
+                    let id         = StoreId::new(PathBuf::from(&link.link))?;
                     let mut target = if self.create_internal_targets {
                         store.retrieve(id)?
                     } else {
