@@ -99,6 +99,7 @@ gen_mods_buildui!(
     ("../../../bin/domain/imag-diary/src/ui.rs"     , imagdiary)       ,
     ("../../../bin/domain/imag-habit/src/ui.rs"     , imaghabit)       ,
     ("../../../bin/domain/imag-log/src/ui.rs"       , imaglog)         ,
+    ("../../../bin/domain/imag-mail/src/ui.rs"      , imagmail)        ,
     ("../../../bin/domain/imag-notes/src/ui.rs"     , imagnotes)       ,
     ("../../../bin/domain/imag-timetrack/src/ui.rs" , imagtimetrack)   ,
     ("../../../bin/domain/imag-todo/src/ui.rs"      , imagtodo)        ,
@@ -128,6 +129,7 @@ fn main() {
         .subcommand(build_subcommand!("init"        , imaginit        , version))
         .subcommand(build_subcommand!("link"        , imaglink        , version))
         .subcommand(build_subcommand!("log"         , imaglog         , version))
+        .subcommand(build_subcommand!("mail"        , imagmail        , version))
         .subcommand(build_subcommand!("mv"          , imagmv          , version))
         .subcommand(build_subcommand!("notes"       , imagnotes       , version))
         .subcommand(build_subcommand!("ref"         , imagref         , version))
