@@ -24,6 +24,7 @@ toml = "0.4"
 toml-query = "0.8"
 filters = "0.3"
 failure = "0.1"
+log = "0.4"
 
 libimagstore = { version = "0.10.0", path = "../../../lib/core/libimagstore" }
 libimagerror = { version = "0.10.0", path = "../../../lib/core/libimagerror" }

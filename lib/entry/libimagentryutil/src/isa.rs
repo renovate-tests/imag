@@ -93,6 +93,7 @@ impl Is for ::libimagstore::store::Entry {
     }
 
     fn remove_isflag<T: IsKindHeaderPathProvider>(&mut self) -> Result<()> {
+        trace!("Trying to remove: {}", T::kindflag_header_location());
         self.get_header_mut()
             .delete(T::kindflag_header_location())
             .map_err(Error::from)
