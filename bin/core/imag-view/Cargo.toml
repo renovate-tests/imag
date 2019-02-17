@@ -1,6 +1,6 @@
 [package]
 name = "imag-view"
-version = "0.9.0"
+version = "0.9.1"
 authors = ["Matthias Beyer <mail@beyermatthias.de>"]
 
 description = "Part of the imag core distribution: imag-view command"
@@ -29,13 +29,13 @@ handlebars = "1.0"
 tempfile = "3"
 failure = "0.1"
 
-libimagstore     = { version = "0.9.0", path = "../../../lib/core/libimagstore" }
-libimagrt        = { version = "0.9.0", path = "../../../lib/core/libimagrt" }
-libimagerror     = { version = "0.9.0", path = "../../../lib/core/libimagerror" }
-libimagutil      = { version = "0.9.0", path = "../../../lib/etc/libimagutil" }
+libimagstore     = { version = "0.9.1", path = "../../../lib/core/libimagstore" }
+libimagrt        = { version = "0.9.1", path = "../../../lib/core/libimagrt" }
+libimagerror     = { version = "0.9.1", path = "../../../lib/core/libimagerror" }
+libimagutil      = { version = "0.9.1", path = "../../../lib/etc/libimagutil" }
 
 [dependencies.libimagentryview]
-version          = "0.9.0"
+version          = "0.9.1"
 path             = "../../../lib/entry/libimagentryview"
 
 [dependencies.clap]

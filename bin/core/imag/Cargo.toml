@@ -1,6 +1,6 @@
 [package]
 name = "imag"
-version = "0.9.0"
+version = "0.9.1"
 authors = ["Matthias Beyer <mail@beyermatthias.de>"]
 
 description = "Part of the imag core distribution: imag command"
@@ -17,11 +17,11 @@ build = "build.rs"
 
 [build-dependencies]
 clap = ">=2.16.1"
-libimagrt       = { version = "0.9.0", path = "../../../lib/core/libimagrt" }
-libimagerror    = { version = "0.9.0", path = "../../../lib/core/libimagerror" }
-libimagstore    = { version = "0.9.0", path = "../../../lib/core/libimagstore" }
-libimagentrytag = { version = "0.9.0", path = "../../../lib/entry/libimagentrytag" }
-libimagutil     = { version = "0.9.0", path = "../../../lib/etc/libimagutil" }
+libimagrt       = { version = "0.9.1", path = "../../../lib/core/libimagrt" }
+libimagerror    = { version = "0.9.1", path = "../../../lib/core/libimagerror" }
+libimagstore    = { version = "0.9.1", path = "../../../lib/core/libimagstore" }
+libimagentrytag = { version = "0.9.1", path = "../../../lib/entry/libimagentrytag" }
+libimagutil     = { version = "0.9.1", path = "../../../lib/etc/libimagutil" }
 log             = "0.4.0"
 
 [badges]
@@ -36,8 +36,8 @@ log = "0.4.0"
 toml = "0.4"
 toml-query = "0.8"
 
-libimagerror = { version = "0.9.0", path = "../../../lib/core/libimagerror" }
-libimagstore = { version = "0.9.0", path = "../../../lib/core/libimagstore" }
+libimagerror = { version = "0.9.1", path = "../../../lib/core/libimagerror" }
+libimagstore = { version = "0.9.1", path = "../../../lib/core/libimagstore" }
 
 [dependencies.clap]
 version = "^2.29"
@@ -45,7 +45,7 @@ default-features = false
 features = ["suggestions", "color", "wrap_help"]
 
 [dependencies.libimagrt]
-version  = "0.9.0"
+version  = "0.9.1"
 path     = "../../../lib/core/libimagrt"
 features = ["pub_logging_initialization"]
 
