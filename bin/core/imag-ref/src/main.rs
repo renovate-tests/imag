@@ -47,15 +47,17 @@ extern crate libimagutil;
 mod ui;
 use ui::build_ui;
 
-use std::path::PathBuf;
 use std::process::exit;
+use std::io::Write;
 
 use libimagerror::trace::MapErrTrace;
 use libimagerror::exit::ExitUnwrap;
 use libimagrt::setup::generate_runtime_setup;
 use libimagrt::runtime::Runtime;
-use libimagstore::storeid::IntoStoreId;
 use libimagentryref::reference::Ref;
+use libimagentryref::reference::MutRef;
+use libimagentryref::reference::RefFassade;
+use libimagentryref::hasher::default::DefaultHasher;
 
 fn main() {
     let version = make_imag_version!();
@@ -69,6 +71,7 @@ fn main() {
             debug!("Call: {}", name);
             match name {
                 "deref"  => deref(&rt),
+                "create" => create(&rt),
                 "remove" => remove(&rt),
                 other => {
                     debug!("Unknown command");
@@ -82,47 +85,43 @@ fn main() {
 }
 
 fn deref(rt: &Runtime) {
-    let cmd  = rt.cli().subcommand_matches("deref").unwrap();
-    let id   = cmd.value_of("ID")
-        .map(String::from)
-        .map(PathBuf::from)
-        .unwrap() // saved by clap
-        .into_storeid()
-        .map_err_trace_exit_unwrap();
+    let cmd = rt.cli().subcommand_matches("deref").unwrap();
+    let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap();
+    let out = rt.stdout();
+    let mut outlock = out.lock();
 
-    match rt.store().get(id.clone()).map_err_trace_exit_unwrap() {
-        Some(entry) => {
-            entry
-                .get_path()
-                .map_err_trace_exit_unwrap()
-                .to_str()
-                .ok_or_else(|| {
-                    error!("Could not transform path into string!");
+    ids.into_iter()
+        .for_each(|id| {
+            match rt.store().get(id.clone()).map_err_trace_exit_unwrap() {
+                Some(entry) => {
+                    entry
+                        .as_ref_with_hasher::<DefaultHasher>()
+                        .get_path()
+                        .map_err_trace_exit_unwrap()
+                        .to_str()
+                        .ok_or_else(|| {
+                            error!("Could not transform path into string!");
+                            exit(1)
+                        })
+                        .map(|s| writeln!(outlock, "{}", s))
+                        .ok(); // safe here because we exited already in the error case
+
+                    let _ = rt.report_touched(&id).unwrap_or_exit();
+                },
+                None => {
+                    error!("No entry for id '{}' found", id);
                     exit(1)
-                })
-                .map(|s| info!("{}", s))
-                .ok(); // safe here because we exited already in the error case
-
-            let _ = rt.report_touched(&id).unwrap_or_exit();
-        },
-        None => {
-            error!("No entry for id '{}' found", id);
-            exit(1)
-        },
-    };
+                },
+            }
+        });
 }
 
 fn remove(rt: &Runtime) {
     use libimaginteraction::ask::ask_bool;
 
-    let cmd  = rt.cli().subcommand_matches("remove").unwrap();
-    let yes  = cmd.is_present("yes");
-    let id   = cmd.value_of("ID")
-        .map(String::from)
-        .map(PathBuf::from)
-        .unwrap() // saved by clap
-        .into_storeid()
-        .map_err_trace_exit_unwrap();
+    let cmd = rt.cli().subcommand_matches("remove").unwrap();
+    let yes = cmd.is_present("yes");
+    let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap();
 
     let mut input = rt.stdin().unwrap_or_else(|| {
         error!("No input stream. Cannot ask for permission");
@@ -131,21 +130,30 @@ fn remove(rt: &Runtime) {
 
     let mut output = rt.stdout();
 
-    match rt.store().get(id.clone()).map_err_trace_exit_unwrap() {
-        Some(mut entry) => {
-            if yes ||
-                ask_bool(&format!("Delete ref from entry '{}'", id), None, &mut input, &mut output)
-                    .map_err_trace_exit_unwrap()
-            {
-                let _ = entry.remove_ref().map_err_trace_exit_unwrap();
-            } else {
-                info!("Aborted");
+    ids.into_iter()
+        .for_each(|id| {
+            match rt.store().get(id.clone()).map_err_trace_exit_unwrap() {
+                Some(mut entry) => {
+                    if yes ||
+                        ask_bool(&format!("Delete ref from entry '{}'", id), None, &mut input, &mut output)
+                            .map_err_trace_exit_unwrap()
+                    {
+                        let _ = entry.as_ref_with_hasher_mut::<DefaultHasher>()
+                            .remove_ref()
+                            .map_err_trace_exit_unwrap();
+                    } else {
+                        info!("Aborted");
+                    }
+                },
+                None => {
+                    error!("No entry for id '{}' found", id);
+                    exit(1)
+                },
             }
-        },
-        None => {
-            error!("No entry for id '{}' found", id);
-            exit(1)
-        },
-    };
+        });
+}
+
+fn create(rt: &Runtime) {
+    unimplemented!()
 }
 

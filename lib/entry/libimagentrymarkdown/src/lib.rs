@@ -46,6 +46,7 @@ extern crate libimagentryref;
 extern crate libimagutil;
 #[macro_use] extern crate failure;
 #[macro_use] extern crate log;
+extern crate sha1;
 
 #[cfg(test)]
 extern crate env_logger;

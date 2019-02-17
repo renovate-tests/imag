@@ -19,29 +19,37 @@
 
 use std::path::Path;
 
-use libimagstore::storeid::StoreId;
-
-use refstore::UniqueRefPathGenerator;
-
 use failure::Fallible as Result;
 
-/// A base UniqueRefPathGenerator which must be overridden by the actual UniqueRefPathGenerator
-/// which is provided by this crate
-#[allow(dead_code)]
-pub struct Base;
+pub trait Hasher {
+    const NAME: &'static str;
 
-impl UniqueRefPathGenerator for Base {
-    fn collection() -> &'static str {
-        "ref"
+    /// hash the file at path `path`
+    fn hash<P: AsRef<Path>>(path: P) -> Result<String>;
+}
+
+pub mod default {
+    pub use super::sha1::Sha1Hasher as DefaultHasher;
+}
+
+pub mod sha1 {
+    use std::path::Path;
+
+    use failure::Fallible as Result;
+    use sha1::{Sha1, Digest};
+
+    use hasher::Hasher;
+
+    pub struct Sha1Hasher;
+
+    impl Hasher for Sha1Hasher {
+        const NAME : &'static str = "sha1";
+
+        fn hash<P: AsRef<Path>>(path: P) -> Result<String> {
+            let digest = Sha1::digest(::std::fs::read_to_string(path)?.as_bytes());
+            Ok(format!("{:x}", digest)) // TODO: Ugh...
+        }
     }
 
-    fn unique_hash<A: AsRef<Path>>(_path: A) -> Result<String> {
-        // This has to be overridden
-        panic!("Not overridden base functionality. This is a BUG!")
-    }
-
-    fn postprocess_storeid(sid: StoreId) -> Result<StoreId> {
-        Ok(sid) // default implementation
-    }
 }
 
