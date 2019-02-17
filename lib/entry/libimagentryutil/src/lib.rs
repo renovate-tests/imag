@@ -40,7 +40,7 @@
 extern crate filters;
 extern crate toml;
 extern crate toml_query;
-#[macro_use] extern crate failure;
+extern crate failure;
 
 extern crate libimagstore;
 extern crate libimagerror;
