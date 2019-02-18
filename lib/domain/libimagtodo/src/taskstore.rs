@@ -128,7 +128,6 @@ impl<'a> TaskStore<'a> for Store {
     }
 
     fn delete_tasks_by_imports<R: BufRead>(&self, r: R) -> Result<()> {
-        use serde_json::ser::to_string as serde_to_string;
         use task_hookrs::status::TaskStatus;
 
         for (counter, res_ttask) in import_tasks(r).into_iter().enumerate() {
@@ -139,8 +138,7 @@ impl<'a> TaskStore<'a> for Store {
                 // task before the change, and the second one after
                 // the change. The (maybe modified) second one is
                 // expected by taskwarrior.
-                let val = serde_to_string(&ttask).context(err_msg("Import error"))?;
-
+                //
                 // Taskwarrior does not have the concept of deleted tasks, but only modified
                 // ones.
                 //
