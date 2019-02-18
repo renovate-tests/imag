@@ -126,7 +126,6 @@ fn main() {
                                     "Print diagnostics about imag and the imag store",
                                     ui::build_ui);
 
-    let mut entries_counter = 0;
     let template            = get_config(&rt, "rt.progressbar_style");
     let tick_chars          = get_config(&rt, "rt.progressticker_chars");
 
@@ -154,18 +153,6 @@ fn main() {
             let diag = Diagnostic::for_entry(&e);
             debug!("Diagnostic for '{:?}' = {:?}", e.get_location(), diag);
             drop(e);
-
-            entries_counter += 1;
-
-            // because we're effectively reading _all_ store entries here.
-            //
-            // The store has an API for it, but the cache size calculation is O(n) and we can do
-            // better by simply flushing the cache each 100 entries
-            if entries_counter > 100 {
-                let _ = rt.store().flush_cache().map_err_trace_exit_unwrap();
-                entries_counter = 0;
-            }
-
             diag
         })
         .collect::<Result<Vec<_>>>()
