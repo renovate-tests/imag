@@ -19,6 +19,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::fmt::Debug;
 
 use failure::Fallible as Result;
 
@@ -26,7 +27,7 @@ use storeid::StoreIdWithBase;
 use file_abstraction::FileAbstraction;
 
 /// See documentation for PathIterator
-pub(crate) trait PathIterBuilder {
+pub(crate) trait PathIterBuilder : Debug {
     fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf>>>;
     fn in_collection(&mut self, c: &str);
 }
@@ -59,7 +60,7 @@ impl<'a> PathIterator<'a> {
                backend: Arc<FileAbstraction>)
         -> PathIterator<'a>
     {
-        trace!("Generating iterator object with PathIterBuilder");
+        trace!("Generating iterator object with PathIterBuilder: {:?}", iter_builder);
         let iter = iter_builder.build_iter();
         PathIterator { iter_builder, iter, storepath, backend }
     }
@@ -68,6 +69,7 @@ impl<'a> PathIterator<'a> {
         trace!("Generating iterator object for collection: {}", c);
         self.iter_builder.in_collection(c);
         self.iter = self.iter_builder.build_iter();
+        trace!("Set new iterator");
         self
     }
 
@@ -90,6 +92,7 @@ impl<'a> Iterator for PathIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.iter.next() {
+            trace!("Iterating over item = {:?}", next);
             match next {
                 Err(e)   => return Some(Err(e)),
                 Ok(next) => match self.backend.is_file(&next) {

@@ -179,6 +179,9 @@ impl<'a> StoreIdWithBase<'a> {
     pub(crate) fn from_full_path<D>(store_part: &'a PathBuf, full_path: D) -> Result<StoreIdWithBase<'a>>
         where D: Deref<Target = Path>
     {
+        trace!("Creating StoreIdWithBase object from full path = {} with store_part = {}",
+               full_path.display(),
+               store_part.display());
         let p = full_path
             .strip_prefix(store_part)
             .map_err(Error::from)

@@ -164,17 +164,20 @@ impl FileAbstraction for FSFileAbstraction {
     }
 }
 
+#[derive(Debug)]
 pub struct WalkDirPathIterBuilder {
     basepath: PathBuf
 }
 
 impl PathIterBuilder for WalkDirPathIterBuilder {
     fn build_iter(&self) -> Box<Iterator<Item = Result<PathBuf>>> {
+        trace!("Building iterator for {}", self.basepath.display());
         Box::new(WalkDir::new(self.basepath.clone())
             .min_depth(1)
             .max_open(100)
             .into_iter()
             .map(|r| {
+                trace!("Working in PathIterator with {:?}", r);
                 r.map(|e| PathBuf::from(e.path()))
                     .context(format_err!("Error in Walkdir"))
                     .map_err(Error::from)

@@ -203,6 +203,7 @@ impl FileAbstraction for InMemoryFileAbstraction {
     }
 }
 
+#[derive(Debug)]
 pub struct InMemPathIterBuilder(Vec<PathBuf>);
 
 impl PathIterBuilder for InMemPathIterBuilder {
