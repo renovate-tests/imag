@@ -138,8 +138,9 @@ pub trait Ref {
     /// Check whether the underlying object is actually a ref
     fn is_ref(&self) -> Result<bool>;
 
-    /// Get the stored hash.
-    fn get_path(&self) -> Result<PathBuf>;
+    fn get_path(&self, config: &Config) -> Result<PathBuf>;
+
+    fn get_relative_path(&self) -> Result<PathBuf>;
 
     /// Get the stored hash.
     fn get_hash(&self) -> Result<&str>;
@@ -171,7 +172,26 @@ impl<'a, H: Hasher> Ref for RefWithHasher<'a, H> {
             })
     }
 
-    fn get_path(&self) -> Result<PathBuf> {
+    /// Get the path of the actual file
+    fn get_path(&self, config: &Config) -> Result<PathBuf> {
+        use toml_query::read::TomlValueReadTypeExt;
+
+        let relpath = self.0
+            .get_header()
+            .read_string("ref.relpath")?
+            .map(PathBuf::from)
+            .ok_or_else(|| Error::from(EM::EntryHeaderFieldMissing("ref.relpath")))?;
+
+        let collection_name = self.0
+            .get_header()
+            .read_string("ref.collection")?
+            .ok_or_else(|| Error::from(EM::EntryHeaderFieldMissing("ref.collection")))?;
+
+        get_file_path(config, &collection_name, relpath)
+    }
+
+    /// Get the relative path, relative to the configured basepath
+    fn get_relative_path(&self) -> Result<PathBuf> {
         self.0
             .get_header()
             .read("ref.relpath")
