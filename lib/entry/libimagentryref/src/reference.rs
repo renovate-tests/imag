@@ -305,7 +305,14 @@ impl<'a, H> MutRef for MutRefWithHasher<'a, H>
 
         debug!("Entry hashing...");
         let _ = H::hash(&file_path)
-            .and_then(|hash| make_header_section(hash, H::NAME, path, collection_name))
+            .and_then(|hash| {
+                // stripping the prefix of "path"
+                let relpath = path.as_ref()
+                    .strip_prefix(get_basepath(collection_name.as_ref(), config)?)?;
+                trace!("Using relpath = {} to make header section", relpath.display());
+
+                make_header_section(hash, H::NAME, relpath, collection_name)
+            })
             .and_then(|h| self.0.get_header_mut().insert("ref", h).map_err(Error::from))
             .and_then(|_| self.0.set_isflag::<IsRef>())
             .context("Making ref out of entry")?;
@@ -354,6 +361,13 @@ pub(crate) fn make_header_section<P, C, H>(hash: String, hashname: H, relpath: P
     let _ = header_section.insert("collection", Value::String(String::from(collection.as_ref())));
 
     Ok(header_section)
+}
+
+fn get_basepath<'a, Coll: AsRef<str>>(collection_name: Coll, config: &'a Config) -> Result<&'a PathBuf> {
+    config.get(collection_name.as_ref())
+        .ok_or_else(|| format_err!("Collection {} seems not to exist in config",
+                                   collection_name.as_ref()))
+        .map_err(Error::from)
 }
 
 fn get_file_path<P>(config: &Config, collection_name: &str, path: P) -> Result<PathBuf>
@@ -420,11 +434,11 @@ mod test {
         setup_logging();
         let store           = get_store();
         let mut entry       = store.retrieve(PathBuf::from("test_makeref")).unwrap();
-        let file            = PathBuf::from("/"); // has to exist
+        let file            = PathBuf::from("/tmp"); // has to exist
         let collection_name = "some_collection";
         let config          = Config({
             let mut c = BTreeMap::new();
-            c.insert(String::from("some_collection"), PathBuf::from("/tmp"));
+            c.insert(String::from("some_collection"), PathBuf::from("/"));
             c
         });
 
@@ -437,11 +451,11 @@ mod test {
         setup_logging();
         let store           = get_store();
         let mut entry       = store.retrieve(PathBuf::from("test_makeref_isref")).unwrap();
-        let file            = PathBuf::from("/"); // has to exists
+        let file            = PathBuf::from("/tmp"); // has to exists
         let collection_name = "some_collection";
         let config          = Config({
             let mut c = BTreeMap::new();
-            c.insert(String::from("some_collection"), PathBuf::from("/tmp"));
+            c.insert(String::from("some_collection"), PathBuf::from("/"));
             c
         });
 
@@ -456,7 +470,7 @@ mod test {
         setup_logging();
         let store           = get_store();
         let mut entry       = store.retrieve(PathBuf::from("test_makeref_is_ref_with_testhash")).unwrap();
-        let file            = PathBuf::from("/"); // has to exist
+        let file            = PathBuf::from("/tmp"); // has to exist
         let collection_name = "some_collection";
         let config          = Config({
             let mut c = BTreeMap::new();
@@ -479,8 +493,8 @@ mod test {
             assert_eq!(var.unwrap(), shouldbe, "{} is not == {}", location, shouldbe);
         };
 
-        check_isstr(&entry, "ref.relpath", "/");
-        check_isstr(&entry, "ref.hash.Testhasher", "/"); // TestHasher hashes by returning the path itself
+        check_isstr(&entry, "ref.relpath", "tmp");
+        check_isstr(&entry, "ref.hash.Testhasher", "/tmp"); // TestHasher hashes by returning the path itself
         check_isstr(&entry, "ref.collection", "some_collection");
     }
 
