@@ -174,12 +174,12 @@ impl<'a, H: Hasher> Ref for RefWithHasher<'a, H> {
     fn get_path(&self) -> Result<PathBuf> {
         self.0
             .get_header()
-            .read("ref.path")
+            .read("ref.relpath")
             .map_err(Error::from)?
-            .ok_or_else(|| Error::from(EM::EntryHeaderFieldMissing("ref.path")))
+            .ok_or_else(|| Error::from(EM::EntryHeaderFieldMissing("ref.relpath")))
             .and_then(|v| {
                 v.as_str()
-                    .ok_or_else(|| EM::EntryHeaderTypeError2("ref.path", "string"))
+                    .ok_or_else(|| EM::EntryHeaderTypeError2("ref.relpath", "string"))
                     .map_err(Error::from)
             })
             .map(PathBuf::from)
@@ -199,9 +199,9 @@ impl<'a, H: Hasher> Ref for RefWithHasher<'a, H> {
             .ok_or_else(|| Error::from(EM::EntryHeaderTypeError2("ref.hash.<hash>", "string")))?;
 
         let path = ref_header
-            .read("path")
+            .read("relpath")
             .map_err(Error::from)?
-            .ok_or_else(|| err_msg("Header missing at 'ref.path'"))?
+            .ok_or_else(|| err_msg("Header missing at 'ref.relpath'"))?
             .as_str()
             .map(PathBuf::from)
             .ok_or_else(|| Error::from(EM::EntryHeaderTypeError2("ref.hash.<hash>", "string")))?;
