@@ -41,6 +41,7 @@ use libimagerror::errors::ErrorMsg as EM;
 
 type ModuleName = String;
 
+#[derive(Debug)]
 enum LogDestination {
     Stderr,
     File(Arc<Mutex<::std::fs::File>>),
@@ -52,6 +53,7 @@ impl Default for LogDestination {
     }
 }
 
+#[derive(Debug)]
 struct ModuleSettings {
     enabled:        bool,
     level:          Option<Level>,
@@ -61,6 +63,7 @@ struct ModuleSettings {
 }
 
 /// Logger implementation for `log` crate.
+#[derive(Debug)]
 pub struct ImagLogger {
     global_loglevel     : Level,
 

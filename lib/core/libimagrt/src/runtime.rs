@@ -367,11 +367,15 @@ impl<'a> Runtime<'a> {
 
             set_max_level(logger.global_loglevel().to_level_filter());
 
-            debug!("Init logger with {}", logger.global_loglevel());
+            // safe debug output for later, after the instance itself
+            // is moved away
+            let logger_expl = format!("{:?}", logger);
 
             set_boxed_logger(Box::new(logger))
                 .map_err(|e| panic!("Could not setup logger: {:?}", e))
                 .ok();
+
+            trace!("Imag Logger = {}", logger_expl);
         }
     }
 
