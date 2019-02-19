@@ -186,9 +186,18 @@ impl<'a> Entries<'a> {
     /// Revisit whether this can be done in a cleaner way. See commit message for why this is
     /// needed.
     pub fn into_storeid_iter(self) -> StoreIdIterator {
+        use storeid::StoreIdWithBase;
+        use storeid::IntoStoreId;
+
+        let storepath = self.1.path().to_path_buf();
+
         let iter = self.0
             .into_inner()
-            .map(|r| r.and_then(StoreId::new));
+            .map(move |r| {
+                r.and_then(|path| {
+                    StoreIdWithBase::from_full_path(&storepath, path)?.into_storeid()
+                })
+            });
         StoreIdIterator::new(Box::new(iter))
     }
 
