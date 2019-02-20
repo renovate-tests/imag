@@ -51,7 +51,6 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use failure::Fallible as Result;
-use toml_query::read::TomlValueReadExt;
 use toml_query::read::TomlValueReadTypeExt;
 
 use libimagerror::trace::{MapErrTrace, trace_error};
@@ -62,6 +61,7 @@ use libimagmail::mail::Mail;
 use libimagmail::store::MailStore;
 use libimagmail::util;
 use libimagentryref::reference::{Ref, RefFassade};
+use libimagentryref::util::get_ref_config;
 use libimagrt::runtime::Runtime;
 use libimagrt::setup::generate_runtime_setup;
 use libimagutil::info_result::*;
@@ -101,7 +101,7 @@ fn main() {
 
 fn import_mail(rt: &Runtime) {
     let collection_name = get_ref_collection_name(rt).map_err_trace_exit_unwrap();
-    let refconfig       = get_ref_config(rt).map_err_trace_exit_unwrap();
+    let refconfig       = get_ref_config(rt, "imag-mail").map_err_trace_exit_unwrap();
     let scmd            = rt.cli().subcommand_matches("import-mail").unwrap();
     let store           = rt.store();
 
@@ -126,7 +126,7 @@ fn import_mail(rt: &Runtime) {
 }
 
 fn list(rt: &Runtime) {
-    let refconfig       = get_ref_config(rt).map_err_trace_exit_unwrap();
+    let refconfig       = get_ref_config(rt, "imag-mail").map_err_trace_exit_unwrap();
     let scmd            = rt.cli().subcommand_matches("list").unwrap(); // safe via clap
     let print_content   = scmd.is_present("list-read");
 
@@ -248,15 +248,6 @@ fn get_ref_collection_name(rt: &Runtime) -> Result<String> {
     rt.config()
         .ok_or_else(|| format_err!("No configuration, cannot find collection name for mail collection"))?
         .read_string(setting_name)?
-        .ok_or_else(|| format_err!("Setting missing: {}", setting_name))
-}
-
-fn get_ref_config(rt: &Runtime) -> Result<::libimagentryref::reference::Config> {
-    let setting_name = "ref.basepathes";
-
-    rt.config()
-        .ok_or_else(|| format_err!("No configuration, cannot find collection name for mail collection"))?
-        .read_deserialized::<::libimagentryref::reference::Config>(setting_name)?
         .ok_or_else(|| format_err!("Setting missing: {}", setting_name))
 }
 

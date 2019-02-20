@@ -37,8 +37,3 @@ version = "^2.29"
 default-features = false
 features = ["color", "suggestions", "wrap_help"]
 
-[dependencies.toml-query]
-version = "0.8"
-default-features = false
-features = ["typed"]
-

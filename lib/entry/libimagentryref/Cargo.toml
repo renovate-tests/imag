@@ -25,13 +25,18 @@ log          = "0.4.0"
 failure      = "0.1"
 sha-1        = "0.8"
 toml         = "0.4"
-toml-query   = "0.8"
 serde        = "1"
 serde_derive = "1"
 
 libimagstore     = { version = "0.10.0", path = "../../../lib/core/libimagstore" }
 libimagerror     = { version = "0.10.0", path = "../../../lib/core/libimagerror" }
+libimagrt        = { version = "0.10.0", path = "../../../lib/core/libimagrt" }
 libimagentryutil = { version = "0.10.0", path = "../../../lib/entry/libimagentryutil" }
+
+[dependencies.toml-query]
+version = "0.8"
+default-features = false
+features = ["typed"]
 
 [dev-dependencies]
 env_logger = "0.5"
