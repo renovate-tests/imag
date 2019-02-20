@@ -323,14 +323,18 @@ impl<'a, H> MutRef for MutRefWithHasher<'a, H>
             let _   = Err(msg).context("Making ref out of entry")?;
         }
 
-        debug!("Entry hashing...");
+        debug!("Entry hashing = {}", file_path.display());
         let _ = H::hash(&file_path)
             .and_then(|hash| {
-                // stripping the prefix of "path"
-                let relpath = path.as_ref()
-                    .strip_prefix(get_basepath(collection_name.as_ref(), config)?)?;
-                trace!("Using relpath = {} to make header section", relpath.display());
+                trace!("hash = {}", hash);
 
+                // stripping the prefix of "path"
+                let prefix = get_basepath(collection_name.as_ref(), config)?;
+
+                trace!("Stripping = {}", prefix.display());
+                let relpath = path.as_ref().strip_prefix(prefix)?;
+
+                trace!("Using relpath = {} to make header section", relpath.display());
                 make_header_section(hash, H::NAME, relpath, collection_name)
             })
             .and_then(|h| self.0.get_header_mut().insert("ref", h).map_err(Error::from))
