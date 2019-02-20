@@ -17,19 +17,33 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-use clap::{Arg, App, SubCommand};
+use std::path::PathBuf;
+
+use libimagstore::storeid::StoreId;
+use libimagrt::runtime::IdPathProvider;
+use libimagstore::storeid::IntoStoreId;
+use libimagerror::trace::MapErrTrace;
+
+use clap::{Arg, ArgMatches, App, SubCommand};
 
 pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
     app
         .subcommand(SubCommand::with_name("import-mail")
                     .about("Import a mail (create a reference to it) (Maildir)")
                     .version("0.1")
+                    .arg(Arg::with_name("ignore-existing-ids")
+                         .long("ignore-existing")
+                         .short("I")
+                         .takes_value(false)
+                         .required(false)
+                         .help("Ignore errors that might occur when store entries exist already"))
+
                     .arg(Arg::with_name("path")
-                         .long("path")
-                         .short("p")
+                         .index(1)
                          .takes_value(true)
+                         .multiple(true)
                          .required(true)
-                         .help("Path to the mail file or a directory which is then searched recursively")
+                         .help("Path to the mail file(s) to import")
                          .value_name("PATH"))
                     )
 
@@ -37,28 +51,20 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                     .about("List all stored references to mails")
                     .version("0.1")
 
-                    // TODO: Thee following four arguments are the same as in imag-ref.
-                    // We should make these importable from libimagentryref.
+                    .arg(Arg::with_name("list-read")
+                         .long("read")
+                         .short("r")
+                         .takes_value(false)
+                         .required(false)
+                         .multiple(false)
+                         .help("Print the textual content of the mail itself as well"))
 
-                    .arg(Arg::with_name("check-dead")
-                         .long("check-dead")
-                         .short("d")
-                         .help("Check each reference whether it is dead"))
-
-                    .arg(Arg::with_name("check-changed")
-                         .long("check-changed")
-                         .short("c")
-                         .help("Check whether a reference had changed (content or permissions)"))
-
-                    .arg(Arg::with_name("check-changed-content")
-                         .long("check-changed-content")
-                         .short("C")
-                         .help("Check whether the content of the referenced file changed"))
-
-                    .arg(Arg::with_name("check-changed-permissions")
-                         .long("check-changed-perms")
-                         .short("P")
-                         .help("Check whether the permissions of the referenced file changed"))
+                    .arg(Arg::with_name("list-id")
+                         .index(1)
+                         .takes_value(true)
+                         .required(false)
+                         .multiple(true)
+                         .help("The ids of the mails to list information for"))
 
                     )
 
@@ -70,5 +76,19 @@ pub fn build_ui<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
                                 .version("0.1"))
                     // TODO: We really should be able to filter here.
                     )
+}
+
+pub struct PathProvider;
+impl IdPathProvider for PathProvider {
+    fn get_ids(matches: &ArgMatches) -> Vec<StoreId> {
+        if matches.is_present("list-id") {
+            matches.values_of("list-id")
+                .unwrap()
+                .map(|s| PathBuf::from(s).into_storeid().map_err_trace_exit_unwrap())
+                .collect()
+        } else {
+            vec![]
+        }
+    }
 }
 

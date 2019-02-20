@@ -24,14 +24,22 @@ maintenance                       = { status     = "actively-developed" }
 [dependencies]
 log = "0.4.0"
 failure = "0.1"
+indoc = "0.3"
 
 libimagrt       = { version = "0.10.0", path = "../../../lib/core/libimagrt" }
+libimagstore    = { version = "0.10.0", path = "../../../lib/core/libimagstore" }
 libimagerror    = { version = "0.10.0", path = "../../../lib/core/libimagerror" }
 libimagmail     = { version = "0.10.0", path = "../../../lib/domain/libimagmail" }
 libimagutil     = { version = "0.10.0", path = "../../../lib/etc/libimagutil" }
+libimagentryref = { version = "0.10.0", path = "../../../lib/entry/libimagentryref" }
 
 [dependencies.clap]
 version = "^2.29"
 default-features = false
 features = ["color", "suggestions", "wrap_help"]
+
+[dependencies.toml-query]
+version = "0.8"
+default-features = false
+features = ["typed"]
 
