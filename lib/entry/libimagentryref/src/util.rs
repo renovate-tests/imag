@@ -17,43 +17,21 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-#![forbid(unsafe_code)]
+use failure::Fallible as Result;
 
-#![recursion_limit="256"]
+use libimagrt::runtime::Runtime;
 
-#![deny(
-    dead_code,
-    non_camel_case_types,
-    non_snake_case,
-    path_statements,
-    trivial_numeric_casts,
-    unstable_features,
-    unused_allocation,
-    unused_import_braces,
-    unused_imports,
-    unused_must_use,
-    unused_mut,
-    unused_qualifications,
-    while_true,
-)]
+use reference::Config as RefConfig;
 
-#[macro_use] extern crate log;
-extern crate itertools;
-extern crate toml;
-extern crate toml_query;
-#[macro_use] extern crate serde_derive;
-extern crate sha1;
+pub fn get_ref_config(rt: &Runtime, app_name: &'static str) -> Result<RefConfig> {
+    use toml_query::read::TomlValueReadExt;
 
-extern crate libimagstore;
-extern crate libimagrt;
-extern crate libimagerror;
-#[macro_use] extern crate libimagentryutil;
-#[macro_use] extern crate failure;
+    let setting_name = "ref.basepathes";
 
-#[cfg(test)]
-extern crate env_logger;
+    rt.config()
+        .ok_or_else(|| format_err!("No configuration, cannot find collection name for {}", app_name))?
+        .read_deserialized::<RefConfig>(setting_name)?
+        .ok_or_else(|| format_err!("Setting missing: {}", setting_name))
+}
 
-pub mod hasher;
-pub mod reference;
-pub mod util;
 

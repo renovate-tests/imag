@@ -1,9 +1,9 @@
 [package]
-name = "imag-ref"
+name = "imag-mail"
 version = "0.10.0"
 authors = ["Matthias Beyer <mail@beyermatthias.de>"]
 
-description = "Part of the imag core distribution: imag-ref command"
+description = "Part of the imag core distribution: imag-mail command"
 
 keywords    = ["imag", "PIM", "personal", "information", "management"]
 readme      = "../../../README.md"
@@ -22,18 +22,24 @@ is-it-maintained-open-issues      = { repository = "matthiasbeyer/imag" }
 maintenance                       = { status     = "actively-developed" }
 
 [dependencies]
-log        = "0.4.0"
-failure    = "0.1"
+log = "0.4.0"
+failure = "0.1"
+indoc = "0.3"
 
-libimagstore       = { version = "0.10.0", path = "../../../lib/core/libimagstore" }
-libimagrt          = { version = "0.10.0", path = "../../../lib/core/libimagrt" }
-libimagerror       = { version = "0.10.0", path = "../../../lib/core/libimagerror" }
-libimagentryref    = { version = "0.10.0", path = "../../../lib/entry/libimagentryref" }
-libimaginteraction = { version = "0.10.0", path = "../../../lib/etc/libimaginteraction" }
-libimagutil        = { version = "0.10.0", path = "../../../lib/etc/libimagutil" }
+libimagrt       = { version = "0.10.0", path = "../../../lib/core/libimagrt" }
+libimagstore    = { version = "0.10.0", path = "../../../lib/core/libimagstore" }
+libimagerror    = { version = "0.10.0", path = "../../../lib/core/libimagerror" }
+libimagmail     = { version = "0.10.0", path = "../../../lib/domain/libimagmail" }
+libimagutil     = { version = "0.10.0", path = "../../../lib/etc/libimagutil" }
+libimagentryref = { version = "0.10.0", path = "../../../lib/entry/libimagentryref" }
 
 [dependencies.clap]
 version = "^2.29"
 default-features = false
 features = ["color", "suggestions", "wrap_help"]
+
+[dependencies.toml-query]
+version = "0.8"
+default-features = false
+features = ["typed"]
 

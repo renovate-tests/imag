@@ -38,22 +38,25 @@
 )]
 
 #[macro_use] extern crate log;
-extern crate itertools;
+extern crate mailparse;
 extern crate toml;
 extern crate toml_query;
-#[macro_use] extern crate serde_derive;
-extern crate sha1;
-
-extern crate libimagstore;
-extern crate libimagrt;
-extern crate libimagerror;
-#[macro_use] extern crate libimagentryutil;
+extern crate filters;
 #[macro_use] extern crate failure;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
 
-#[cfg(test)]
-extern crate env_logger;
+extern crate libimagerror;
+#[macro_use] extern crate libimagstore;
+extern crate libimagentryref;
+#[macro_use] extern crate libimagentryutil;
 
+module_entry_path_mod!("mail");
+
+pub mod config;
 pub mod hasher;
-pub mod reference;
+pub mod mail;
+pub mod mid;
+pub mod store;
 pub mod util;
 

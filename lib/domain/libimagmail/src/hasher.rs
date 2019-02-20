@@ -17,43 +17,24 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-#![forbid(unsafe_code)]
+use std::path::Path;
 
-#![recursion_limit="256"]
+use failure::Fallible as Result;
 
-#![deny(
-    dead_code,
-    non_camel_case_types,
-    non_snake_case,
-    path_statements,
-    trivial_numeric_casts,
-    unstable_features,
-    unused_allocation,
-    unused_import_braces,
-    unused_imports,
-    unused_must_use,
-    unused_mut,
-    unused_qualifications,
-    while_true,
-)]
+use libimagentryref::hasher::Hasher;
 
-#[macro_use] extern crate log;
-extern crate itertools;
-extern crate toml;
-extern crate toml_query;
-#[macro_use] extern crate serde_derive;
-extern crate sha1;
+pub struct MailHasher;
 
-extern crate libimagstore;
-extern crate libimagrt;
-extern crate libimagerror;
-#[macro_use] extern crate libimagentryutil;
-#[macro_use] extern crate failure;
+impl Hasher for MailHasher {
+    const NAME: &'static str = "MailHasher";
 
-#[cfg(test)]
-extern crate env_logger;
-
-pub mod hasher;
-pub mod reference;
-pub mod util;
-
+    /// hash the file at path `path`
+    ///
+    /// TODO: This is the expensive implementation. We use the message Id as hash, which is
+    /// convenient and _should_ be safe
+    ///
+    /// TODO: Confirm that this approach is right
+    fn hash<P: AsRef<Path>>(path: P) -> Result<String> {
+        ::util::get_message_id_for_mailfile(path)
+    }
+}

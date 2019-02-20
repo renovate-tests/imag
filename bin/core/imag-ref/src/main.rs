@@ -35,9 +35,7 @@
 )]
 
 #[macro_use] extern crate log;
-#[macro_use] extern crate failure;
 extern crate clap;
-extern crate toml_query;
 
 extern crate libimagstore;
 #[macro_use] extern crate libimagrt;
@@ -52,8 +50,6 @@ use ui::build_ui;
 use std::process::exit;
 use std::io::Write;
 
-use failure::Fallible as Result;
-
 use libimagerror::trace::MapErrTrace;
 use libimagerror::exit::ExitUnwrap;
 use libimagrt::setup::generate_runtime_setup;
@@ -62,7 +58,7 @@ use libimagentryref::reference::Ref;
 use libimagentryref::reference::MutRef;
 use libimagentryref::reference::RefFassade;
 use libimagentryref::hasher::default::DefaultHasher;
-use libimagentryref::reference::Config as RefConfig;
+use libimagentryref::util::get_ref_config;
 
 fn main() {
     let version = make_imag_version!();
@@ -92,7 +88,7 @@ fn main() {
 fn deref(rt: &Runtime) {
     let cmd = rt.cli().subcommand_matches("deref").unwrap();
     let ids = rt.ids::<::ui::PathProvider>().map_err_trace_exit_unwrap();
-    let cfg = get_ref_config(&rt).map_err_trace_exit_unwrap();
+    let cfg = get_ref_config(&rt, "imag-ref").map_err_trace_exit_unwrap();
     let out = rt.stdout();
     let mut outlock = out.lock();
 
@@ -161,16 +157,5 @@ fn remove(rt: &Runtime) {
 
 fn create(rt: &Runtime) {
     unimplemented!()
-}
-
-fn get_ref_config(rt: &Runtime) -> Result<RefConfig> {
-    use toml_query::read::TomlValueReadExt;
-
-    let setting_name = "ref.basepathes";
-
-    rt.config()
-        .ok_or_else(|| format_err!("No configuration, cannot find collection name for ref collection"))?
-        .read_deserialized::<RefConfig>(setting_name)?
-        .ok_or_else(|| format_err!("Setting missing: {}", setting_name))
 }
 
