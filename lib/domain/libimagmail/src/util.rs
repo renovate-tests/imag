@@ -23,23 +23,37 @@ use failure::Error;
 use failure::Fallible as Result;
 use failure::ResultExt;
 
-pub(crate) fn get_message_id_for_mailfile<P: AsRef<Path>>(p: P) -> Result<String> {
+/// Get the message header at a specific key
+///
+/// # WARNING
+///
+/// Key must be all-lowercase
+///
+/// # WARNING
+///
+/// Expensive, as mailfile gets read from disk internally.
+/// TODO: Optimize
+///
+pub(crate) fn get_message_header_at_key<P: AsRef<Path>, K: AsRef<str>>(p: P, k: K) -> Result<String> {
     ::mailparse::parse_mail(::std::fs::read_to_string(p.as_ref())?.as_bytes())
         .context(format_err!("Cannot parse Email {}", p.as_ref().display()))?
         .headers
         .into_iter()
         .filter_map(|hdr| match hdr.get_key() {
             Err(e) => Some(Err(e).map_err(Error::from)),
-            Ok(k) => if k.to_lowercase() == "message-id" {
+            Ok(k) => if k.to_lowercase() == k.as_ref() {
                 Some(Ok(hdr))
             } else {
                 None
             }
         })
         .next()
-        .ok_or_else(|| format_err!("Message Id not found in {}", p.as_ref().display()))?
+        .ok_or_else(|| format_err!("'{}' not found in {}", k.as_ref(), p.as_ref().display()))?
         .and_then(|hdr| hdr.get_value().map_err(Error::from))
-        .map(strip_message_delimiters)
+}
+
+pub(crate) fn get_message_id_for_mailfile<P: AsRef<Path>>(p: P) -> Result<String> {
+    get_message_header_at_key(p, "message-id").map(strip_message_delimiters)
 }
 
 /// Strips message delimiters ('<' and '>') from a Message-ID field.
