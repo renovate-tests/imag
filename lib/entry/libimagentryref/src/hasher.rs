@@ -42,12 +42,17 @@ pub mod sha1 {
 
     pub struct Sha1Hasher;
 
+    impl Sha1Hasher {
+        pub fn sha1_hash(s: &str) -> String {
+            format!("{:x}", Sha1::digest(s.as_bytes())) // TODO: Ugh...
+        }
+    }
+
     impl Hasher for Sha1Hasher {
         const NAME : &'static str = "sha1";
 
         fn hash<P: AsRef<Path>>(path: P) -> Result<String> {
-            let digest = Sha1::digest(::std::fs::read_to_string(path)?.as_bytes());
-            Ok(format!("{:x}", digest)) // TODO: Ugh...
+            Ok(Sha1Hasher::sha1_hash(&::std::fs::read_to_string(path)?))
         }
     }
 
