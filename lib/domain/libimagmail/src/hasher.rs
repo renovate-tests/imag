@@ -22,6 +22,8 @@ use std::path::Path;
 use failure::Fallible as Result;
 
 use libimagentryref::hasher::Hasher;
+use libimagerror::errors::ErrorMsg;
+use libimagentryref::hasher::sha1::Sha1Hasher;
 
 pub struct MailHasher;
 
@@ -30,11 +32,24 @@ impl Hasher for MailHasher {
 
     /// hash the file at path `path`
     ///
-    /// TODO: This is the expensive implementation. We use the message Id as hash, which is
-    /// convenient and _should_ be safe
+    /// We create a sha1 over the path of the file (which is NOT safe, because mails can move) and
+    /// the Message-ID of the mail itself.
     ///
-    /// TODO: Confirm that this approach is right
+    /// # TODO: Fix
+    ///
+    /// The file name is not constant with mail files, because flags are encoded in the filename.
+    /// The path is not constant with mail files, because they can be moved between boxes.
     fn hash<P: AsRef<Path>>(path: P) -> Result<String> {
-        ::util::get_message_id_for_mailfile(path)
+        let mut path_str = path
+            .as_ref()
+            .to_str()
+            .map(String::from)
+            .ok_or_else(|| ErrorMsg::UTF8Error)?;
+
+        let message_id = ::util::get_message_id_for_mailfile(path)?;
+
+        path_str.push_str(&message_id);
+
+        Ok(Sha1Hasher::sha1_hash(&path_str))
     }
 }
