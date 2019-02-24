@@ -41,10 +41,13 @@ pub(crate) fn get_message_header_at_key<P: AsRef<Path>, K: AsRef<str>>(p: P, k: 
         .into_iter()
         .filter_map(|hdr| match hdr.get_key() {
             Err(e) => Some(Err(e).map_err(Error::from)),
-            Ok(k) => if k.to_lowercase() == k.as_ref() {
-                Some(Ok(hdr))
-            } else {
-                None
+            Ok(key) => {
+                trace!("Test: {} == {}", key.to_lowercase(), k.as_ref());
+                if key.to_lowercase() == k.as_ref() {
+                    Some(Ok(hdr))
+                } else {
+                    None
+                }
             }
         })
         .next()
