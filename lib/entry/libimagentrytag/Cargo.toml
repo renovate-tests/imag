@@ -20,7 +20,7 @@ is-it-maintained-open-issues      = { repository = "matthiasbeyer/imag" }
 maintenance                       = { status     = "actively-developed" }
 
 [dependencies]
-log = "0.4.0"
+log = "0.4.6"
 regex = "1"
 toml = "0.4"
 itertools = "0.7"
